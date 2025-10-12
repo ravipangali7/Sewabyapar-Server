@@ -88,7 +88,9 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
 }
 CORS_ALLOW_ALL_ORIGINS = True
-
+CSRF_TRUSTED_ORIGINS = [
+    'http://38.242.233.225:8000',
+]
 WSGI_APPLICATION = 'ecommerce_backend.wsgi.application'
 
 
