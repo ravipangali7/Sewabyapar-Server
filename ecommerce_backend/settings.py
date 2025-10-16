@@ -111,7 +111,6 @@ CSRF_USE_SESSIONS = False
 
 CSRF_TRUSTED_ORIGINS = [
     'http://38.242.233.225:8000',
-    'http://192.168.1.14:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
@@ -176,8 +175,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
