@@ -1,14 +1,11 @@
 from rest_framework import serializers
-from .models import (
-    User, Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon
-)
+from .models import User, Address, Notification, Otp
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'phone', 'name', 'email', 'fcm_token', 'profile_picture', 'created_at', 'updated_at']
+        fields = ['id', 'phone', 'name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {
             'phone': {'required': True},
@@ -23,16 +20,28 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['phone', 'name', 'email', 'password', 'password_confirm', 'fcm_token', 'profile_picture']
+        fields = ['phone', 'name', 'email', 'country_code', 'country', 'password', 'password_confirm', 'fcm_token', 'profile_picture']
         extra_kwargs = {
             'phone': {'required': True},
             'name': {'required': True},
-            'email': {'required': False}
+            'email': {'required': False},
+            'country_code': {'required': True},
+            'country': {'required': True}
         }
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("Passwords don't match")
+        
+        # Validate country and country_code match
+        country_code = attrs.get('country_code')
+        country = attrs.get('country')
+        
+        if country_code == '+977' and country != 'Nepal':
+            raise serializers.ValidationError({'country': 'Country must be Nepal when country code is +977'})
+        if country_code == '+91' and country != 'India':
+            raise serializers.ValidationError({'country': 'Country must be India when country code is +91'})
+            
         return attrs
     
     def create(self, validated_data):
@@ -47,210 +56,159 @@ class UserCreateSerializer(serializers.ModelSerializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['name', 'email', 'fcm_token', 'profile_picture']
+        fields = ['name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture']
         extra_kwargs = {
             'name': {'required': False},
             'email': {'required': False}
         }
-
-
-class StoreSerializer(serializers.ModelSerializer):
-    owner = UserSerializer(read_only=True)
     
-    class Meta:
-        model = Store
-        fields = ['id', 'name', 'description', 'owner', 'logo', 'banner', 'address', 
-                 'phone', 'email', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class CategorySerializer(serializers.ModelSerializer):
-    subcategories = serializers.SerializerMethodField()
-    image = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Category
-        fields = ['id', 'name', 'description', 'image', 'parent', 'subcategories', 
-                 'is_active', 'created_at']
-        read_only_fields = ['id', 'created_at']
-    
-    def get_image(self, obj):
-        if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
-        return None
-    
-    def get_subcategories(self, obj):
-        if obj.subcategories.exists():
-            return CategorySerializer(obj.subcategories.all(), many=True, context=self.context).data
-        return []
-
-
-class ProductImageSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = ProductImage
-        fields = ['id', 'image', 'alt_text', 'is_primary', 'created_at']
-        read_only_fields = ['id', 'created_at']
-    
-    def get_image(self, obj):
-        if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
-        return None
-
-
-class ProductSerializer(serializers.ModelSerializer):
-    store = StoreSerializer(read_only=True)
-    category = CategorySerializer(read_only=True)
-    images = ProductImageSerializer(many=True, read_only=True)
-    average_rating = serializers.SerializerMethodField()
-    review_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Product
-        fields = ['id', 'name', 'description', 'store', 'category', 'price', 'compare_price',
-                 'sku', 'stock_quantity', 'is_active', 'is_featured', 'weight', 'dimensions',
-                 'images', 'average_rating', 'review_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
-    def to_representation(self, instance):
-        # Pass the request context to nested serializers
-        data = super().to_representation(instance)
-        request = self.context.get('request')
+    def validate(self, attrs):
+        # Validate country and country_code match if both are provided
+        country_code = attrs.get('country_code')
+        country = attrs.get('country')
         
-        # Update category with full image URL
-        if data.get('category') and request:
-            category_data = data['category']
-            if category_data.get('image'):
-                category_data['image'] = request.build_absolute_uri(category_data['image'])
-        
-        # Update images with full URLs
-        if data.get('images') and request:
-            for image_data in data['images']:
-                if image_data.get('image'):
-                    image_data['image'] = request.build_absolute_uri(image_data['image'])
-        
-        return data
-    
-    def get_average_rating(self, obj):
-        reviews = obj.reviews.all()
-        if reviews:
-            return round(sum(review.rating for review in reviews) / len(reviews), 1)
-        return 0
-    
-    def get_review_count(self, obj):
-        return obj.reviews.count()
+        if country_code and country:
+            if country_code == '+977' and country != 'Nepal':
+                raise serializers.ValidationError({'country': 'Country must be Nepal when country code is +977'})
+            if country_code == '+91' and country != 'India':
+                raise serializers.ValidationError({'country': 'Country must be India when country code is +91'})
+                
+        return attrs
 
 
-class ProductCreateSerializer(serializers.ModelSerializer):
+class AddressSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Product
-        fields = ['name', 'description', 'store', 'category', 'price', 'compare_price',
-                 'sku', 'stock_quantity', 'is_active', 'is_featured', 'weight', 'dimensions']
-
-
-class CartSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
-    product_id = serializers.IntegerField(write_only=True)
-    
-    class Meta:
-        model = Cart
-        fields = ['id', 'product', 'product_id', 'quantity', 'created_at', 'updated_at']
+        model = Address
+        fields = ['id', 'title', 'full_name', 'phone', 'address', 'city', 'state', 'zip_code', 'is_default', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
-    store = StoreSerializer(read_only=True)
-    
-    class Meta:
-        model = OrderItem
-        fields = ['id', 'product', 'store', 'quantity', 'price', 'total']
-        read_only_fields = ['id', 'total']
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
-    user = UserSerializer(read_only=True)
-    
-    class Meta:
-        model = Order
-        fields = ['id', 'order_number', 'user', 'status', 'total_amount', 'shipping_address',
-                 'billing_address', 'phone', 'email', 'notes', 'items', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'order_number', 'created_at', 'updated_at']
-
-
-class OrderCreateSerializer(serializers.ModelSerializer):
-    items = serializers.ListField(
-        child=serializers.DictField(),
-        write_only=True
-    )
-    
-    class Meta:
-        model = Order
-        fields = ['shipping_address', 'billing_address', 'phone', 'email', 'notes', 'items']
     
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
-        
-        # Calculate total amount from items
-        total_amount = sum(item.get('total', 0) for item in items_data)
-        validated_data['total_amount'] = total_amount
-        
-        # Create the order
-        order = super().create(validated_data)
-        
-        # Create order items
-        from .models import OrderItem
-        for item_data in items_data:
-            OrderItem.objects.create(
-                order=order,
-                product_id=item_data['product'],
-                store_id=item_data['store'],
-                quantity=item_data['quantity'],
-                price=item_data['price'],
-                total=item_data['total']
-            )
-        
-        return order
-
-
-class ReviewSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    product = ProductSerializer(read_only=True)
+        # Ensure only one default address per user
+        if validated_data.get('is_default', False):
+            Address.objects.filter(user=validated_data['user']).update(is_default=False)
+        return super().create(validated_data)
     
-    class Meta:
-        model = Review
-        fields = ['id', 'user', 'product', 'rating', 'title', 'comment', 
-                 'is_verified_purchase', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'is_verified_purchase', 'created_at', 'updated_at']
+    def update(self, instance, validated_data):
+        # Ensure only one default address per user
+        if validated_data.get('is_default', False):
+            Address.objects.filter(user=instance.user).exclude(id=instance.id).update(is_default=False)
+        return super().update(instance, validated_data)
 
 
-class WishlistSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
-    product_id = serializers.IntegerField(write_only=True)
-    
+class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Wishlist
-        fields = ['id', 'product', 'product_id', 'created_at']
+        model = Notification
+        fields = ['id', 'title', 'message', 'type', 'is_read', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 
-class CouponSerializer(serializers.ModelSerializer):
-    is_valid = serializers.SerializerMethodField()
+class SendOTPSerializer(serializers.Serializer):
+    """Serializer for sending OTP"""
+    phone = serializers.CharField(max_length=15)
+    country_code = serializers.ChoiceField(choices=User.COUNTRY_CODE_CHOICES)
+    country = serializers.ChoiceField(choices=User.COUNTRY_CHOICES)
     
-    class Meta:
-        model = Coupon
-        fields = ['id', 'code', 'description', 'discount_type', 'discount_value',
-                 'minimum_amount', 'usage_limit', 'used_count', 'is_active',
-                 'valid_from', 'valid_until', 'is_valid', 'created_at']
-        read_only_fields = ['id', 'used_count', 'created_at']
+    def validate_phone(self, value):
+        if not value or len(value) < 10:
+            raise serializers.ValidationError("Invalid phone number")
+        return value.strip()
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    """Serializer for verifying OTP and registering user"""
+    phone = serializers.CharField(max_length=15)
+    country_code = serializers.ChoiceField(choices=User.COUNTRY_CODE_CHOICES)
+    country = serializers.ChoiceField(choices=User.COUNTRY_CHOICES)
+    otp = serializers.CharField(max_length=6)
+    name = serializers.CharField(max_length=100)
+    password = serializers.CharField(min_length=8)
+    password_confirm = serializers.CharField(min_length=8)
     
-    def get_is_valid(self, obj):
-        return obj.is_valid()
+    def validate_phone(self, value):
+        if not value or len(value) < 10:
+            raise serializers.ValidationError("Invalid phone number")
+        return value.strip()
+    
+    def validate_otp(self, value):
+        if not value or len(value) != 6 or not value.isdigit():
+            raise serializers.ValidationError("OTP must be a 6-digit number")
+        return value
+    
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError("Passwords don't match")
+        
+        # Validate country and country_code match
+        country_code = attrs.get('country_code')
+        country = attrs.get('country')
+        
+        if country_code == '+977' and country != 'Nepal':
+            raise serializers.ValidationError({'country': 'Country must be Nepal when country code is +977'})
+        if country_code == '+91' and country != 'India':
+            raise serializers.ValidationError({'country': 'Country must be India when country code is +91'})
+            
+        return attrs
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    """Serializer for resending OTP"""
+    phone = serializers.CharField(max_length=15)
+    country_code = serializers.ChoiceField(choices=User.COUNTRY_CODE_CHOICES)
+    country = serializers.ChoiceField(choices=User.COUNTRY_CHOICES)
+    
+    def validate_phone(self, value):
+        if not value or len(value) < 10:
+            raise serializers.ValidationError("Invalid phone number")
+        return value.strip()
+
+
+class ForgotPasswordSendOTPSerializer(serializers.Serializer):
+    """Serializer for sending OTP for password reset"""
+    phone = serializers.CharField(max_length=15)
+    country_code = serializers.ChoiceField(choices=User.COUNTRY_CODE_CHOICES)
+    
+    def validate_phone(self, value):
+        if not value or len(value) < 10:
+            raise serializers.ValidationError("Invalid phone number")
+        return value.strip()
+
+
+class ForgotPasswordVerifyOTPSerializer(serializers.Serializer):
+    """Serializer for verifying OTP for password reset"""
+    phone = serializers.CharField(max_length=15)
+    country_code = serializers.ChoiceField(choices=User.COUNTRY_CODE_CHOICES)
+    otp = serializers.CharField(max_length=6)
+    
+    def validate_phone(self, value):
+        if not value or len(value) < 10:
+            raise serializers.ValidationError("Invalid phone number")
+        return value.strip()
+    
+    def validate_otp(self, value):
+        if not value or len(value) != 6 or not value.isdigit():
+            raise serializers.ValidationError("OTP must be a 6-digit number")
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """Serializer for resetting password"""
+    phone = serializers.CharField(max_length=15)
+    country_code = serializers.ChoiceField(choices=User.COUNTRY_CODE_CHOICES)
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(min_length=8)
+    password_confirm = serializers.CharField(min_length=8)
+    
+    def validate_phone(self, value):
+        if not value or len(value) < 10:
+            raise serializers.ValidationError("Invalid phone number")
+        return value.strip()
+    
+    def validate_otp(self, value):
+        if not value or len(value) != 6 or not value.isdigit():
+            raise serializers.ValidationError("OTP must be a 6-digit number")
+        return value
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['password_confirm']:
+            raise serializers.ValidationError("Passwords don't match")
+        return attrs
