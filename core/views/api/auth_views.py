@@ -153,12 +153,17 @@ def send_registration_otp(request):
     
     # Send SMS based on country code
     if country_code == '+91':
-        # India: Don't send SMS, just log
-        print(f"OTP for {phone} (India): {otp}")
-        message = "OTP created successfully (India - no SMS sent)"
+        # India: Send SMS via Fast2SMS
+        sms_result = sms_service.send_otp(phone, otp, country_code)
+        if sms_result['success']:
+            message = "OTP sent successfully to your phone number"
+        else:
+            return Response({
+                'error': f"Failed to send SMS: {sms_result['message']}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     elif country_code == '+977':
         # Nepal: Send SMS via Kaicho Group API
-        sms_result = sms_service.send_otp(phone, otp)
+        sms_result = sms_service.send_otp(phone, otp, country_code)
         if sms_result['success']:
             message = "OTP sent successfully to your phone number"
         else:
@@ -274,14 +279,19 @@ def resend_otp(request):
     
     # Send SMS based on country code
     if country_code == '+91':
-        # India: Don't send SMS, just log
-        print(f"Resend OTP for {phone} (India): {otp}")
-        message = "New OTP created successfully (India - no SMS sent)"
+        # India: Send SMS via Fast2SMS
+        sms_result = sms_service.send_otp(phone, otp, country_code)
+        if sms_result['success']:
+            message = "OTP sent successfully to your phone number"
+        else:
+            return Response({
+                'error': f"Failed to send SMS: {sms_result['message']}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     elif country_code == '+977':
         # Nepal: Send SMS via Kaicho Group API
-        sms_result = sms_service.send_otp(phone, otp)
+        sms_result = sms_service.send_otp(phone, otp, country_code)
         if sms_result['success']:
-            message = "New OTP sent successfully to your phone number"
+            message = "OTP sent successfully to your phone number"
         else:
             return Response({
                 'error': f"Failed to send SMS: {sms_result['message']}"
@@ -336,12 +346,17 @@ def send_forgot_password_otp(request):
     
     # Send SMS based on country code
     if country_code == '+91':
-        # India: Don't send SMS, just log
-        print(f"Forgot Password OTP for {phone} (India): {otp}")
-        message = "OTP created successfully (India - no SMS sent)"
+        # India: Send SMS via Fast2SMS
+        sms_result = sms_service.send_otp(phone, otp, country_code)
+        if sms_result['success']:
+            message = "OTP sent successfully to your phone number"
+        else:
+            return Response({
+                'error': f"Failed to send SMS: {sms_result['message']}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     elif country_code == '+977':
         # Nepal: Send SMS via Kaicho Group API
-        sms_result = sms_service.send_otp(phone, otp)
+        sms_result = sms_service.send_otp(phone, otp, country_code)
         if sms_result['success']:
             message = "OTP sent successfully to your phone number"
         else:

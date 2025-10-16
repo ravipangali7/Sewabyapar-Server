@@ -201,5 +201,11 @@ SMS_CAMPAIGN_ID = '9148'
 SMS_ROUTE_ID = '130'
 SMS_SENDER_ID = 'SMSBit'
 
+# Fast2SMS Configuration (for India +91)
+FAST2SMS_API_KEY = 'r19vf08FKyaQq5whXTmNp4Jz3CYbSdxg7tU2oDWAZnuVIMlRkPkpM9YczHOZjxaqrBFnVQgTGWo4lRdJ'
+FAST2SMS_API_URL = 'https://www.fast2sms.com/dev/bulkV2'
+FAST2SMS_ROUTE = 'q'  # Quick SMS route
+FAST2SMS_LANGUAGE = 'english'
+
 # OTP Configuration
 OTP_EXPIRY_MINUTES = 10
