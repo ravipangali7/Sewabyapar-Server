@@ -23,8 +23,8 @@
                 </div>
             {% endif %}
             
-            <div class="text-gray-700 leading-relaxed">
-                {{ page.description|linebreaks }}
+            <div class="text-gray-700 leading-relaxed prose prose-lg max-w-none">
+                {{ page.description|safe }}
             </div>
         </div>
     </div>

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+from django_ckeditor_5.fields import CKEditor5Field
 
 
 class MySetting(models.Model):
@@ -14,13 +15,13 @@ class MySetting(models.Model):
     # Hero Section
     hero_title = models.CharField(max_length=200, help_text="Hero section main title")
     hero_image = models.ImageField(upload_to='website/hero/', blank=True, null=True, help_text="Hero section background image")
-    hero_description = models.TextField(help_text="Hero section description")
+    hero_description = CKEditor5Field('Hero section description', config_name='default')
     
     # About Section
     about_title = models.CharField(max_length=200, help_text="About section title")
     about_tag = models.CharField(max_length=200, blank=True, help_text="About section tagline")
     about_image = models.ImageField(upload_to='website/about/', blank=True, null=True, help_text="About section image")
-    about_description = models.TextField(help_text="About section description")
+    about_description = CKEditor5Field('About section description', config_name='default')
     
     # Statistics
     total_customers = models.IntegerField(default=0, help_text="Total number of customers")
@@ -76,7 +77,7 @@ class CMSPages(models.Model):
     title = models.CharField(max_length=200, help_text="Page title")
     slug = models.SlugField(max_length=200, unique=True, blank=True, help_text="URL-friendly version of title")
     image = models.ImageField(upload_to='website/cms/', blank=True, null=True, help_text="Page image")
-    description = models.TextField(help_text="Page content")
+    description = CKEditor5Field('Page content', config_name='extends')
     on_footer = models.BooleanField(default=False, help_text="Show in footer links")
     on_menu = models.BooleanField(default=False, help_text="Show in main navigation menu")
     

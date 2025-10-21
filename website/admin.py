@@ -43,7 +43,7 @@ class ServicesAdmin(admin.ModelAdmin):
     list_display = ['title', 'slug', 'created_at']
     list_filter = ['created_at']
     search_fields = ['title', 'description']
-    readonly_fields = ['slug', 'created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
     prepopulated_fields = {'slug': ('title',)}
     
     fieldsets = (
@@ -63,7 +63,7 @@ class CMSPagesAdmin(admin.ModelAdmin):
     list_display = ['title', 'slug', 'on_menu', 'on_footer', 'created_at']
     list_filter = ['on_menu', 'on_footer', 'created_at']
     search_fields = ['title', 'description']
-    readonly_fields = ['slug', 'created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
     prepopulated_fields = {'slug': ('title',)}
     
     fieldsets = (
