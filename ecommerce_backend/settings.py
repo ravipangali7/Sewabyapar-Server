@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'ecommerce',
     'shared',
     'taxi',
+    'website',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders'

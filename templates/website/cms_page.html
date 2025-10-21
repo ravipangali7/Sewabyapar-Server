@@ -1,0 +1,32 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ page.title }} - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="bg-gray-50 py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ page.title }}</h1>
+            <div class="w-24 h-1 bg-pink-500 mx-auto"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Page Content -->
+<section class="py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="prose prose-lg max-w-none">
+            {% if page.image %}
+                <div class="mb-8">
+                    <img src="{{ page.image.url }}" alt="{{ page.title }}" class="w-full h-64 object-cover rounded-lg shadow-lg">
+                </div>
+            {% endif %}
+            
+            <div class="text-gray-700 leading-relaxed">
+                {{ page.description|linebreaks }}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
