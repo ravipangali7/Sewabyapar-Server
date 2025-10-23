@@ -10,7 +10,8 @@ from ...models import User, Otp
 from ...serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     SendOTPSerializer, VerifyOTPSerializer, ResendOTPSerializer,
-    ForgotPasswordSendOTPSerializer, ForgotPasswordVerifyOTPSerializer, ResetPasswordSerializer
+    ForgotPasswordSendOTPSerializer, ForgotPasswordVerifyOTPSerializer, ResetPasswordSerializer,
+    DeleteAccountSerializer
 )
 from ...utils.sms_service import sms_service
 from django.conf import settings
@@ -72,6 +73,12 @@ def user_login(request):
         return Response({
             'error': 'Phone number doesn\'t exist'
         }, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Check if account is active
+    if not user.is_active:
+        return Response({
+            'error': 'Your account has been deleted. Please contact administration to recover your account.'
+        }, status=status.HTTP_403_FORBIDDEN)
 
     # Check if the provided country_code matches the user's registered country_code
     if user.country_code != country_code:
@@ -463,4 +470,30 @@ def reset_password(request):
     except Exception as e:
         return Response({
             'error': f'Password reset failed: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def delete_account(request):
+    """Delete user account (soft delete by setting is_active to False)"""
+    try:
+        # Set user as inactive instead of deleting
+        user = request.user
+        user.is_active = False
+        user.save()
+        
+        # Delete user's auth token to force logout
+        try:
+            request.user.auth_token.delete()
+        except:
+            pass  # Token might not exist
+        
+        return Response({
+            'message': 'Account deleted successfully'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': f'Account deletion failed: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

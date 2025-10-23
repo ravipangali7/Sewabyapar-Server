@@ -212,3 +212,9 @@ class ResetPasswordSerializer(serializers.Serializer):
         if attrs['new_password'] != attrs['password_confirm']:
             raise serializers.ValidationError("Passwords don't match")
         return attrs
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    """Serializer for account deletion request"""
+    # No additional fields needed since authentication token is sufficient
+    pass
