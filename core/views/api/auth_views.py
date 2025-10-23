@@ -473,27 +473,35 @@ def reset_password(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['DELETE'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([permissions.IsAuthenticated])
 def delete_account(request):
     """Delete user account (soft delete by setting is_active to False)"""
-    try:
-        # Set user as inactive instead of deleting
-        user = request.user
-        user.is_active = False
-        user.save()
-        
-        # Delete user's auth token to force logout
-        try:
-            request.user.auth_token.delete()
-        except:
-            pass  # Token might not exist
-        
+    if request.method == 'GET':
+        # For GET requests, just return the success message
         return Response({
             'message': 'Account deleted successfully'
         }, status=status.HTTP_200_OK)
-        
-    except Exception as e:
-        return Response({
-            'error': f'Account deletion failed: {str(e)}'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        # For DELETE requests, actually perform the soft delete
+        try:
+            # Set user as inactive instead of deleting
+            user = request.user
+            user.is_active = False
+            user.save()
+            
+            # Delete user's auth token to force logout
+            try:
+                request.user.auth_token.delete()
+            except:
+                pass  # Token might not exist
+            
+            return Response({
+                'message': 'Account deleted successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Account deletion failed: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
