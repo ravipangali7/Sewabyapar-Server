@@ -11,7 +11,7 @@ class MySettingAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'phone', 'email', 'logo', 'tagline')
+            'fields': ('name', 'phone', 'email', 'address', 'website', 'logo', 'tagline')
         }),
         ('Hero Section', {
             'fields': ('hero_title', 'hero_image', 'hero_description')

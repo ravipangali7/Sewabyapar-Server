@@ -9,6 +9,8 @@ class MySetting(models.Model):
     name = models.CharField(max_length=200, help_text="Company/Website name")
     phone = models.CharField(max_length=20, help_text="Contact phone number")
     email = models.EmailField(help_text="Contact email address")
+    address = models.TextField(blank=True, help_text="Company address")
+    website = models.URLField(blank=True, help_text="Company website URL")
     logo = models.ImageField(upload_to='website/logos/', blank=True, null=True, help_text="Company logo")
     tagline = models.CharField(max_length=300, blank=True, help_text="Website tagline")
     
