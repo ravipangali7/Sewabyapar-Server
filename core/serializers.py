@@ -79,7 +79,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = ['id', 'title', 'full_name', 'phone', 'address', 'city', 'state', 'zip_code', 'is_default', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'full_name', 'phone', 'address', 'city', 'state', 'zip_code', 'latitude', 'longitude', 'is_default', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def create(self, validated_data):

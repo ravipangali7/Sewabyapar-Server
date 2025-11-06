@@ -109,6 +109,8 @@ class Address(models.Model):
     city = models.CharField(max_length=50)
     state = models.CharField(max_length=50)
     zip_code = models.CharField(max_length=10)
+    latitude = models.DecimalField(max_digits=20, decimal_places=12, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=20, decimal_places=12, null=True, blank=True)
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
