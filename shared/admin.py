@@ -12,8 +12,9 @@ class FeedbackComplainReplyInline(admin.TabularInline):
     """Inline admin for replies"""
     model = FeedbackComplainReply
     extra = 0
-    readonly_fields = ['user', 'created_at']
-    fields = ['user', 'is_admin_reply', 'message', 'created_at']
+    readonly_fields = ['created_at']
+    fields = ['is_admin_reply', 'message', 'created_at']
+    exclude = ['user']  # Hide user field, will be auto-set
 
 
 @admin.register(FeedbackComplain)
@@ -33,6 +34,19 @@ class FeedbackComplainAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def save_formset(self, request, form, formset, change):
+        """Override to auto-set user and is_admin_reply for inline replies"""
+        instances = formset.save(commit=False)
+        for instance in instances:
+            # If this is a new reply (no pk) or user is not set, set it to admin user
+            if not instance.pk or not instance.user_id:
+                instance.user = request.user
+                instance.is_admin_reply = True
+            instance.save()
+        # Delete any marked for deletion
+        for obj in formset.deleted_objects:
+            obj.delete()
 
 
 @admin.register(FeedbackComplainReply)
@@ -50,3 +64,10 @@ class FeedbackComplainReplyAdmin(admin.ModelAdmin):
             'fields': ('created_at',),
         }),
     )
+    
+    def save_model(self, request, obj, form, change):
+        """Override to auto-set user and is_admin_reply for admin replies"""
+        if not change or not obj.user_id:  # New reply or user not set
+            obj.user = request.user
+            obj.is_admin_reply = True
+        super().save_model(request, obj, form, change)
