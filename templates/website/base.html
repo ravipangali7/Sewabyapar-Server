@@ -145,14 +145,14 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
-                <div class="flex items-center">
+                <a href="/" class="flex items-center hover:opacity-80 transition-opacity cursor-pointer">
                     {% if settings and settings.logo %}
                         <img src="{{ settings.logo.url }}" alt="{{ settings.name }}" class="h-8 w-8 mr-2">
                     {% endif %}
                     <span class="text-xl font-bold text-red-600">
                         {% if settings %}{{ settings.name }}{% else %}Sewa{% endif %}
                     </span>
-                </div>
+                </a>
                 
                 <!-- Navigation Links -->
                 <div class="hidden md:flex items-center space-x-8">
