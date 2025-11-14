@@ -1,0 +1,78 @@
+{% extends 'website/base.html' %}
+
+{% block title %}My Taxi Bookings - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">My Taxi Bookings</h1>
+    
+    {% if bookings %}
+    <div class="space-y-4 sm:space-y-6">
+        {% for booking in bookings %}
+        <div class="bg-white rounded-xl shadow-md p-5 sm:p-6 hover:shadow-lg transition-shadow">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                <div class="flex-1">
+                    <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking #{{ booking.id }}</h3>
+                    <p class="text-gray-700 font-medium mb-1">{{ booking.trip.from_place.name }} → {{ booking.trip.to_place.name }}</p>
+                    <p class="text-gray-600 text-sm mb-1">{{ booking.date }} at {{ booking.time }}</p>
+                    <p class="text-gray-600 text-sm">Seater: {{ booking.seater.seat }}</p>
+                </div>
+                <div class="flex flex-col sm:items-end gap-2">
+                    <span class="inline-block px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold 
+                        {% if booking.trip_status == 'completed' %}bg-green-100 text-green-800
+                        {% elif booking.trip_status == 'cancelled' %}bg-red-100 text-red-800
+                        {% elif booking.trip_status == 'ongoing' %}bg-blue-100 text-blue-800
+                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                        {{ booking.get_trip_status_display }}
+                    </span>
+                    <p class="text-lg sm:text-xl font-bold text-red-600">₹{{ booking.price|floatformat:2 }}</p>
+                </div>
+            </div>
+            <a href="{% url 'website:taxi_booking_detail' booking.id %}" class="inline-flex items-center text-red-600 hover:text-red-700 font-semibold transition-colors min-h-[44px]">
+                View Details
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if bookings.has_other_pages %}
+    <div class="mt-8 sm:mt-12 flex justify-center">
+        <nav class="flex items-center space-x-2">
+            {% if bookings.has_previous %}
+            <a href="?page={{ bookings.previous_page_number }}" 
+                class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                Previous
+            </a>
+            {% endif %}
+            <span class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium min-h-[44px] flex items-center">
+                Page {{ bookings.number }} of {{ bookings.paginator.num_pages }}
+            </span>
+            {% if bookings.has_next %}
+            <a href="?page={{ bookings.next_page_number }}" 
+                class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                Next
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-16 sm:py-24">
+        <div class="max-w-md mx-auto">
+            <svg class="mx-auto h-24 w-24 text-gray-400 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">No bookings yet</h2>
+            <p class="text-gray-600 mb-8">You haven't made any taxi bookings yet. Book your first ride now!</p>
+            <a href="{% url 'website:new_taxi_booking' %}" class="inline-block bg-red-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px]">
+                Book a Taxi
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Shop - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <!-- Hero Section -->
+    <div class="text-center mb-8 sm:mb-12">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">Shop</h1>
+        <p class="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">Discover amazing products from our curated collection</p>
+    </div>
+
+    <!-- Featured Products -->
+    {% if featured_products %}
+    <section class="mb-12 sm:mb-16">
+        <div class="flex items-center justify-between mb-6 sm:mb-8">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Featured Products</h2>
+            <a href="{% url 'website:products' %}" class="text-red-600 hover:text-red-700 font-semibold text-sm sm:text-base">View All →</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {% for product in featured_products %}
+            <a href="{% url 'website:product_detail' product.id %}" class="group">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                    <div class="aspect-square overflow-hidden bg-gray-100">
+                        {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center">
+                            <span class="text-gray-400">No Image</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{{ product.name }}</h3>
+                        <div class="flex items-baseline gap-2">
+                            <p class="text-red-600 font-bold text-xl">₹{{ product.price }}</p>
+                            {% if product.compare_price %}
+                            <p class="text-gray-400 line-through text-sm">₹{{ product.compare_price }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Categories -->
+    {% if categories %}
+    <section class="mb-12 sm:mb-16">
+        <div class="flex items-center justify-between mb-6 sm:mb-8">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Shop by Category</h2>
+            <a href="{% url 'website:categories' %}" class="text-red-600 hover:text-red-700 font-semibold text-sm sm:text-base">View All →</a>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
+            {% for category in categories %}
+            <a href="{% url 'website:products' %}?category={{ category.id }}" class="group">
+                <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 text-center hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                    {% if category.image %}
+                    <div class="aspect-square overflow-hidden rounded-lg mb-3">
+                        <img src="{{ category.image.url }}" alt="{{ category.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    </div>
+                    {% else %}
+                    <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-3 flex items-center justify-center">
+                        <span class="text-gray-400 text-2xl">{{ category.name|first|upper }}</span>
+                    </div>
+                    {% endif %}
+                    <h3 class="font-semibold text-gray-900 group-hover:text-red-600 transition-colors text-sm sm:text-base">{{ category.name }}</h3>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Recent Products -->
+    {% if recent_products %}
+    <section>
+        <div class="flex items-center justify-between mb-6 sm:mb-8">
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Latest Products</h2>
+            <a href="{% url 'website:products' %}" class="text-red-600 hover:text-red-700 font-semibold text-sm sm:text-base">View All →</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {% for product in recent_products %}
+            <a href="{% url 'website:product_detail' product.id %}" class="group">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                    <div class="aspect-square overflow-hidden bg-gray-100">
+                        {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center">
+                            <span class="text-gray-400">No Image</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{{ product.name }}</h3>
+                        <p class="text-red-600 font-bold text-xl">₹{{ product.price }}</p>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

@@ -77,6 +77,58 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
         }
+        
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            .hero-bg {
+                background-attachment: scroll;
+            }
+        }
+        
+        /* Touch-friendly buttons */
+        button, a.button, input[type="submit"] {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        /* Smooth transitions */
+        * {
+            transition-property: color, background-color, border-color, transform, box-shadow;
+            transition-duration: 200ms;
+            transition-timing-function: ease-in-out;
+        }
+        
+        /* Better focus states */
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+        }
+        
+        /* Card hover effects */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Image aspect ratio */
+        .aspect-square {
+            aspect-ratio: 1 / 1;
+        }
+        
+        .aspect-video {
+            aspect-ratio: 16 / 9;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -105,29 +157,42 @@
                 <!-- Navigation Links -->
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="/" class="text-gray-700 hover:text-red-600 font-medium transition-colors">HOME</a>
-                    <a href="/#services" class="text-gray-700 hover:text-red-600 font-medium transition-colors">SERVICES</a>
-                    <a href="/#about" class="text-gray-700 hover:text-red-600 font-medium transition-colors">ABOUT</a>
-                    <a href="/#contact" class="text-gray-700 hover:text-red-600 font-medium transition-colors">CONTACT</a>
+                    <a href="{% url 'website:shop' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">SHOP</a>
+                    <a href="{% url 'website:taxi' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">TAXI</a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'website:profile' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">PROFILE</a>
+                    {% endif %}
                     {% for page in menu_pages %}
                         <a href="{% url 'website:cms_page' page.slug %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">{{ page.title|upper }}</a>
                     {% endfor %}
                 </div>
                 
                 <!-- Action Buttons -->
-                {% comment %} <div class="flex items-center space-x-4">
-                    {% if settings %}
-                        <a href="tel:{{ settings.phone }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-                            Support: {{ settings.phone }}
-                        </a>
-                    {% endif %}
-                    <a href="/admin/" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
-                        Login to System
+                <div class="hidden md:flex items-center space-x-3">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'website:cart' %}" class="relative text-gray-700 hover:text-red-600 font-medium transition-colors text-sm">
+                        CART
                     </a>
-                </div> {% endcomment %}
+                    <form method="post" action="{% url 'website:logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors min-h-[44px]">LOGOUT</button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'website:login' %}" class="bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">LOGIN</a>
+                    <a href="{% url 'website:register' %}" class="bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors min-h-[44px] flex items-center">REGISTER</a>
+                    {% endif %}
+                </div>
                 
                 <!-- Mobile menu button -->
-                <div class="md:hidden">
-                    <button id="mobile-menu-button" class="text-gray-700 hover:text-red-600">
+                <div class="md:hidden flex items-center space-x-2">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'website:cart' %}" class="text-gray-700 hover:text-red-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </a>
+                    {% endif %}
+                    <button id="mobile-menu-button" class="text-gray-700 hover:text-red-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
@@ -136,22 +201,48 @@
             </div>
             
             <!-- Mobile menu -->
-            <div id="mobile-menu" class="md:hidden hidden">
-                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-                    <a href="/" class="block px-3 py-2 text-gray-700 hover:text-red-600 font-medium">HOME</a>
-                    <a href="/#services" class="block px-3 py-2 text-gray-700 hover:text-red-600 font-medium">SERVICES</a>
-                    <a href="/#about" class="block px-3 py-2 text-gray-700 hover:text-red-600 font-medium">ABOUT</a>
-                    <a href="/#contact" class="block px-3 py-2 text-gray-700 hover:text-red-600 font-medium">CONTACT</a>
+            <div id="mobile-menu" class="md:hidden hidden border-t border-gray-200">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white">
+                    <a href="/" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">HOME</a>
+                    <a href="{% url 'website:shop' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">SHOP</a>
+                    <a href="{% url 'website:taxi' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">TAXI</a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'website:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">PROFILE</a>
+                    {% endif %}
                     {% for page in menu_pages %}
-                        <a href="{% url 'website:cms_page' page.slug %}" class="block px-3 py-2 text-gray-700 hover:text-red-600 font-medium">{{ page.title|upper }}</a>
+                        <a href="{% url 'website:cms_page' page.slug %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">{{ page.title|upper }}</a>
                     {% endfor %}
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'website:cart' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">CART</a>
+                    <form method="post" action="{% url 'website:logout' %}" class="px-4 py-3">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] text-left">LOGOUT</button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'website:login' %}" class="block px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center justify-center text-center">LOGIN</a>
+                    <a href="{% url 'website:register' %}" class="block px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors min-h-[44px] flex items-center justify-center text-center">REGISTER</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        {% for message in messages %}
+        <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-800 border border-red-300{% elif message.tags == 'success' %}bg-green-100 text-green-800 border border-green-300{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-300{% else %}bg-blue-100 text-blue-800 border border-blue-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span>{{ message }}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-lg font-bold hover:opacity-70">&times;</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Main Content -->
-    <main>
+    <main class="min-h-screen">
         {% block content %}{% endblock %}
     </main>
 

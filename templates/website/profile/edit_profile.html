@@ -1,0 +1,68 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Edit Profile - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">Edit Profile</h1>
+
+    <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+        <form method="post" enctype="multipart/form-data" action="{% url 'website:edit_profile' %}" class="space-y-6">
+            {% csrf_token %}
+            <div class="space-y-5">
+                <div>
+                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="name" name="name" value="{{ user.name }}" required 
+                        class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                </div>
+
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" name="email" value="{{ user.email|default:'' }}" 
+                        class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="country_code" class="block text-sm font-semibold text-gray-700 mb-2">Country Code</label>
+                        <select id="country_code" name="country_code" required 
+                            class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                            <option value="+977" {% if user.country_code == '+977' %}selected{% endif %}>+977 (Nepal)</option>
+                            <option value="+91" {% if user.country_code == '+91' %}selected{% endif %}>+91 (India)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="country" class="block text-sm font-semibold text-gray-700 mb-2">Country</label>
+                        <select id="country" name="country" required 
+                            class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                            <option value="Nepal" {% if user.country == 'Nepal' %}selected{% endif %}>Nepal</option>
+                            <option value="India" {% if user.country == 'India' %}selected{% endif %}>India</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="profile_picture" class="block text-sm font-semibold text-gray-700 mb-2">Profile Picture</label>
+                    {% if user.profile_picture %}
+                    <div class="mb-4">
+                        <img src="{{ user.profile_picture.url }}" alt="Current profile picture" class="w-24 h-24 rounded-full object-cover border-4 border-red-100">
+                    </div>
+                    {% endif %}
+                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*" 
+                        class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-red-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px]">
+                        Save Changes
+                    </button>
+                    <a href="{% url 'website:profile' %}" class="flex-1 bg-gray-200 text-gray-700 px-6 py-3.5 rounded-xl font-semibold hover:bg-gray-300 transition-all text-center min-h-[48px] flex items-center justify-center">
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Wishlist - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">My Wishlist</h1>
+    
+    {% if wishlist_items %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {% for item in wishlist_items %}
+        <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <a href="{% url 'website:product_detail' item.product.id %}" class="block">
+                <div class="aspect-square overflow-hidden bg-gray-100">
+                    {% if item.product.images.first %}
+                    <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center">
+                        <span class="text-gray-400">No Image</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{{ item.product.name }}</h3>
+                    <p class="text-red-600 font-bold text-xl mb-4">₹{{ item.product.price }}</p>
+                </div>
+            </a>
+            <div class="p-4 pt-0">
+                <form method="post" action="{% url 'website:wishlist' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                    <button type="submit" name="action" value="remove" 
+                        class="w-full bg-red-50 text-red-600 px-4 py-2.5 rounded-lg font-semibold hover:bg-red-100 transition-colors min-h-[44px] flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        Remove from Wishlist
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if wishlist_items.has_other_pages %}
+    <div class="mt-8 sm:mt-12 flex justify-center">
+        <nav class="flex items-center space-x-2">
+            {% if wishlist_items.has_previous %}
+            <a href="?page={{ wishlist_items.previous_page_number }}" 
+                class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                Previous
+            </a>
+            {% endif %}
+            <span class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium min-h-[44px] flex items-center">
+                {{ wishlist_items.number }} of {{ wishlist_items.paginator.num_pages }}
+            </span>
+            {% if wishlist_items.has_next %}
+            <a href="?page={{ wishlist_items.next_page_number }}" 
+                class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                Next
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-16 sm:py-24">
+        <div class="max-w-md mx-auto">
+            <svg class="mx-auto h-24 w-24 text-gray-400 mb-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Your wishlist is empty</h2>
+            <p class="text-gray-600 mb-8">Start adding products you love to your wishlist.</p>
+            <a href="{% url 'website:shop' %}" class="inline-block bg-red-600 text-white px-8 py-3.5 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px]">
+                Start Shopping
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Products - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        <!-- Sidebar -->
+        <aside class="w-full lg:w-64 flex-shrink-0">
+            <div class="bg-white rounded-xl shadow-md p-6 sticky top-24">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Categories</h2>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="{% url 'website:products' %}" class="block px-4 py-2.5 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium transition-colors {% if not selected_category %}bg-red-50 text-red-600{% endif %}">
+                            All Categories
+                        </a>
+                    </li>
+                    {% for category in categories %}
+                    <li>
+                        <a href="{% url 'website:products' %}?category={{ category.id }}" class="block px-4 py-2.5 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium transition-colors {% if selected_category == category.id|stringformat:'s' %}bg-red-50 text-red-600{% endif %}">
+                            {{ category.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Products Grid -->
+        <main class="flex-1">
+            <div class="mb-6">
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Products</h1>
+                {% if search_query %}
+                <p class="text-gray-600">Search results for: <strong class="text-gray-900">"{{ search_query }}"</strong></p>
+                {% endif %}
+            </div>
+
+            {% if products %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {% for product in products %}
+                <a href="{% url 'website:product_detail' product.id %}" class="group">
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="aspect-square overflow-hidden bg-gray-100">
+                            {% if product.images.first %}
+                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center">
+                                <span class="text-gray-400">No Image</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{{ product.name }}</h3>
+                            <div class="flex items-baseline gap-2">
+                                <p class="text-red-600 font-bold text-xl">₹{{ product.price }}</p>
+                                {% if product.compare_price %}
+                                <p class="text-gray-400 line-through text-sm">₹{{ product.compare_price }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if products.has_other_pages %}
+            <div class="mt-8 sm:mt-12 flex justify-center">
+                <nav class="flex items-center space-x-2">
+                    {% if products.has_previous %}
+                    <a href="?page={{ products.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                        class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                        Previous
+                    </a>
+                    {% endif %}
+                    <span class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium min-h-[44px] flex items-center">
+                        Page {{ products.number }} of {{ products.paginator.num_pages }}
+                    </span>
+                    {% if products.has_next %}
+                    <a href="?page={{ products.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                        class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                        Next
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-16 sm:py-24">
+                <svg class="mx-auto h-24 w-24 text-gray-400 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <p class="text-gray-600 text-lg mb-4">No products found.</p>
+                <a href="{% url 'website:shop' %}" class="inline-block bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-all min-h-[44px]">
+                    Back to Shop
+                </a>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

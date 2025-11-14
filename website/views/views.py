@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from .models import MySetting, Services, CMSPages
+from ..models import MySetting, Services, CMSPages
 
 
 def home_view(request):
@@ -76,3 +76,4 @@ def contact_form_view(request):
         'success': False,
         'message': 'Invalid request method.'
     })
+

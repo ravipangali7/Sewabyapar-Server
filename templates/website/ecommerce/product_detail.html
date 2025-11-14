@@ -1,0 +1,160 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ product.name }} - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+        <!-- Product Images -->
+        <div class="w-full">
+            {% if product.images.first %}
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-auto object-cover aspect-square">
+            </div>
+            {% if product.images.count > 1 %}
+            <div class="grid grid-cols-4 gap-2 mt-4">
+                {% for image in product.images.all|slice:":4" %}
+                <img src="{{ image.image.url }}" alt="{{ product.name }}" class="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity">
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="w-full h-96 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl shadow-lg flex items-center justify-center">
+                <span class="text-gray-400 text-lg">No Image Available</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Product Info -->
+        <div class="w-full">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 leading-tight">{{ product.name }}</h1>
+            
+            <div class="mb-6">
+                <div class="flex items-baseline gap-3 mb-2">
+                    <span class="text-3xl sm:text-4xl font-bold text-red-600">₹{{ product.price }}</span>
+                    {% if product.compare_price %}
+                    <span class="text-xl sm:text-2xl text-gray-400 line-through">₹{{ product.compare_price }}</span>
+                    <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                        {{ product.compare_price|floatformat:0|add:"-"|add:product.price|floatformat:0 }}% OFF
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-6 p-4 bg-gray-50 rounded-xl">
+                <p class="text-gray-700 leading-relaxed mb-4">{{ product.description }}</p>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center">
+                        <span class="font-semibold text-gray-900 w-24">Store:</span>
+                        <span class="text-gray-700">{{ product.store.name }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="font-semibold text-gray-900 w-24">Category:</span>
+                        <span class="text-gray-700">{{ product.category.name }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="font-semibold text-gray-900 w-24">Stock:</span>
+                        <span class="text-gray-700 {% if product.stock_quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ product.stock_quantity }} available
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add to Cart and Wishlist -->
+            <div class="space-y-4 mb-8">
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'website:cart' %}" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex items-center gap-3">
+                            <label for="quantity" class="text-sm font-semibold text-gray-700">Quantity:</label>
+                            <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" 
+                                class="w-24 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-semibold">
+                        </div>
+                        <button type="submit" class="flex-1 bg-red-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px] flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            {% if in_cart %}Update Cart{% else %}Add to Cart{% endif %}
+                        </button>
+                    </div>
+                </form>
+                <form method="post" action="{% url 'website:wishlist' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <button type="submit" class="w-full bg-gray-100 text-gray-700 px-6 py-3.5 rounded-lg font-semibold hover:bg-gray-200 transition-all border-2 border-gray-200 min-h-[48px] flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2 {% if in_wishlist %}text-red-600 fill-current{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        {% if in_wishlist %}Remove from Wishlist{% else %}Add to Wishlist{% endif %}
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'website:login' %}?next={% url 'website:product_detail' product.id %}" class="block w-full bg-red-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl text-center min-h-[48px] flex items-center justify-center">
+                    Login to Purchase
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Reviews -->
+    {% if reviews %}
+    <section class="mt-12 lg:mt-16">
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+        <div class="space-y-4">
+            {% for review in reviews %}
+            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
+                    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <span class="text-red-600 font-semibold">{{ review.user.name|first|upper }}</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-900 block">{{ review.user.name }}</span>
+                            <span class="text-yellow-500 text-sm">{% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-500">{{ review.created_at|date:"F d, Y" }}</p>
+                </div>
+                {% if review.title %}
+                <h3 class="font-semibold text-gray-900 mb-2">{{ review.title }}</h3>
+                {% endif %}
+                <p class="text-gray-700 leading-relaxed">{{ review.comment }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Related Products -->
+    {% if related_products %}
+    <section class="mt-12 lg:mt-16">
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Related Products</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {% for related_product in related_products %}
+            <a href="{% url 'website:product_detail' related_product.id %}" class="group">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                    {% if related_product.images.first %}
+                    <div class="aspect-square overflow-hidden bg-gray-100">
+                        <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    </div>
+                    {% else %}
+                    <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                        <span class="text-gray-400">No Image</span>
+                    </div>
+                    {% endif %}
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{{ related_product.name }}</h3>
+                        <p class="text-red-600 font-bold text-xl">₹{{ related_product.price }}</p>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

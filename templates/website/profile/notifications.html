@@ -1,0 +1,65 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Notifications - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">Notifications</h1>
+    
+    {% if notifications %}
+    <div class="space-y-4">
+        {% for notification in notifications %}
+        <div class="bg-white rounded-xl shadow-md p-5 sm:p-6 {% if not notification.is_read %}border-l-4 border-red-600{% endif %} hover:shadow-lg transition-shadow">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-900">{{ notification.title }}</h3>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold 
+                            {% if notification.type == 'order' %}bg-blue-100 text-blue-800
+                            {% elif notification.type == 'promotion' %}bg-purple-100 text-purple-800
+                            {% elif notification.type == 'security' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ notification.get_type_display }}
+                        </span>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed mb-2">{{ notification.message }}</p>
+                    <p class="text-gray-500 text-sm">{{ notification.created_at|date:"F d, Y g:i A" }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if notifications.has_other_pages %}
+    <div class="mt-8 sm:mt-12 flex justify-center">
+        <nav class="flex items-center space-x-2">
+            {% if notifications.has_previous %}
+            <a href="?page={{ notifications.previous_page_number }}" 
+                class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                Previous
+            </a>
+            {% endif %}
+            <span class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium min-h-[44px] flex items-center">
+                Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}
+            </span>
+            {% if notifications.has_next %}
+            <a href="?page={{ notifications.next_page_number }}" 
+                class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors min-h-[44px] flex items-center">
+                Next
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-16 sm:py-24">
+        <svg class="mx-auto h-24 w-24 text-gray-400 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">No notifications</h2>
+        <p class="text-gray-600">You're all caught up! No new notifications.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

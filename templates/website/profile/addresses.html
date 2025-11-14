@@ -1,0 +1,109 @@
+{% extends 'website/base.html' %}
+
+{% block title %}My Addresses - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">My Addresses</h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <!-- Address List -->
+        <div class="lg:col-span-2 space-y-4">
+            {% if addresses %}
+            {% for address in addresses %}
+            <div class="bg-white rounded-xl shadow-md p-5 sm:p-6 {% if address.is_default %}border-2 border-red-600 bg-red-50{% else %}border border-gray-200{% endif %} hover:shadow-lg transition-shadow">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-900">{{ address.title }}</h3>
+                            {% if address.is_default %}
+                            <span class="px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded-full">Default</span>
+                            {% endif %}
+                        </div>
+                        <div class="space-y-1 text-gray-700">
+                            <p class="font-medium">{{ address.full_name }}</p>
+                            <p class="text-sm">{{ address.address }}</p>
+                            <p class="text-sm">{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                            <p class="text-sm">Phone: {{ address.phone }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="bg-white rounded-xl shadow-md p-8 sm:p-12 text-center">
+                <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p class="text-gray-600 mb-4">No addresses found.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Add Address Form -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-lg p-6 sticky top-24">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Add New Address</h2>
+                <form method="post" action="{% url 'website:addresses' %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="title" class="block text-sm font-semibold text-gray-700 mb-2">Title</label>
+                        <input type="text" id="title" name="title" placeholder="Home, Office, etc." required 
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                    </div>
+
+                    <div>
+                        <label for="full_name" class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                        <input type="text" id="full_name" name="full_name" required 
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                    </div>
+
+                    <div>
+                        <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+                        <input type="tel" id="phone" name="phone" required 
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                    </div>
+
+                    <div>
+                        <label for="address" class="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                        <textarea id="address" name="address" rows="2" required 
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="city" class="block text-sm font-semibold text-gray-700 mb-2">City</label>
+                            <input type="text" id="city" name="city" required 
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                        </div>
+
+                        <div>
+                            <label for="state" class="block text-sm font-semibold text-gray-700 mb-2">State</label>
+                            <input type="text" id="state" name="state" required 
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="zip_code" class="block text-sm font-semibold text-gray-700 mb-2">Zip Code</label>
+                        <input type="text" id="zip_code" name="zip_code" required 
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                    </div>
+
+                    <div>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="is_default" class="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <span class="ml-3 text-sm text-gray-700">Set as default address</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="w-full bg-red-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px]">
+                        Add Address
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

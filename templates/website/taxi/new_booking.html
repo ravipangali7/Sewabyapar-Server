@@ -1,0 +1,195 @@
+{% extends 'website/base.html' %}
+
+{% block title %}New Booking - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">New Taxi Booking</h1>
+    
+    <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+        <form method="post" action="{% url 'website:new_taxi_booking' %}" class="space-y-6">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <label for="from_place" class="block text-sm font-semibold text-gray-700 mb-2">From Place</label>
+                    <select id="from_place" name="from_place" required 
+                        class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                        <option value="">Select From Place</option>
+                        {% for place in from_places %}
+                        <option value="{{ place.id }}" {% if selected_trip and selected_trip.from_place.id == place.id %}selected{% endif %}>{{ place.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="to_place" class="block text-sm font-semibold text-gray-700 mb-2">To Place</label>
+                    <select id="to_place" name="to_place" required 
+                        class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg disabled:bg-gray-100 disabled:cursor-not-allowed" disabled>
+                        <option value="">Select From Place first</option>
+                    </select>
+                    <p class="text-sm text-gray-500 mt-2" id="to-place-help">Please select From Place first</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <label for="date" class="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+                    <input type="date" id="date" name="date" required 
+                        class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                </div>
+
+                <div>
+                    <label for="time" class="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+                    <input type="time" id="time" name="time" required 
+                        class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg">
+                </div>
+            </div>
+
+            <div>
+                <label for="seater" class="block text-sm font-semibold text-gray-700 mb-2">Seater Type</label>
+                <select id="seater" name="seater" required 
+                    class="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg" disabled>
+                    <option value="">Select From and To places first</option>
+                </select>
+                <p class="text-sm text-gray-500 mt-2" id="seater-help">Please select both From and To places to see available seaters</p>
+            </div>
+
+            <div>
+                <label for="remarks" class="block text-sm font-semibold text-gray-700 mb-2">Remarks <span class="text-gray-400">(Optional)</span></label>
+                <textarea id="remarks" name="remarks" rows="3" 
+                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg"></textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-red-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px] text-lg">
+                Book Taxi
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Trips data from backend
+const tripsData = {{ trips_data_json|safe }};
+const placesData = {{ places_data_json|safe }};
+
+const fromPlaceSelect = document.getElementById('from_place');
+const toPlaceSelect = document.getElementById('to_place');
+const seaterSelect = document.getElementById('seater');
+const seaterHelp = document.getElementById('seater-help');
+const toPlaceHelp = document.getElementById('to-place-help');
+
+function updateToPlaceOptions() {
+    const fromPlaceId = parseInt(fromPlaceSelect.value);
+    
+    // Clear to place and seater options
+    toPlaceSelect.innerHTML = '<option value="">Select To Place</option>';
+    toPlaceSelect.disabled = true;
+    toPlaceHelp.textContent = 'Please select From Place first';
+    
+    // Clear seater when from place changes
+    seaterSelect.innerHTML = '<option value="">Select From and To places first</option>';
+    seaterSelect.disabled = true;
+    seaterHelp.textContent = 'Please select both From and To places to see available seaters';
+    
+    if (!fromPlaceId) {
+        return;
+    }
+    
+    // Find all trips with the selected from_place
+    const availableTrips = tripsData.filter(trip => trip.from_place_id === fromPlaceId);
+    
+    if (availableTrips.length === 0) {
+        toPlaceSelect.innerHTML = '<option value="">No destinations available</option>';
+        toPlaceHelp.textContent = 'No destinations available for the selected From Place';
+        return;
+    }
+    
+    // Get unique to_place_ids from available trips
+    const availableToPlaceIds = [...new Set(availableTrips.map(trip => trip.to_place_id))];
+    
+    // Filter places data to only show available to places
+    const availableToPlaces = placesData.filter(place => 
+        availableToPlaceIds.includes(place.id)
+    );
+    
+    // Populate to place options
+    availableToPlaces.forEach(place => {
+        const option = document.createElement('option');
+        option.value = place.id;
+        option.textContent = place.name;
+        toPlaceSelect.appendChild(option);
+    });
+    
+    // Enable to place dropdown
+    toPlaceSelect.disabled = false;
+    toPlaceHelp.textContent = 'Select your destination';
+    
+    // Pre-select to place if trip is pre-selected
+    {% if selected_trip %}
+    const selectedToPlaceId = {{ selected_trip.to_place.id }};
+    if (selectedToPlaceId && availableToPlaceIds.includes(selectedToPlaceId)) {
+        toPlaceSelect.value = selectedToPlaceId;
+        // Trigger seater update after a short delay
+        setTimeout(() => {
+            updateSeaterOptions();
+        }, 50);
+    }
+    {% endif %}
+}
+
+function updateSeaterOptions() {
+    const fromPlaceId = parseInt(fromPlaceSelect.value);
+    const toPlaceId = parseInt(toPlaceSelect.value);
+    
+    // Clear seater options
+    seaterSelect.innerHTML = '<option value="">Select Seater</option>';
+    seaterSelect.disabled = true;
+    seaterHelp.textContent = 'Please select both From and To places to see available seaters';
+    
+    if (!fromPlaceId || !toPlaceId) {
+        return;
+    }
+    
+    // Find matching trip
+    const matchingTrip = tripsData.find(trip => 
+        trip.from_place_id === fromPlaceId && trip.to_place_id === toPlaceId
+    );
+    
+    if (matchingTrip && matchingTrip.seaters.length > 0) {
+        // Populate seater options
+        matchingTrip.seaters.forEach(seater => {
+            const option = document.createElement('option');
+            option.value = seater.id;
+            option.textContent = `${seater.seat} - ₹${seater.price}`;
+            seaterSelect.appendChild(option);
+        });
+        seaterSelect.disabled = false;
+        seaterHelp.textContent = 'Select your preferred seater type';
+    } else {
+        seaterSelect.innerHTML = '<option value="">No seaters available for this route</option>';
+        seaterHelp.textContent = 'No seaters available for the selected route. Please choose different places.';
+    }
+}
+
+// Event listeners
+fromPlaceSelect.addEventListener('change', function() {
+    updateToPlaceOptions();
+});
+
+toPlaceSelect.addEventListener('change', function() {
+    updateSeaterOptions();
+});
+
+// Initialize on page load
+{% if selected_trip %}
+// If trip is pre-selected, update to place options first
+setTimeout(() => {
+    updateToPlaceOptions();
+}, 100);
+{% else %}
+// Initialize to place dropdown as disabled
+updateToPlaceOptions();
+{% endif %}
+</script>
+{% endblock %}
+

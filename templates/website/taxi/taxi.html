@@ -1,0 +1,58 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Taxi Booking - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <div class="text-center mb-8 sm:mb-12">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">Taxi Booking</h1>
+        <p class="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">Book your ride easily and safely</p>
+    </div>
+
+    <div class="text-center mb-8 sm:mb-12">
+        {% if user.is_authenticated %}
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{% url 'website:new_taxi_booking' %}" class="bg-red-600 text-white px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px] flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Book a Taxi
+            </a>
+            <a href="{% url 'website:my_taxi_bookings' %}" class="bg-gray-100 text-gray-700 px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-gray-200 transition-all border-2 border-gray-200 min-h-[48px] flex items-center justify-center">
+                My Bookings
+            </a>
+        </div>
+        {% else %}
+        <a href="{% url 'website:login' %}?next={% url 'website:taxi' %}" class="inline-block bg-red-600 text-white px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all shadow-lg hover:shadow-xl min-h-[48px]">
+            Login to Book
+        </a>
+        {% endif %}
+    </div>
+
+    {% if trips %}
+    <section>
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Available Routes</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {% for trip in trips %}
+            <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-1">{{ trip.from_place.name }}</h3>
+                        <svg class="w-6 h-6 text-red-600 my-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                        <h3 class="text-xl font-semibold text-gray-900">{{ trip.to_place.name }}</h3>
+                    </div>
+                </div>
+                {% if user.is_authenticated %}
+                <a href="{% url 'website:new_taxi_booking' %}?trip={{ trip.id }}" class="block w-full bg-red-600 text-white text-center px-4 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-all min-h-[44px] flex items-center justify-center">
+                    Book Now
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
