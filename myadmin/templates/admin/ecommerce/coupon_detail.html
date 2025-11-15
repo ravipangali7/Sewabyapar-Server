@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Coupon Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:coupon_update' coupon.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:coupon_delete' coupon.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:coupon_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Coupon Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">Code:</dt><dd class="col-sm-9">{{ coupon.code }}</dd><dt class="col-sm-3">Description:</dt><dd class="col-sm-9">{{ coupon.description|default:"-" }}</dd><dt class="col-sm-3">Discount Type:</dt><dd class="col-sm-9">{{ coupon.get_discount_type_display }}</dd><dt class="col-sm-3">Discount Value:</dt><dd class="col-sm-9">{{ coupon.discount_value }}</dd><dt class="col-sm-3">Minimum Amount:</dt><dd class="col-sm-9">{{ coupon.minimum_amount|default:"-" }}</dd><dt class="col-sm-3">Usage Limit:</dt><dd class="col-sm-9">{{ coupon.usage_limit|default:"Unlimited" }}</dd><dt class="col-sm-3">Used Count:</dt><dd class="col-sm-9">{{ coupon.used_count }}</dd><dt class="col-sm-3">Status:</dt><dd class="col-sm-9">{% if coupon.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</dd><dt class="col-sm-3">Valid From:</dt><dd class="col-sm-9">{{ coupon.valid_from|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Valid Until:</dt><dd class="col-sm-9">{{ coupon.valid_until|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Is Valid:</dt><dd class="col-sm-9">{% if coupon.is_valid %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

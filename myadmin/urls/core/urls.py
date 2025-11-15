@@ -1,0 +1,35 @@
+"""Core app URLs"""
+from django.urls import path
+from myadmin.views.core import user_views, address_views, otp_views, notification_views
+
+app_name = 'core'
+
+urlpatterns = [
+    # User URLs
+    path('users/', user_views.UserListView.as_view(), name='user_list'),
+    path('users/<int:pk>/', user_views.UserDetailView.as_view(), name='user_detail'),
+    path('users/create/', user_views.UserCreateView.as_view(), name='user_create'),
+    path('users/<int:pk>/update/', user_views.UserUpdateView.as_view(), name='user_update'),
+    path('users/<int:pk>/delete/', user_views.UserDeleteView.as_view(), name='user_delete'),
+    path('users/<int:pk>/verify-kyc/', user_views.verify_kyc, name='user_verify_kyc'),
+    path('users/bulk-delete/', user_views.UserBulkDeleteView.as_view(), name='user_bulk_delete'),
+    
+    # Address URLs
+    path('addresses/', address_views.AddressListView.as_view(), name='address_list'),
+    path('addresses/<int:pk>/', address_views.AddressDetailView.as_view(), name='address_detail'),
+    path('addresses/create/', address_views.AddressCreateView.as_view(), name='address_create'),
+    path('addresses/<int:pk>/update/', address_views.AddressUpdateView.as_view(), name='address_update'),
+    path('addresses/<int:pk>/delete/', address_views.AddressDeleteView.as_view(), name='address_delete'),
+    
+    # OTP URLs (read-only)
+    path('otps/', otp_views.OtpListView.as_view(), name='otp_list'),
+    path('otps/<int:pk>/', otp_views.OtpDetailView.as_view(), name='otp_detail'),
+    
+    # Notification URLs
+    path('notifications/', notification_views.NotificationListView.as_view(), name='notification_list'),
+    path('notifications/<int:pk>/', notification_views.NotificationDetailView.as_view(), name='notification_detail'),
+    path('notifications/create/', notification_views.NotificationCreateView.as_view(), name='notification_create'),
+    path('notifications/<int:pk>/update/', notification_views.NotificationUpdateView.as_view(), name='notification_update'),
+    path('notifications/<int:pk>/delete/', notification_views.NotificationDeleteView.as_view(), name='notification_delete'),
+]
+

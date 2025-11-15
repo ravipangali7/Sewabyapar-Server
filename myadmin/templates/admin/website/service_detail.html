@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Service Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:website:service_update' service.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:website:service_delete' service.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:website:service_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Service Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">Title:</dt><dd class="col-sm-9">{{ service.title }}</dd><dt class="col-sm-3">Slug:</dt><dd class="col-sm-9">{{ service.slug }}</dd><dt class="col-sm-3">Description:</dt><dd class="col-sm-9">{{ service.description }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ service.created_at|date:"M d, Y" }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

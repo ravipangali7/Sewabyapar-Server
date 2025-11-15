@@ -1,0 +1,14 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Vehicles</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:vehicle_create' %}"><i class="align-middle" data-feather="plus"></i> Add Vehicle</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Vehicles</h5></div><div class="card-body">
+        <form method="get" class="mb-3"><div class="input-group"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"><button class="btn btn-primary" type="submit">Search</button></div></form>
+        <table class="table table-hover"><thead><tr><th>Name</th><th>Vehicle No</th><th>Driver</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+            {% for vehicle in vehicles %}<tr><td>{{ vehicle.name }}</td><td>{{ vehicle.vehicle_no }}</td><td>{{ vehicle.driver.user.name }}</td><td>{% if vehicle.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td><td>{{ vehicle.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:taxi:vehicle_detail' vehicle.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:taxi:vehicle_update' vehicle.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="6" class="text-center">No vehicles found</td></tr>{% endfor %}
+        </tbody></table>
+        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+    </div></div></div></div>
+</div>
+{% endblock %}
+

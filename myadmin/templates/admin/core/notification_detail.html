@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Notification Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:core:notification_update' notification.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:core:notification_delete' notification.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:notification_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Notification Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ notification.user.name }}</dd><dt class="col-sm-3">Title:</dt><dd class="col-sm-9">{{ notification.title }}</dd><dt class="col-sm-3">Message:</dt><dd class="col-sm-9">{{ notification.message }}</dd><dt class="col-sm-3">Type:</dt><dd class="col-sm-9"><span class="badge bg-info">{{ notification.get_type_display }}</span></dd><dt class="col-sm-3">Read:</dt><dd class="col-sm-9">{% if notification.is_read %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-warning">No</span>{% endif %}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ notification.created_at|date:"M d, Y H:i" }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

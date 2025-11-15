@@ -4,6 +4,7 @@ from .address_views import addresses_view
 from .notification_views import notifications_view
 from .feedback_views import feedback_complain_view, feedback_detail_view
 from .help_support_views import help_support_view
+from .kyc_views import kyc_submit_view, kyc_status_view
 
 __all__ = [
     'profile_view',
@@ -13,5 +14,7 @@ __all__ = [
     'feedback_complain_view',
     'feedback_detail_view',
     'help_support_view',
+    'kyc_submit_view',
+    'kyc_status_view',
 ]
 

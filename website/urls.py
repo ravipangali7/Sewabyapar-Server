@@ -7,6 +7,7 @@ app_name = 'website'
 urlpatterns = [
     # General website routes
     path('', views.home_view, name='home'),
+    path('dashboard/', views.dashboard_view, name='dashboard'),
     path('page/<slug:slug>/', views.cms_page_view, name='cms_page'),
     path('contact/', views.contact_form_view, name='contact_form'),
     
@@ -44,4 +45,6 @@ urlpatterns = [
     path('profile/feedback/', profile.feedback_complain_view, name='feedback_complain'),
     path('profile/feedback/<int:feedback_id>/', profile.feedback_detail_view, name='feedback_detail'),
     path('profile/help-support/', profile.help_support_view, name='help_support'),
+    path('profile/kyc/', profile.kyc_submit_view, name='kyc_submit'),
+    path('profile/kyc/status/', profile.kyc_status_view, name='kyc_status'),
 ]

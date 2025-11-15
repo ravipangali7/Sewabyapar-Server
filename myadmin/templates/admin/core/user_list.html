@@ -1,0 +1,127 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Users</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:user_create' %}">
+            <i class="align-middle" data-feather="plus"></i> Add User
+        </a>
+        <a class="btn btn-success ms-2" href="?export=csv">
+            <i class="align-middle" data-feather="download"></i> Export CSV
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Users</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" placeholder="Search users..." value="{{ search }}">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                    </form>
+                    <form method="post" action="{% url 'myadmin:core:user_bulk_delete' %}" id="bulk-action-form" class="mb-3">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">Select All</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()">Deselect All</button>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete selected users?')">
+                                    <i class="align-middle" data-feather="trash-2"></i> Delete Selected
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="40"><input type="checkbox" id="select-all-checkbox" onclick="toggleAll()"></th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Email</th>
+                                <th>KYC Status</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td><input type="checkbox" name="selected_items" value="{{ user.pk }}" class="item-checkbox"></td>
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.phone }}</td>
+                                <td>{{ user.email|default:"-" }}</td>
+                                <td>
+                                    {% if user.is_kyc_verified %}
+                                        <span class="badge bg-success">Verified</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'myadmin:core:user_detail' user.pk %}" class="btn btn-sm btn-info">View</a>
+                                    <a href="{% url 'myadmin:core:user_update' user.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">No users found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if is_paginated %}
+                    <nav>
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                            {% endif %}
+                            <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function toggleAll() {
+    const selectAll = document.getElementById('select-all-checkbox');
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    document.getElementById('select-all-checkbox').checked = true;
+}
+
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('select-all-checkbox').checked = false;
+}
+</script>
+{% endblock %}
+

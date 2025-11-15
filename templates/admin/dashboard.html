@@ -1,0 +1,342 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <h1 class="h3 mb-3"><strong>Analytics</strong> Dashboard</h1>
+
+    <!-- Main Stats Cards -->
+    <div class="row">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col mt-0">
+                            <h5 class="card-title">Total Users</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="users"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 class="mt-1 mb-3">{{ total_users }}</h1>
+                    <div class="mb-0">
+                        <span class="text-{% if users_growth_today >= 0 %}success{% else %}danger{% endif %}">
+                            <i class="mdi mdi-arrow-{% if users_growth_today >= 0 %}up{% else %}down{% endif %}-bold"></i> 
+                            {{ users_growth_today|floatformat:1 }}%
+                        </span>
+                        <span class="text-muted">vs yesterday</span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Today: {{ new_users_today }} | This week: {{ new_users_week }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col mt-0">
+                            <h5 class="card-title">Total Orders</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="shopping-cart"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 class="mt-1 mb-3">{{ total_orders }}</h1>
+                    <div class="mb-0">
+                        <span class="text-{% if orders_growth_today >= 0 %}success{% else %}danger{% endif %}">
+                            <i class="mdi mdi-arrow-{% if orders_growth_today >= 0 %}up{% else %}down{% endif %}-bold"></i> 
+                            {{ orders_growth_today|floatformat:1 }}%
+                        </span>
+                        <span class="text-muted">vs yesterday</span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Today: {{ orders_today }} | Pending: {{ pending_orders }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col mt-0">
+                            <h5 class="card-title">Total Revenue</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="trending-up"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 class="mt-1 mb-3">₹{{ total_revenue|floatformat:2 }}</h1>
+                    <div class="mb-0">
+                        <span class="text-{% if revenue_growth_today >= 0 %}success{% else %}danger{% endif %}">
+                            <i class="mdi mdi-arrow-{% if revenue_growth_today >= 0 %}up{% else %}down{% endif %}-bold"></i> 
+                            {{ revenue_growth_today|floatformat:1 }}%
+                        </span>
+                        <span class="text-muted">vs yesterday</span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Today: ₹{{ today_revenue|floatformat:2 }} | Week: ₹{{ week_revenue|floatformat:2 }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col mt-0">
+                            <h5 class="card-title">Total Products</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="package"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 class="mt-1 mb-3">{{ total_products }}</h1>
+                    <div class="mb-0">
+                        <span class="text-success">
+                            <i class="mdi mdi-check-circle"></i> {{ active_products }}
+                        </span>
+                        <span class="text-muted">Active</span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Stores: {{ total_stores }} ({{ active_stores }} active)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Comparison Cards -->
+    <div class="row">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-2">Today's Revenue</h5>
+                    <h2 class="mb-0">₹{{ today_revenue|floatformat:2 }}</h2>
+                    <div class="mt-2">
+                        <span class="text-{% if revenue_growth_today >= 0 %}success{% else %}danger{% endif %}">
+                            <i class="mdi mdi-arrow-{% if revenue_growth_today >= 0 %}up{% else %}down{% endif %}-bold"></i> 
+                            {{ revenue_growth_today|floatformat:1 }}%
+                        </span>
+                        <span class="text-muted">vs yesterday (₹{{ yesterday_revenue|floatformat:2 }})</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-2">This Week's Revenue</h5>
+                    <h2 class="mb-0">₹{{ week_revenue|floatformat:2 }}</h2>
+                    <div class="mt-2">
+                        <span class="text-{% if revenue_growth_week >= 0 %}success{% else %}danger{% endif %}">
+                            <i class="mdi mdi-arrow-{% if revenue_growth_week >= 0 %}up{% else %}down{% endif %}-bold"></i> 
+                            {{ revenue_growth_week|floatformat:1 }}%
+                        </span>
+                        <span class="text-muted">vs last week (₹{{ last_week_revenue|floatformat:2 }})</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-2">This Month's Revenue</h5>
+                    <h2 class="mb-0">₹{{ month_revenue|floatformat:2 }}</h2>
+                    <div class="mt-2">
+                        <span class="text-{% if revenue_growth_month >= 0 %}success{% else %}danger{% endif %}">
+                            <i class="mdi mdi-arrow-{% if revenue_growth_month >= 0 %}up{% else %}down{% endif %}-bold"></i> 
+                            {{ revenue_growth_month|floatformat:1 }}%
+                        </span>
+                        <span class="text-muted">vs last month (₹{{ last_month_revenue|floatformat:2 }})</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-2">Taxi Bookings</h5>
+                    <h2 class="mb-0">{{ total_taxi_bookings }}</h2>
+                    <div class="mt-2">
+                        <span class="text-warning">{{ pending_taxi_bookings }}</span>
+                        <span class="text-muted">Pending</span>
+                        <span class="text-success ms-2">{{ completed_taxi_bookings }}</span>
+                        <span class="text-muted">Completed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Recent Orders -->
+        <div class="col-12 col-lg-8 col-xxl-9 d-flex">
+            <div class="card flex-fill">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Orders</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover my-0">
+                            <thead>
+                                <tr>
+                                    <th>Order Number</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td><a href="{% url 'myadmin:ecommerce:order_detail' order.pk %}">{{ order.order_number }}</a></td>
+                                    <td>{{ order.user.name }}</td>
+                                    <td>₹{{ order.total_amount|floatformat:2 }}</td>
+                                    <td><span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'pending' %}warning{% elif order.status == 'cancelled' %}danger{% else %}info{% endif %}">{{ order.get_status_display }}</span></td>
+                                    <td>{{ order.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No orders found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats & Order Status -->
+        <div class="col-12 col-lg-4 col-xxl-3 d-flex">
+            <div class="card flex-fill w-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Order Status Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for status in order_status_counts %}
+                        <li class="mb-3">
+                            <strong>{{ status.status|title }}:</strong> 
+                            <span class="badge bg-secondary">{{ status.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-muted">No orders yet</li>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    <div class="mt-3">
+                        <strong>Quick Stats:</strong>
+                        <ul class="list-unstyled mt-2 mb-0">
+                            <li class="mb-2">
+                                <strong>Stores:</strong> {{ total_stores }} ({{ active_stores }} active)
+                            </li>
+                            <li class="mb-2">
+                                <strong>Completed Orders:</strong> {{ completed_orders }}
+                            </li>
+                            <li class="mb-2">
+                                <strong>Taxi Bookings:</strong> {{ total_taxi_bookings }}
+                            </li>
+                            <li class="mb-2">
+                                <strong>New Users (Month):</strong> {{ new_users_month }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Users and Products -->
+    <div class="row">
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Users</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in recent_users %}
+                                <tr>
+                                    <td><a href="{% url 'myadmin:core:user_detail' user.pk %}">{{ user.name }}</a></td>
+                                    <td>{{ user.phone }}</td>
+                                    <td>{{ user.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No users found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Products</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Store</th>
+                                    <th>Price</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in recent_products %}
+                                <tr>
+                                    <td><a href="{% url 'myadmin:ecommerce:product_detail' product.pk %}">{{ product.name|truncatewords:5 }}</a></td>
+                                    <td>{{ product.store.name|default:"-" }}</td>
+                                    <td>₹{{ product.price|floatformat:2 }}</td>
+                                    <td>{{ product.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No products found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

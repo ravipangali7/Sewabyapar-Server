@@ -1,0 +1,13 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Trips</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:trip_create' %}"><i class="align-middle" data-feather="plus"></i> Add Trip</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Trips</h5></div><div class="card-body">
+        <table class="table table-hover"><thead><tr><th>From</th><th>To</th><th>Actions</th></tr></thead><tbody>
+            {% for trip in trips %}<tr><td>{{ trip.from_place.name }}</td><td>{{ trip.to_place.name }}</td><td><a href="{% url 'myadmin:taxi:trip_detail' trip.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:taxi:trip_update' trip.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="3" class="text-center">No trips found</td></tr>{% endfor %}
+        </tbody></table>
+        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+    </div></div></div></div>
+</div>
+{% endblock %}
+

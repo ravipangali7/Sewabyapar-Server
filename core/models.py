@@ -61,6 +61,16 @@ class User(AbstractUser):
     country = models.CharField(max_length=10, choices=COUNTRY_CHOICES, default='Nepal')
     fcm_token = models.CharField(max_length=255, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    
+    # KYC Verification Fields
+    national_id = models.CharField(max_length=50, blank=True, null=True, help_text='National ID number')
+    national_id_document = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='National ID document image')
+    pan_no = models.CharField(max_length=20, blank=True, null=True, help_text='PAN (Permanent Account Number)')
+    pan_document = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='PAN document image')
+    is_kyc_verified = models.BooleanField(default=False, help_text='Whether KYC has been verified by admin')
+    kyc_submitted_at = models.DateTimeField(blank=True, null=True, help_text='When user submitted KYC information')
+    kyc_verified_at = models.DateTimeField(blank=True, null=True, help_text='When KYC was verified by admin')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

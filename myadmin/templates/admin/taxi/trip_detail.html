@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Trip Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:trip_update' trip.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:trip_delete' trip.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:trip_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Trip Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">From:</dt><dd class="col-sm-9">{{ trip.from_place.name }}</dd><dt class="col-sm-3">To:</dt><dd class="col-sm-9">{{ trip.to_place.name }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

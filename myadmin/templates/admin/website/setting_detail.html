@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Website Settings</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:website:setting_update' %}">Edit Settings</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Settings Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">Name:</dt><dd class="col-sm-9">{{ setting.name }}</dd><dt class="col-sm-3">Phone:</dt><dd class="col-sm-9">{{ setting.phone }}</dd><dt class="col-sm-3">Email:</dt><dd class="col-sm-9">{{ setting.email }}</dd><dt class="col-sm-3">Website:</dt><dd class="col-sm-9">{{ setting.website|default:"-" }}</dd><dt class="col-sm-3">Address:</dt><dd class="col-sm-9">{{ setting.address|default:"-" }}</dd><dt class="col-sm-3">Tagline:</dt><dd class="col-sm-9">{{ setting.tagline|default:"-" }}</dd><dt class="col-sm-3">Total Customers:</dt><dd class="col-sm-9">{{ setting.total_customers }}</dd><dt class="col-sm-3">Daily Signup:</dt><dd class="col-sm-9">{{ setting.total_daily_signup }}</dd><dt class="col-sm-3">Daily Transactions:</dt><dd class="col-sm-9">{{ setting.total_txn_everyday }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

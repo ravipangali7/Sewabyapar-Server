@@ -1,0 +1,135 @@
+{% load static %}
+<nav id="sidebar" class="sidebar js-sidebar">
+    <div class="sidebar-content js-simplebar">
+        <a class="sidebar-brand" href="{% url 'myadmin:dashboard' %}"><span class="align-middle">Admin Panel</span></a>
+
+        <ul class="sidebar-nav">
+            <li class="sidebar-header">Main</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:dashboard' %}">
+                    <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Dashboard</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">Core</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:user_list' %}">
+                    <i class="align-middle" data-feather="users"></i> <span class="align-middle">Users</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:address_list' %}">
+                    <i class="align-middle" data-feather="map-pin"></i> <span class="align-middle">Addresses</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:otp_list' %}">
+                    <i class="align-middle" data-feather="key"></i> <span class="align-middle">OTPs</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:notification_list' %}">
+                    <i class="align-middle" data-feather="bell"></i> <span class="align-middle">Notifications</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">Ecommerce</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:product_list' %}">
+                    <i class="align-middle" data-feather="package"></i> <span class="align-middle">Products</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:category_list' %}">
+                    <i class="align-middle" data-feather="grid"></i> <span class="align-middle">Categories</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:store_list' %}">
+                    <i class="align-middle" data-feather="shopping-bag"></i> <span class="align-middle">Stores</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:order_list' %}">
+                    <i class="align-middle" data-feather="shopping-cart"></i> <span class="align-middle">Orders</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:review_list' %}">
+                    <i class="align-middle" data-feather="star"></i> <span class="align-middle">Reviews</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:cart_list' %}">
+                    <i class="align-middle" data-feather="shopping-bag"></i> <span class="align-middle">Carts</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:wishlist_list' %}">
+                    <i class="align-middle" data-feather="heart"></i> <span class="align-middle">Wishlists</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:coupon_list' %}">
+                    <i class="align-middle" data-feather="tag"></i> <span class="align-middle">Coupons</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">Taxi</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:taxi:driver_list' %}">
+                    <i class="align-middle" data-feather="user"></i> <span class="align-middle">Drivers</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:taxi:vehicle_list' %}">
+                    <i class="align-middle" data-feather="truck"></i> <span class="align-middle">Vehicles</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:taxi:trip_list' %}">
+                    <i class="align-middle" data-feather="map"></i> <span class="align-middle">Trips</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:taxi:seater_list' %}">
+                    <i class="align-middle" data-feather="grid"></i> <span class="align-middle">Seaters</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:taxi:booking_list' %}">
+                    <i class="align-middle" data-feather="calendar"></i> <span class="align-middle">Bookings</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">Shared</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:shared:place_list' %}">
+                    <i class="align-middle" data-feather="map-pin"></i> <span class="align-middle">Places</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:shared:feedback_list' %}">
+                    <i class="align-middle" data-feather="message-square"></i> <span class="align-middle">Feedback/Complaints</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">Website</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:website:setting_detail' %}">
+                    <i class="align-middle" data-feather="settings"></i> <span class="align-middle">Settings</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:website:service_list' %}">
+                    <i class="align-middle" data-feather="briefcase"></i> <span class="align-middle">Services</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:website:cms_list' %}">
+                    <i class="align-middle" data-feather="file-text"></i> <span class="align-middle">CMS Pages</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

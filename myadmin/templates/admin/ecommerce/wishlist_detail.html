@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Wishlist Details</h1><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:wishlist_delete' wishlist.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:wishlist_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Wishlist Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ wishlist.user.name }}</dd><dt class="col-sm-3">Product:</dt><dd class="col-sm-9">{{ wishlist.product.name }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ wishlist.created_at|date:"M d, Y H:i" }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

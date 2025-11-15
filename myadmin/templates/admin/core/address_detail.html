@@ -1,0 +1,32 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Address Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:address_update' address.pk %}">Edit</a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:address_delete' address.pk %}">Delete</a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:address_list' %}">Back</a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">Address Information</h5></div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ address.user.name }}</dd>
+                        <dt class="col-sm-3">Title:</dt><dd class="col-sm-9">{{ address.title }}</dd>
+                        <dt class="col-sm-3">Full Name:</dt><dd class="col-sm-9">{{ address.full_name }}</dd>
+                        <dt class="col-sm-3">Phone:</dt><dd class="col-sm-9">{{ address.phone }}</dd>
+                        <dt class="col-sm-3">Address:</dt><dd class="col-sm-9">{{ address.address }}</dd>
+                        <dt class="col-sm-3">City:</dt><dd class="col-sm-9">{{ address.city }}</dd>
+                        <dt class="col-sm-3">State:</dt><dd class="col-sm-9">{{ address.state }}</dd>
+                        <dt class="col-sm-3">Zip Code:</dt><dd class="col-sm-9">{{ address.zip_code }}</dd>
+                        <dt class="col-sm-3">Default:</dt><dd class="col-sm-9">{% if address.is_default %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

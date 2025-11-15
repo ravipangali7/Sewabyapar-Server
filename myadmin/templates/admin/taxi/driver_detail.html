@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Driver Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:driver_update' driver.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:driver_delete' driver.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:driver_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Driver Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ driver.user.name }}</dd><dt class="col-sm-3">License:</dt><dd class="col-sm-9">{{ driver.license }}</dd><dt class="col-sm-3">Status:</dt><dd class="col-sm-9">{% if driver.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ driver.created_at|date:"M d, Y" }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

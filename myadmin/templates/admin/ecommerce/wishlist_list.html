@@ -1,0 +1,14 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Wishlists</h1></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Wishlist Items</h5></div><div class="card-body">
+        <form method="get" class="mb-3"><div class="input-group"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"><button class="btn btn-primary" type="submit">Search</button></div></form>
+        <table class="table table-hover"><thead><tr><th>User</th><th>Product</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+            {% for wishlist in wishlists %}<tr><td>{{ wishlist.user.name }}</td><td>{{ wishlist.product.name }}</td><td>{{ wishlist.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:ecommerce:wishlist_detail' wishlist.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:ecommerce:wishlist_delete' wishlist.pk %}" class="btn btn-sm btn-danger">Delete</a></td></tr>{% empty %}<tr><td colspan="4" class="text-center">No wishlist items found</td></tr>{% endfor %}
+        </tbody></table>
+        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+    </div></div></div></div>
+</div>
+{% endblock %}
+

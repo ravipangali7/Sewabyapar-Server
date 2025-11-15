@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">OTP Details</h1><a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:otp_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">OTP Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">Phone:</dt><dd class="col-sm-9">{{ otp.phone }}</dd><dt class="col-sm-3">OTP:</dt><dd class="col-sm-9">{{ otp.otp }}</dd><dt class="col-sm-3">Country Code:</dt><dd class="col-sm-9">{{ otp.country_code }}</dd><dt class="col-sm-3">Expires At:</dt><dd class="col-sm-9">{{ otp.expires_at|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ otp.created_at|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Expired:</dt><dd class="col-sm-9">{% if otp.is_expired %}<span class="badge bg-danger">Yes</span>{% else %}<span class="badge bg-success">No</span>{% endif %}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

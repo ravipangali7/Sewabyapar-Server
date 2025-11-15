@@ -1,0 +1,2 @@
+# Ecommerce views package
+

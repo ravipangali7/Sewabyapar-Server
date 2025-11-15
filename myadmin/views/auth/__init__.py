@@ -1,0 +1,2 @@
+# Auth views package
+

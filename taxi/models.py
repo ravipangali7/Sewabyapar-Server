@@ -53,7 +53,7 @@ class Seater(models.Model):
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='seaters')
     
     def __str__(self):
-        return f"{self.trip} - {self.seat} (${self.price})"
+        return f"{self.trip} - {self.seat} (₹{self.price})"
     
     class Meta:
         ordering = ['trip', 'price']

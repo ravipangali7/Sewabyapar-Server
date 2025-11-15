@@ -1,0 +1,14 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Orders</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:order_create' %}"><i class="align-middle" data-feather="plus"></i> Add Order</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Orders</h5></div><div class="card-body">
+        <form method="get" class="mb-3"><div class="row"><div class="col-md-6"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"></div><div class="col-md-4"><select class="form-select" name="status"><option value="">All Status</option>{% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Search</button></div></div></form>
+        <table class="table table-hover"><thead><tr><th>Order Number</th><th>Customer</th><th>Amount</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+            {% for order in orders %}<tr><td><a href="{% url 'myadmin:ecommerce:order_detail' order.pk %}">{{ order.order_number }}</a></td><td>{{ order.user.name }}</td><td>₹{{ order.total_amount }}</td><td><span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'pending' %}warning{% elif order.status == 'cancelled' %}danger{% else %}info{% endif %}">{{ order.get_status_display }}</span></td><td>{{ order.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:ecommerce:order_detail' order.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:ecommerce:order_update' order.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="6" class="text-center">No orders found</td></tr>{% endfor %}
+        </tbody></table>
+        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+    </div></div></div></div>
+</div>
+{% endblock %}
+

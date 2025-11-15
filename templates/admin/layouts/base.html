@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="Responsive Admin &amp; Dashboard Template based on Bootstrap 5" />
+    <meta name="author" content="AdminKit" />
+    <meta name="keywords" content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web" />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link rel="shortcut icon" href="{% static 'myadmin/img/icons/icon-48x48.png' %}" />
+
+
+    <title>Admin Panel | Sewabyapar</title>
+
+    <link href="{% static 'myadmin/css/app.css' %}" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div class="wrapper">
+      {% include 'admin/layouts/sidebar.html' %}
+
+      <div class="main">
+        {% include 'admin/layouts/header.html' %}
+
+        <main class="content">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+          {% block content %}{% endblock %}
+        </main>
+
+        {% include 'admin/layouts/footer.html' %}
+      </div>
+    </div>
+
+    <script src="{% static 'myadmin/js/app.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script>
+      // Initialize Feather icons
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof feather !== 'undefined') {
+          feather.replace();
+        }
+      });
+    </script>
+  </body>
+</html>

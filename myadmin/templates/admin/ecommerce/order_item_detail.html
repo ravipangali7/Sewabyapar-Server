@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Order Item Details</h1><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:order_item_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Order Item Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">Order:</dt><dd class="col-sm-9"><a href="{% url 'myadmin:ecommerce:order_detail' order_item.order.pk %}">{{ order_item.order.order_number }}</a></dd><dt class="col-sm-3">Product:</dt><dd class="col-sm-9">{{ order_item.product.name }}</dd><dt class="col-sm-3">Store:</dt><dd class="col-sm-9">{{ order_item.store.name }}</dd><dt class="col-sm-3">Quantity:</dt><dd class="col-sm-9">{{ order_item.quantity }}</dd><dt class="col-sm-3">Price:</dt><dd class="col-sm-9">₹{{ order_item.price }}</dd><dt class="col-sm-3">Total:</dt><dd class="col-sm-9">₹{{ order_item.total }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

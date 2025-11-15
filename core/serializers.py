@@ -5,8 +5,10 @@ from .models import User, Address, Notification, Otp
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'phone', 'name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'phone', 'name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture', 
+                  'national_id', 'pan_no', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at', 
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_kyc_verified', 'kyc_verified_at']
         extra_kwargs = {
             'phone': {'required': True},
             'name': {'required': True},

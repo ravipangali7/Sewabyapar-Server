@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'shared',
     'taxi',
     'website',
+    'myadmin',
     'django_ckeditor_5',
     'rest_framework',
     'rest_framework.authtoken',

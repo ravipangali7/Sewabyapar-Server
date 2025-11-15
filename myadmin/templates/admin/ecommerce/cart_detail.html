@@ -1,0 +1,10 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Cart Details</h1><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:cart_delete' cart.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:cart_list' %}">Back</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Cart Information</h5></div><div class="card-body">
+        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ cart.user.name }}</dd><dt class="col-sm-3">Product:</dt><dd class="col-sm-9">{{ cart.product.name }}</dd><dt class="col-sm-3">Quantity:</dt><dd class="col-sm-9">{{ cart.quantity }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ cart.created_at|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Updated:</dt><dd class="col-sm-9">{{ cart.updated_at|date:"M d, Y H:i" }}</dd></dl>
+    </div></div></div></div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,67 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">User Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:user_update' user.pk %}">Edit</a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:user_delete' user.pk %}">Delete</a>
+        {% if not user.is_kyc_verified %}
+        <form method="post" action="{% url 'myadmin:core:user_verify_kyc' user.pk %}" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Verify KYC</button>
+        </form>
+        {% endif %}
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:user_list' %}">Back to List</a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">User Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Name:</dt>
+                        <dd class="col-sm-9">{{ user.name }}</dd>
+                        <dt class="col-sm-3">Phone:</dt>
+                        <dd class="col-sm-9">{{ user.phone }}</dd>
+                        <dt class="col-sm-3">Email:</dt>
+                        <dd class="col-sm-9">{{ user.email|default:"-" }}</dd>
+                        <dt class="col-sm-3">Country:</dt>
+                        <dd class="col-sm-9">{{ user.country }} ({{ user.country_code }})</dd>
+                        <dt class="col-sm-3">KYC Status:</dt>
+                        <dd class="col-sm-9">
+                            {% if user.is_kyc_verified %}
+                                <span class="badge bg-success">Verified</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </dd>
+                        <dt class="col-sm-3">Status:</dt>
+                        <dd class="col-sm-9">
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </dd>
+                        <dt class="col-sm-3">Staff:</dt>
+                        <dd class="col-sm-9">
+                            {% if user.is_staff %}
+                                <span class="badge bg-info">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </dd>
+                        <dt class="col-sm-3">Created:</dt>
+                        <dd class="col-sm-9">{{ user.created_at|date:"M d, Y H:i" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

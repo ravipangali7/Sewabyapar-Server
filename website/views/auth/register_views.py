@@ -8,7 +8,7 @@ from website.models import MySetting, CMSPages
 def register_view(request):
     """User registration page"""
     if request.user.is_authenticated:
-        return redirect('website:shop')
+        return redirect('website:dashboard')
     
     try:
         settings = MySetting.objects.first()
@@ -24,8 +24,8 @@ def register_view(request):
         email = request.POST.get('email', '').strip() or None
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
-        country_code = request.POST.get('country_code', '+977')
-        country = request.POST.get('country', 'Nepal')
+        country_code = request.POST.get('country_code', '+91')
+        country = request.POST.get('country', 'India')
         
         # Validation
         if not all([phone, name, password]):
@@ -46,7 +46,7 @@ def register_view(request):
                 )
                 login(request, user)
                 messages.success(request, 'Registration successful!')
-                return redirect('website:shop')
+                return redirect('website:dashboard')
             except Exception as e:
                 messages.error(request, f'Registration failed: {str(e)}')
     
