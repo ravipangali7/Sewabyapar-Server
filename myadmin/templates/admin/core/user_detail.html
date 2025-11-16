@@ -5,63 +5,382 @@
 <div class="container-fluid p-0">
     <div class="mb-3">
         <h1 class="h3 d-inline align-middle">User Details</h1>
-        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:user_update' user.pk %}">Edit</a>
-        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:user_delete' user.pk %}">Delete</a>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:user_update' user.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:user_delete' user.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
         {% if not user.is_kyc_verified %}
         <form method="post" action="{% url 'myadmin:core:user_verify_kyc' user.pk %}" class="d-inline ms-2">
             {% csrf_token %}
-            <button type="submit" class="btn btn-success">Verify KYC</button>
+            <button type="submit" class="btn btn-success">
+                <i class="align-middle" data-feather="check-circle"></i> Verify KYC
+            </button>
         </form>
         {% endif %}
-        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:user_list' %}">Back to List</a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:user_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
     </div>
-    <div class="row">
-        <div class="col-12">
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">User Information</h5>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Account Status</h6>
+                            {% if user.is_active %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 16px; height: 16px;"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if user.is_active %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">KYC Status</h6>
+                            {% if user.is_kyc_verified %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Verified
+                                </span>
+                            {% elif user.national_id or user.national_id_document or user.pan_no or user.pan_document %}
+                                <span class="badge bg-warning fs-6">
+                                    <i class="align-middle" data-feather="clock" style="width: 16px; height: 16px;"></i> Pending
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">Not Submitted</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="shield"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">User Type</h6>
+                            {% if user.is_staff %}
+                                <span class="badge bg-info fs-6">Staff</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">Customer</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if user.is_staff %}user-check{% else %}user{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Member Since</h6>
+                            <div class="fs-6">{{ user.created_at|date:"M Y" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Information -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="user"></i> Personal Information
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">Name:</dt>
-                        <dd class="col-sm-9">{{ user.name }}</dd>
-                        <dt class="col-sm-3">Phone:</dt>
-                        <dd class="col-sm-9">{{ user.phone }}</dd>
-                        <dt class="col-sm-3">Email:</dt>
-                        <dd class="col-sm-9">{{ user.email|default:"-" }}</dd>
-                        <dt class="col-sm-3">Country:</dt>
-                        <dd class="col-sm-9">{{ user.country }} ({{ user.country_code }})</dd>
-                        <dt class="col-sm-3">KYC Status:</dt>
-                        <dd class="col-sm-9">
+                    {% if user.profile_picture %}
+                    <div class="text-center mb-4">
+                        <img src="{{ user.profile_picture.url }}" alt="{{ user.name }}" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #dee2e6;">
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Name:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ user.name }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
+                        <div class="col-sm-8">{{ user.phone }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="mail" style="width: 16px; height: 16px;"></i> Email:</strong></div>
+                        <div class="col-sm-8">{{ user.email|default:"-" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="globe" style="width: 16px; height: 16px;"></i> Country:</strong></div>
+                        <div class="col-sm-8">{{ user.country }} ({{ user.country_code }})</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Account Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="shield" style="width: 16px; height: 16px;"></i> KYC Status:</strong></div>
+                        <div class="col-12 mt-1">
                             {% if user.is_kyc_verified %}
-                                <span class="badge bg-success">Verified</span>
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Verified
+                                </span>
+                            {% elif user.national_id or user.national_id_document or user.pan_no or user.pan_document %}
+                                <span class="badge bg-warning">
+                                    <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i> Pending
+                                </span>
                             {% else %}
-                                <span class="badge bg-warning">Pending</span>
+                                <span class="badge bg-secondary">Not Submitted</span>
                             {% endif %}
-                        </dd>
-                        <dt class="col-sm-3">Status:</dt>
-                        <dd class="col-sm-9">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Account Status:</strong></div>
+                        <div class="col-12 mt-1">
                             {% if user.is_active %}
                                 <span class="badge bg-success">Active</span>
                             {% else %}
                                 <span class="badge bg-danger">Inactive</span>
                             {% endif %}
-                        </dd>
-                        <dt class="col-sm-3">Staff:</dt>
-                        <dd class="col-sm-9">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="user-check" style="width: 16px; height: 16px;"></i> Staff Status:</strong></div>
+                        <div class="col-12 mt-1">
                             {% if user.is_staff %}
-                                <span class="badge bg-info">Yes</span>
+                                <span class="badge bg-info">Staff Member</span>
                             {% else %}
-                                <span class="badge bg-secondary">No</span>
+                                <span class="badge bg-secondary">Regular User</span>
                             {% endif %}
-                        </dd>
-                        <dt class="col-sm-3">Created:</dt>
-                        <dd class="col-sm-9">{{ user.created_at|date:"M d, Y H:i" }}</dd>
-                    </dl>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ user.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ user.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    {% if user.last_login %}
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="log-in" style="width: 16px; height: 16px;"></i> Last Login:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ user.last_login|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ user.last_login|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- KYC Section -->
+    {% if user.national_id or user.national_id_document or user.pan_no or user.pan_document %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="check-circle"></i> KYC Verification
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- National ID -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-primary">
+                                <i class="align-middle" data-feather="id-card"></i> National ID
+                            </h6>
+                            <div class="mb-2">
+                                <strong>Number:</strong> 
+                                {% if user.national_id %}
+                                    <span class="badge bg-info">{{ user.national_id }}</span>
+                                {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </div>
+                            {% if user.national_id_document %}
+                            <div class="mb-2">
+                                <strong>Document:</strong><br>
+                                <a href="{{ user.national_id_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.national_id_document.url }}" data-title="National ID Document">
+                                    <img src="{{ user.national_id_document.url }}" alt="National ID" class="img-thumbnail" style="max-width: 200px; max-height: 200px; cursor: pointer;">
+                                </a>
+                            </div>
+                            <div>
+                                <a href="{{ user.national_id_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="align-middle" data-feather="download"></i> Download
+                                </a>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Document not uploaded</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- PAN -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-info">
+                                <i class="align-middle" data-feather="file-text"></i> PAN
+                            </h6>
+                            <div class="mb-2">
+                                <strong>Number:</strong> 
+                                {% if user.pan_no %}
+                                    <span class="badge bg-info">{{ user.pan_no }}</span>
+                                {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </div>
+                            {% if user.pan_document %}
+                            <div class="mb-2">
+                                <strong>Document:</strong><br>
+                                <a href="{{ user.pan_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.pan_document.url }}" data-title="PAN Document">
+                                    <img src="{{ user.pan_document.url }}" alt="PAN" class="img-thumbnail" style="max-width: 200px; max-height: 200px; cursor: pointer;">
+                                </a>
+                            </div>
+                            <div>
+                                <a href="{{ user.pan_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="align-middle" data-feather="download"></i> Download
+                                </a>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Document not uploaded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Submitted:</strong><br>
+                            {% if user.kyc_submitted_at %}
+                                <span class="text-muted">
+                                    <i class="align-middle" data-feather="calendar" style="width: 14px; height: 14px;"></i>
+                                    {{ user.kyc_submitted_at|date:"M d, Y H:i" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not submitted</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Verified:</strong><br>
+                            {% if user.is_kyc_verified and user.kyc_verified_at %}
+                                <span class="text-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i>
+                                    {{ user.kyc_verified_at|date:"M d, Y H:i" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not verified</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'myadmin:core:kyc_verification' user_id=user.pk %}" class="btn btn-success">
+                                <i class="align-middle" data-feather="check-circle"></i> Review KYC
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<!-- Document Modal -->
+<div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="documentModalLabel">Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalDocumentImage" src="" alt="Document" class="img-fluid" style="max-height: 80vh;">
+            </div>
+            <div class="modal-footer">
+                <a id="modalDocumentLink" href="" target="_blank" class="btn btn-primary">
+                    <i class="align-middle" data-feather="download"></i> Open Full Size
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentModal = document.getElementById('documentModal');
+    if (documentModal) {
+        documentModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const imageUrl = button.getAttribute('data-image');
+            const title = button.getAttribute('data-title');
+            
+            document.getElementById('modalDocumentImage').src = imageUrl;
+            document.getElementById('modalDocumentLink').href = imageUrl;
+            document.getElementById('documentModalLabel').textContent = title;
+        });
+    }
+    
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+
+<style>
+.document-preview-link:hover img {
+    opacity: 0.8;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
+</style>
 {% endblock %}
 

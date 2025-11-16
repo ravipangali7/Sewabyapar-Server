@@ -7,11 +7,11 @@ from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.views import View
 from django.urls import reverse_lazy
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.db import IntegrityError
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Order
-from myadmin.forms.ecommerce_forms import OrderForm
+from myadmin.forms.ecommerce_forms import OrderForm, OrderItemFormSet
 from myadmin.utils.export import export_orders_csv
 from myadmin.utils.bulk_actions import bulk_delete, bulk_update_status, get_selected_ids
 
@@ -68,17 +68,40 @@ class OrderCreateView(StaffRequiredMixin, CreateView):
     form_class = OrderForm
     template_name = 'admin/ecommerce/order_form.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = OrderItemFormSet(self.request.POST)
+        else:
+            context['formset'] = OrderItemFormSet()
+        return context
+    
     def form_valid(self, form):
-        try:
-            messages.success(self.request, 'Order created successfully.')
-            return super().form_valid(form)
-        except IntegrityError as e:
-            logger.error(f'Error creating order: {str(e)}')
-            messages.error(self.request, 'Error creating order. Please check the data and try again.')
-            return self.form_invalid(form)
-        except Exception as e:
-            logger.error(f'Unexpected error creating order: {str(e)}')
-            messages.error(self.request, 'An unexpected error occurred while creating the order.')
+        context = self.get_context_data()
+        formset = context['formset']
+        
+        if formset.is_valid():
+            try:
+                self.object = form.save()
+                formset.instance = self.object
+                formset.save()
+                
+                # Calculate and update order total from all items
+                total = self.object.items.aggregate(total=Sum('total'))['total'] or 0
+                self.object.total_amount = total
+                self.object.save()
+                
+                messages.success(self.request, 'Order created successfully.')
+                return redirect(self.get_success_url())
+            except IntegrityError as e:
+                logger.error(f'Error creating order: {str(e)}')
+                messages.error(self.request, 'Error creating order. Please check the data and try again.')
+                return self.form_invalid(form)
+            except Exception as e:
+                logger.error(f'Unexpected error creating order: {str(e)}')
+                messages.error(self.request, 'An unexpected error occurred while creating the order.')
+                return self.form_invalid(form)
+        else:
             return self.form_invalid(form)
     
     def get_success_url(self):
@@ -91,17 +114,40 @@ class OrderUpdateView(StaffRequiredMixin, UpdateView):
     form_class = OrderForm
     template_name = 'admin/ecommerce/order_form.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = OrderItemFormSet(self.request.POST, instance=self.object)
+        else:
+            context['formset'] = OrderItemFormSet(instance=self.object)
+        return context
+    
     def form_valid(self, form):
-        try:
-            messages.success(self.request, 'Order updated successfully.')
-            return super().form_valid(form)
-        except IntegrityError as e:
-            logger.error(f'Error updating order: {str(e)}')
-            messages.error(self.request, 'Error updating order. Please check the data and try again.')
-            return self.form_invalid(form)
-        except Exception as e:
-            logger.error(f'Unexpected error updating order: {str(e)}')
-            messages.error(self.request, 'An unexpected error occurred while updating the order.')
+        context = self.get_context_data()
+        formset = context['formset']
+        
+        if formset.is_valid():
+            try:
+                self.object = form.save()
+                formset.instance = self.object
+                formset.save()
+                
+                # Calculate and update order total from all items
+                total = self.object.items.aggregate(total=Sum('total'))['total'] or 0
+                self.object.total_amount = total
+                self.object.save()
+                
+                messages.success(self.request, 'Order updated successfully.')
+                return redirect(self.get_success_url())
+            except IntegrityError as e:
+                logger.error(f'Error updating order: {str(e)}')
+                messages.error(self.request, 'Error updating order. Please check the data and try again.')
+                return self.form_invalid(form)
+            except Exception as e:
+                logger.error(f'Unexpected error updating order: {str(e)}')
+                messages.error(self.request, 'An unexpected error occurred while updating the order.')
+                return self.form_invalid(form)
+        else:
             return self.form_invalid(form)
     
     def get_success_url(self):

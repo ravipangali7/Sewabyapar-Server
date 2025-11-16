@@ -11,7 +11,7 @@ from django.db.models import Q
 from django.db import IntegrityError
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Product
-from myadmin.forms.ecommerce_forms import ProductForm
+from myadmin.forms.ecommerce_forms import ProductForm, ProductImageFormSet
 from myadmin.utils.export import export_products_csv
 from myadmin.utils.bulk_actions import bulk_delete, bulk_activate, bulk_deactivate, get_selected_ids
 
@@ -61,17 +61,34 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
     form_class = ProductForm
     template_name = 'admin/ecommerce/product_form.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = ProductImageFormSet(self.request.POST, self.request.FILES)
+        else:
+            context['formset'] = ProductImageFormSet()
+        return context
+    
     def form_valid(self, form):
-        try:
-            messages.success(self.request, 'Product created successfully.')
-            return super().form_valid(form)
-        except IntegrityError as e:
-            logger.error(f'Error creating product: {str(e)}')
-            messages.error(self.request, 'Error creating product. This SKU may already be in use.')
-            return self.form_invalid(form)
-        except Exception as e:
-            logger.error(f'Unexpected error creating product: {str(e)}')
-            messages.error(self.request, 'An unexpected error occurred while creating the product.')
+        context = self.get_context_data()
+        formset = context['formset']
+        
+        if formset.is_valid():
+            try:
+                self.object = form.save()
+                formset.instance = self.object
+                formset.save()
+                messages.success(self.request, 'Product created successfully.')
+                return redirect(self.get_success_url())
+            except IntegrityError as e:
+                logger.error(f'Error creating product: {str(e)}')
+                messages.error(self.request, 'Error creating product. This SKU may already be in use.')
+                return self.form_invalid(form)
+            except Exception as e:
+                logger.error(f'Unexpected error creating product: {str(e)}')
+                messages.error(self.request, 'An unexpected error occurred while creating the product.')
+                return self.form_invalid(form)
+        else:
             return self.form_invalid(form)
     
     def get_success_url(self):
@@ -84,17 +101,34 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
     form_class = ProductForm
     template_name = 'admin/ecommerce/product_form.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = ProductImageFormSet(self.request.POST, self.request.FILES, instance=self.object)
+        else:
+            context['formset'] = ProductImageFormSet(instance=self.object)
+        return context
+    
     def form_valid(self, form):
-        try:
-            messages.success(self.request, 'Product updated successfully.')
-            return super().form_valid(form)
-        except IntegrityError as e:
-            logger.error(f'Error updating product: {str(e)}')
-            messages.error(self.request, 'Error updating product. This SKU may already be in use.')
-            return self.form_invalid(form)
-        except Exception as e:
-            logger.error(f'Unexpected error updating product: {str(e)}')
-            messages.error(self.request, 'An unexpected error occurred while updating the product.')
+        context = self.get_context_data()
+        formset = context['formset']
+        
+        if formset.is_valid():
+            try:
+                self.object = form.save()
+                formset.instance = self.object
+                formset.save()
+                messages.success(self.request, 'Product updated successfully.')
+                return redirect(self.get_success_url())
+            except IntegrityError as e:
+                logger.error(f'Error updating product: {str(e)}')
+                messages.error(self.request, 'Error updating product. This SKU may already be in use.')
+                return self.form_invalid(form)
+            except Exception as e:
+                logger.error(f'Unexpected error updating product: {str(e)}')
+                messages.error(self.request, 'An unexpected error occurred while updating the product.')
+                return self.form_invalid(form)
+        else:
             return self.form_invalid(form)
     
     def get_success_url(self):

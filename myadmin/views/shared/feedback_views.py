@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
 from shared.models import FeedbackComplain
-from myadmin.forms.shared_forms import FeedbackComplainForm
+from myadmin.forms.shared_forms import FeedbackComplainForm, FeedbackComplainReplyFormSet
 
 
 class FeedbackComplainListView(StaffRequiredMixin, ListView):
@@ -54,9 +54,32 @@ class FeedbackComplainCreateView(StaffRequiredMixin, CreateView):
     form_class = FeedbackComplainForm
     template_name = 'admin/shared/feedback_form.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = FeedbackComplainReplyFormSet(self.request.POST)
+        else:
+            context['formset'] = FeedbackComplainReplyFormSet()
+        return context
+    
     def form_valid(self, form):
-        messages.success(self.request, 'Feedback/Complain created successfully.')
-        return super().form_valid(form)
+        context = self.get_context_data()
+        formset = context['formset']
+        
+        if formset.is_valid():
+            self.object = form.save()
+            formset.instance = self.object
+            instances = formset.save(commit=False)
+            for instance in instances:
+                if not instance.pk or not instance.user_id:
+                    instance.user = self.request.user
+                    instance.is_admin_reply = True
+                instance.save()
+            formset.save_m2m()
+            messages.success(self.request, 'Feedback/Complain created successfully.')
+            return redirect(self.get_success_url())
+        else:
+            return self.form_invalid(form)
     
     def get_success_url(self):
         return reverse_lazy('myadmin:shared:feedback_detail', kwargs={'pk': self.object.pk})
@@ -67,9 +90,32 @@ class FeedbackComplainUpdateView(StaffRequiredMixin, UpdateView):
     form_class = FeedbackComplainForm
     template_name = 'admin/shared/feedback_form.html'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['formset'] = FeedbackComplainReplyFormSet(self.request.POST, instance=self.object)
+        else:
+            context['formset'] = FeedbackComplainReplyFormSet(instance=self.object)
+        return context
+    
     def form_valid(self, form):
-        messages.success(self.request, 'Feedback/Complain updated successfully.')
-        return super().form_valid(form)
+        context = self.get_context_data()
+        formset = context['formset']
+        
+        if formset.is_valid():
+            self.object = form.save()
+            formset.instance = self.object
+            instances = formset.save(commit=False)
+            for instance in instances:
+                if not instance.pk or not instance.user_id:
+                    instance.user = self.request.user
+                    instance.is_admin_reply = True
+                instance.save()
+            formset.save_m2m()
+            messages.success(self.request, 'Feedback/Complain updated successfully.')
+            return redirect(self.get_success_url())
+        else:
+            return self.form_invalid(form)
     
     def get_success_url(self):
         return reverse_lazy('myadmin:shared:feedback_detail', kwargs={'pk': self.object.pk})

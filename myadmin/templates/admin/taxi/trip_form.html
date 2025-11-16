@@ -1,8 +1,41 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Trip</h1><a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:trip_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Trip Information</h5></div><div class="card-body"><form method="post">{% csrf_token %}{% include 'admin/includes/form_fields.html' with form=form %}<div class="mt-3"><button type="submit" class="btn btn-primary">Save</button><a href="{% url 'myadmin:taxi:trip_list' %}" class="btn btn-secondary">Cancel</a></div></form></div></div></div></div>
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Trip</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:trip_list' %}">Back</a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <form method="post">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Trip Information</h5>
+                    </div>
+                    <div class="card-body">
+                        {% include 'admin/includes/form_fields.html' with form=form %}
+                    </div>
+                </div>
+                
+                {% if formset %}
+                    {% include 'admin/includes/inline_formset_stacked.html' with formset=formset %}
+                {% endif %}
+                
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a href="{% url 'myadmin:taxi:trip_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+<script src="{% static 'myadmin/js/inline_forms.js' %}"></script>
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
 {% endblock %}
 

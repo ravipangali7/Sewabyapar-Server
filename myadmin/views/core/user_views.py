@@ -35,11 +35,28 @@ class UserListView(StaffRequiredMixin, ListView):
                 Q(phone__icontains=search) |
                 Q(email__icontains=search)
             )
+        
+        # Filter by KYC status
+        kyc_status = self.request.GET.get('kyc_status', 'all')
+        if kyc_status == 'pending':
+            # Users with KYC documents but not verified
+            queryset = queryset.filter(
+                is_kyc_verified=False
+            ).exclude(
+                Q(national_id__isnull=True) & Q(national_id_document__isnull=True) &
+                Q(pan_no__isnull=True) & Q(pan_document__isnull=True)
+            ).exclude(
+                Q(national_id='') & Q(pan_no='')
+            )
+        elif kyc_status == 'verified':
+            queryset = queryset.filter(is_kyc_verified=True)
+        
         return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
+        context['kyc_status'] = self.request.GET.get('kyc_status', 'all')
         return context
     
     def get(self, request, *args, **kwargs):

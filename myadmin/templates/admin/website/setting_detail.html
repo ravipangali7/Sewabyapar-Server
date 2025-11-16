@@ -1,10 +1,154 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Website Settings</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:website:setting_update' %}">Edit Settings</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Settings Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Name:</dt><dd class="col-sm-9">{{ setting.name }}</dd><dt class="col-sm-3">Phone:</dt><dd class="col-sm-9">{{ setting.phone }}</dd><dt class="col-sm-3">Email:</dt><dd class="col-sm-9">{{ setting.email }}</dd><dt class="col-sm-3">Website:</dt><dd class="col-sm-9">{{ setting.website|default:"-" }}</dd><dt class="col-sm-3">Address:</dt><dd class="col-sm-9">{{ setting.address|default:"-" }}</dd><dt class="col-sm-3">Tagline:</dt><dd class="col-sm-9">{{ setting.tagline|default:"-" }}</dd><dt class="col-sm-3">Total Customers:</dt><dd class="col-sm-9">{{ setting.total_customers }}</dd><dt class="col-sm-3">Daily Signup:</dt><dd class="col-sm-9">{{ setting.total_daily_signup }}</dd><dt class="col-sm-3">Daily Transactions:</dt><dd class="col-sm-9">{{ setting.total_txn_everyday }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Website Settings</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:website:setting_update' %}">
+            <i class="align-middle" data-feather="edit"></i> Edit Settings
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Total Customers</h6>
+                            <h4 class="mb-0">{{ setting.total_customers }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Daily Signup</h6>
+                            <h4 class="mb-0">{{ setting.total_daily_signup }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="user-plus"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Daily Transactions</h6>
+                            <h4 class="mb-0">{{ setting.total_txn_everyday }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="trending-up"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="settings"></i> Settings Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Name:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ setting.name }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
+                        <div class="col-sm-8">{{ setting.phone }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="mail" style="width: 16px; height: 16px;"></i> Email:</strong></div>
+                        <div class="col-sm-8">{{ setting.email }}</div>
+                    </div>
+                    {% if setting.website %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="globe" style="width: 16px; height: 16px;"></i> Website:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{{ setting.website }}" target="_blank" class="text-decoration-none">{{ setting.website }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if setting.address %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map-pin" style="width: 16px; height: 16px;"></i> Address:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ setting.address|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if setting.tagline %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> Tagline:</strong></div>
+                        <div class="col-sm-8">{{ setting.tagline }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="bar-chart-2"></i> Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="users" style="width: 16px; height: 16px;"></i> Total Customers:</strong></div>
+                        <div class="col-12 mt-1">
+                            <span class="badge bg-info fs-6">{{ setting.total_customers }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="user-plus" style="width: 16px; height: 16px;"></i> Daily Signup:</strong></div>
+                        <div class="col-12 mt-1">
+                            <span class="badge bg-success fs-6">{{ setting.total_daily_signup }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="trending-up" style="width: 16px; height: 16px;"></i> Daily Transactions:</strong></div>
+                        <div class="col-12 mt-1">
+                            <span class="badge bg-primary fs-6">{{ setting.total_txn_everyday }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

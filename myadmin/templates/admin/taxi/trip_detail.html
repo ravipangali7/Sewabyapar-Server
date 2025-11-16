@@ -1,10 +1,186 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Trip Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:trip_update' trip.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:trip_delete' trip.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:trip_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Trip Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">From:</dt><dd class="col-sm-9">{{ trip.from_place.name }}</dd><dt class="col-sm-3">To:</dt><dd class="col-sm-9">{{ trip.to_place.name }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Trip Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:trip_update' trip.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:trip_delete' trip.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:trip_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Seaters</h6>
+                            <h4 class="mb-0">{{ trip.seaters.count }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Bookings</h6>
+                            <h4 class="mb-0">{{ trip.bookings.count|default:0 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">From</h6>
+                            <div class="fs-6">{{ trip.from_place.name|truncatewords:3 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="map-pin"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">To</h6>
+                            <div class="fs-6">{{ trip.to_place.name|truncatewords:3 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="map-pin"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="map"></i> Trip Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map-pin" style="width: 16px; height: 16px;"></i> From:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:shared:place_detail' trip.from_place.pk %}" class="text-decoration-none">{{ trip.from_place.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map-pin" style="width: 16px; height: 16px;"></i> To:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:shared:place_detail' trip.to_place.pk %}" class="text-decoration-none">{{ trip.to_place.name }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seaters -->
+            {% if trip.seaters.all %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="users"></i> Seaters ({{ trip.seaters.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Seat</th>
+                                    <th>Price</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for seater in trip.seaters.all %}
+                                <tr>
+                                    <td><span class="badge bg-info">{{ seater.seat }}</span></td>
+                                    <td><strong>₹{{ seater.price|floatformat:2 }}</strong></td>
+                                    <td>
+                                        <a href="{% url 'myadmin:taxi:seater_detail' seater.pk %}" class="btn btn-sm btn-info">
+                                            <i class="align-middle" data-feather="eye" style="width: 14px; height: 14px;"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Trip Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 bg-light rounded">
+                        <div class="mb-2">
+                            <strong>Route:</strong><br>
+                            <i class="align-middle" data-feather="map-pin" style="width: 14px; height: 14px;"></i>
+                            {{ trip.from_place.name }} → {{ trip.to_place.name }}
+                        </div>
+                        <hr>
+                        <div class="mb-2">
+                            <strong>Seaters:</strong> {{ trip.seaters.count }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Bookings:</strong> {{ trip.bookings.count|default:0 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

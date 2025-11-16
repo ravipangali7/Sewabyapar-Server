@@ -1,10 +1,82 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Cart Details</h1><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:cart_delete' cart.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:cart_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Cart Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ cart.user.name }}</dd><dt class="col-sm-3">Product:</dt><dd class="col-sm-9">{{ cart.product.name }}</dd><dt class="col-sm-3">Quantity:</dt><dd class="col-sm-9">{{ cart.quantity }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ cart.created_at|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Updated:</dt><dd class="col-sm-9">{{ cart.updated_at|date:"M d, Y H:i" }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Cart Details</h1>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:cart_delete' cart.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:cart_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="shopping-cart"></i> Cart Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' cart.user.pk %}" class="text-decoration-none">{{ cart.user.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Product:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:product_detail' cart.product.pk %}" class="text-decoration-none">{{ cart.product.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Quantity:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-secondary fs-6">{{ cart.quantity }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="clock"></i> Timestamps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ cart.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ cart.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="edit" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ cart.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ cart.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

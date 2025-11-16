@@ -1,0 +1,240 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">KYC Management</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:user_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Users
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">KYC Requests</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="search" placeholder="Search by name, phone, email, National ID, PAN..." value="{{ search }}">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" name="status">
+                                    <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+                                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="verified" {% if status == 'verified' %}selected{% endif %}>Verified</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">
+                                    <i class="align-middle" data-feather="search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <form method="post" action="{% url 'myadmin:core:kyc_bulk_verify' %}" id="bulk-action-form" class="mb-3">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">Select All</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()">Deselect All</button>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to verify selected KYC requests?')">
+                                    <i class="align-middle" data-feather="check-circle"></i> Verify Selected
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="40"><input type="checkbox" id="select-all-checkbox" onclick="toggleAll()"></th>
+                                    <th>User</th>
+                                    <th>Documents</th>
+                                    <th>National ID</th>
+                                    <th>PAN</th>
+                                    <th>Status</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in kyc_users %}
+                                <tr>
+                                    <td>
+                                        {% if not user.is_kyc_verified %}
+                                        <input type="checkbox" name="selected_items" value="{{ user.pk }}" class="item-checkbox">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ user.name }}</strong><br>
+                                            <small class="text-muted">{{ user.phone }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            {% if user.national_id_document %}
+                                            <a href="{{ user.national_id_document.url }}" target="_blank" class="document-thumbnail" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.national_id_document.url }}" data-title="National ID Document">
+                                                <img src="{{ user.national_id_document.url }}" alt="National ID" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                                            </a>
+                                            {% endif %}
+                                            {% if user.pan_document %}
+                                            <a href="{{ user.pan_document.url }}" target="_blank" class="document-thumbnail" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.pan_document.url }}" data-title="PAN Document">
+                                                <img src="{{ user.pan_document.url }}" alt="PAN" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                                            </a>
+                                            {% endif %}
+                                            {% if not user.national_id_document and not user.pan_document %}
+                                            <span class="text-muted">No documents</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if user.national_id %}
+                                            <span class="badge bg-info">{{ user.national_id }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.pan_no %}
+                                            <span class="badge bg-info">{{ user.pan_no }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_kyc_verified %}
+                                            <span class="badge bg-success">
+                                                <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Verified
+                                            </span>
+                                            {% if user.kyc_verified_at %}
+                                                <br><small class="text-muted">{{ user.kyc_verified_at|date:"M d, Y" }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.kyc_submitted_at %}
+                                            {{ user.kyc_submitted_at|date:"M d, Y" }}<br>
+                                            <small class="text-muted">{{ user.kyc_submitted_at|date:"H:i" }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:core:kyc_verification' user_id=user.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="align-middle" data-feather="eye"></i> Review
+                                        </a>
+                                        {% if not user.is_kyc_verified %}
+                                        <form method="post" action="{% url 'myadmin:core:kyc_verify' user_id=user.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Verify KYC for {{ user.name }}?')">
+                                                <i class="align-middle" data-feather="check"></i> Verify
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No KYC requests found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if is_paginated %}
+                    <nav>
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">Previous</a></li>
+                            {% endif %}
+                            <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Document Modal -->
+<div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="documentModalLabel">Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalDocumentImage" src="" alt="Document" class="img-fluid" style="max-height: 70vh;">
+            </div>
+            <div class="modal-footer">
+                <a id="modalDocumentLink" href="" target="_blank" class="btn btn-primary">
+                    <i class="align-middle" data-feather="download"></i> Open Full Size
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAll() {
+    const selectAll = document.getElementById('select-all-checkbox');
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    document.getElementById('select-all-checkbox').checked = true;
+}
+
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('select-all-checkbox').checked = false;
+}
+
+// Document modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const documentModal = document.getElementById('documentModal');
+    if (documentModal) {
+        documentModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const imageUrl = button.getAttribute('data-image');
+            const title = button.getAttribute('data-title');
+            
+            document.getElementById('modalDocumentImage').src = imageUrl;
+            document.getElementById('modalDocumentLink').href = imageUrl;
+            document.getElementById('documentModalLabel').textContent = title;
+        });
+    }
+    
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+{% endblock %}
+

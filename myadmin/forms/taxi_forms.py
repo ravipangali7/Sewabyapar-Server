@@ -1,5 +1,6 @@
 """Forms for taxi models"""
 from django import forms
+from django.forms.models import inlineformset_factory
 from taxi.models import Driver, Vehicle, Trip, Seater, TaxiBooking
 
 
@@ -46,6 +47,17 @@ class SeaterForm(forms.ModelForm):
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'trip': forms.Select(attrs={'class': 'form-select'}),
         }
+
+
+# Inline Formset for Seater
+SeaterFormSet = inlineformset_factory(
+    Trip,
+    Seater,
+    form=SeaterForm,
+    fields=['seat', 'price'],
+    extra=1,
+    can_delete=True,
+)
 
 
 class TaxiBookingForm(forms.ModelForm):

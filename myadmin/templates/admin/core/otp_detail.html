@@ -1,10 +1,89 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">OTP Details</h1><a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:otp_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">OTP Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Phone:</dt><dd class="col-sm-9">{{ otp.phone }}</dd><dt class="col-sm-3">OTP:</dt><dd class="col-sm-9">{{ otp.otp }}</dd><dt class="col-sm-3">Country Code:</dt><dd class="col-sm-9">{{ otp.country_code }}</dd><dt class="col-sm-3">Expires At:</dt><dd class="col-sm-9">{{ otp.expires_at|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ otp.created_at|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Expired:</dt><dd class="col-sm-9">{% if otp.is_expired %}<span class="badge bg-danger">Yes</span>{% else %}<span class="badge bg-success">No</span>{% endif %}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">OTP Details</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:otp_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="key"></i> OTP Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
+                        <div class="col-sm-8">{{ otp.phone }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="key" style="width: 16px; height: 16px;"></i> OTP Code:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-primary fs-6">{{ otp.otp }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="globe" style="width: 16px; height: 16px;"></i> Country Code:</strong></div>
+                        <div class="col-sm-8">{{ otp.country_code }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="alert-circle" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-sm-8">
+                            {% if otp.is_expired %}
+                                <span class="badge bg-danger">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 14px; height: 14px;"></i> Expired
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Active
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="clock"></i> Timestamps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ otp.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ otp.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Expires At:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ otp.expires_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ otp.expires_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

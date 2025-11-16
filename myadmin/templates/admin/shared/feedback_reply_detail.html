@@ -1,10 +1,102 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Reply Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:shared:feedback_reply_update' reply.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:shared:feedback_reply_delete' reply.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:shared:feedback_reply_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Reply Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Feedback/Complaint:</dt><dd class="col-sm-9"><a href="{% url 'myadmin:shared:feedback_detail' reply.feedback_complain.pk %}">{{ reply.feedback_complain.subject }}</a></dd><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ reply.user.name }}</dd><dt class="col-sm-3">Type:</dt><dd class="col-sm-9">{% if reply.is_admin_reply %}<span class="badge bg-primary">Admin</span>{% else %}<span class="badge bg-secondary">Customer</span>{% endif %}</dd><dt class="col-sm-3">Message:</dt><dd class="col-sm-9">{{ reply.message }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ reply.created_at|date:"M d, Y H:i" }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Reply Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:shared:feedback_reply_update' reply.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:shared:feedback_reply_delete' reply.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shared:feedback_reply_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="message-circle"></i> Reply Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="message-square" style="width: 16px; height: 16px;"></i> Feedback/Complaint:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:shared:feedback_detail' reply.feedback_complain.pk %}" class="text-decoration-none">{{ reply.feedback_complain.subject }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' reply.user.pk %}" class="text-decoration-none">{{ reply.user.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> Type:</strong></div>
+                        <div class="col-sm-8">
+                            {% if reply.is_admin_reply %}
+                                <span class="badge bg-primary">Admin Reply</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Customer Reply</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="message-square" style="width: 16px; height: 16px;"></i> Message:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ reply.message|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> Reply Type:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if reply.is_admin_reply %}
+                                <span class="badge bg-primary">
+                                    <i class="align-middle" data-feather="user-check" style="width: 14px; height: 14px;"></i> Admin
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">Customer</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ reply.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ reply.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

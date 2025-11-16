@@ -1,0 +1,296 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">KYC Verification</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:kyc_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to KYC List
+        </a>
+        <a class="btn btn-info ms-2" href="{% url 'myadmin:core:user_detail' user.pk %}">
+            <i class="align-middle" data-feather="user"></i> View User Profile
+        </a>
+    </div>
+
+    <!-- User Information Card -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="user"></i> User Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Name:</strong><br>
+                            <span class="text-muted">{{ user.name }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Phone:</strong><br>
+                            <span class="text-muted">{{ user.phone }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Email:</strong><br>
+                            <span class="text-muted">{{ user.email|default:"-" }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>KYC Status:</strong><br>
+                            {% if user.is_kyc_verified %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Verified
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i> Pending
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KYC Documents -->
+    <div class="row">
+        <!-- National ID Section -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="id-card"></i> National ID
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user.national_id or user.national_id_document %}
+                        <div class="mb-3">
+                            <strong>National ID Number:</strong><br>
+                            {% if user.national_id %}
+                                <span class="badge bg-info fs-6">{{ user.national_id }}</span>
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if user.national_id_document %}
+                        <div class="mb-3">
+                            <strong>Document:</strong><br>
+                            <div class="document-preview-container">
+                                <a href="{{ user.national_id_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.national_id_document.url }}" data-title="National ID Document">
+                                    <img src="{{ user.national_id_document.url }}" alt="National ID Document" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
+                                </a>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{{ user.national_id_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="align-middle" data-feather="download"></i> Download
+                                </a>
+                                <a href="{{ user.national_id_document.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                    <i class="align-middle" data-feather="external-link"></i> Open in New Tab
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="align-middle" data-feather="alert-circle"></i> Document not uploaded
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-secondary">
+                            <i class="align-middle" data-feather="info"></i> No National ID information provided
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- PAN Section -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="file-text"></i> PAN (Permanent Account Number)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user.pan_no or user.pan_document %}
+                        <div class="mb-3">
+                            <strong>PAN Number:</strong><br>
+                            {% if user.pan_no %}
+                                <span class="badge bg-info fs-6">{{ user.pan_no }}</span>
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if user.pan_document %}
+                        <div class="mb-3">
+                            <strong>Document:</strong><br>
+                            <div class="document-preview-container">
+                                <a href="{{ user.pan_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.pan_document.url }}" data-title="PAN Document">
+                                    <img src="{{ user.pan_document.url }}" alt="PAN Document" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
+                                </a>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{{ user.pan_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="align-middle" data-feather="download"></i> Download
+                                </a>
+                                <a href="{{ user.pan_document.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                    <i class="align-middle" data-feather="external-link"></i> Open in New Tab
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="align-middle" data-feather="alert-circle"></i> Document not uploaded
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-secondary">
+                            <i class="align-middle" data-feather="info"></i> No PAN information provided
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KYC Timeline -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="clock"></i> KYC Timeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Submitted:</strong><br>
+                            {% if user.kyc_submitted_at %}
+                                <span class="text-muted">
+                                    <i class="align-middle" data-feather="calendar" style="width: 14px; height: 14px;"></i>
+                                    {{ user.kyc_submitted_at|date:"F d, Y" }}<br>
+                                    <small>{{ user.kyc_submitted_at|date:"g:i A" }}</small>
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not submitted</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Verified:</strong><br>
+                            {% if user.is_kyc_verified and user.kyc_verified_at %}
+                                <span class="text-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i>
+                                    {{ user.kyc_verified_at|date:"F d, Y" }}<br>
+                                    <small>{{ user.kyc_verified_at|date:"g:i A" }}</small>
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not verified</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Status:</strong><br>
+                            {% if user.is_kyc_verified %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Verified
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning fs-6">
+                                    <i class="align-middle" data-feather="clock" style="width: 16px; height: 16px;"></i> Pending Verification
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    {% if not user.is_kyc_verified %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <form method="post" action="{% url 'myadmin:core:kyc_verify' user_id=user.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Are you sure you want to verify KYC for {{ user.name }}?')">
+                            <i class="align-middle" data-feather="check-circle"></i> Verify KYC
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-success">
+                <i class="align-middle" data-feather="check-circle"></i> 
+                <strong>KYC Verified!</strong> This user's KYC has been verified on {{ user.kyc_verified_at|date:"F d, Y" }}.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Document Modal -->
+<div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="documentModalLabel">Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalDocumentImage" src="" alt="Document" class="img-fluid" style="max-height: 80vh;">
+            </div>
+            <div class="modal-footer">
+                <a id="modalDocumentLink" href="" target="_blank" class="btn btn-primary">
+                    <i class="align-middle" data-feather="download"></i> Open Full Size
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentModal = document.getElementById('documentModal');
+    if (documentModal) {
+        documentModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const imageUrl = button.getAttribute('data-image');
+            const title = button.getAttribute('data-title');
+            
+            document.getElementById('modalDocumentImage').src = imageUrl;
+            document.getElementById('modalDocumentLink').href = imageUrl;
+            document.getElementById('documentModalLabel').textContent = title;
+        });
+    }
+    
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+
+<style>
+.document-preview-link:hover img {
+    opacity: 0.8;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
+
+.document-preview-container {
+    text-align: center;
+}
+</style>
+{% endblock %}
+

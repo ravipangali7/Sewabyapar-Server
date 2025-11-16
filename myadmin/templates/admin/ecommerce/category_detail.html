@@ -1,10 +1,209 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Category Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:category_update' category.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:category_delete' category.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:category_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Category Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Name:</dt><dd class="col-sm-9">{{ category.name }}</dd><dt class="col-sm-3">Parent:</dt><dd class="col-sm-9">{{ category.parent.name|default:"-" }}</dd><dt class="col-sm-3">Status:</dt><dd class="col-sm-9">{% if category.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</dd><dt class="col-sm-3">Description:</dt><dd class="col-sm-9">{{ category.description|default:"-" }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ category.created_at|date:"M d, Y" }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Category Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:category_update' category.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:category_delete' category.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:category_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            {% if category.is_active %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 16px; height: 16px;"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if category.is_active %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Products</h6>
+                            <h4 class="mb-0">{{ category.products.count }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="package"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Subcategories</h6>
+                            <h4 class="mb-0">{{ category.children.count }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="layers"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Created</h6>
+                            <div class="fs-6">{{ category.created_at|date:"M Y" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Information -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="grid"></i> Category Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if category.image %}
+                    <div class="text-center mb-4">
+                        <img src="{{ category.image.url }}" alt="{{ category.name }}" class="img-thumbnail" style="max-width: 300px; max-height: 300px; object-fit: cover;">
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Name:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ category.name }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="layers" style="width: 16px; height: 16px;"></i> Parent Category:</strong></div>
+                        <div class="col-sm-8">
+                            {% if category.parent %}
+                                <a href="{% url 'myadmin:ecommerce:category_detail' category.parent.pk %}" class="text-decoration-none">{{ category.parent.name }}</a>
+                            {% else %}
+                                <span class="text-muted">Root Category</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if category.description %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Description:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ category.description|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Subcategories -->
+            {% if category.children.all %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="layers"></i> Subcategories ({{ category.children.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for subcat in category.children.all %}
+                        <div class="col-md-4 mb-2">
+                            <a href="{% url 'myadmin:ecommerce:category_detail' subcat.pk %}" class="text-decoration-none">
+                                <div class="card">
+                                    <div class="card-body p-2">
+                                        <i class="align-middle" data-feather="folder" style="width: 16px; height: 16px;"></i>
+                                        {{ subcat.name }}
+                                        <span class="badge bg-secondary float-end">{{ subcat.products.count }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Status & Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if category.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ category.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ category.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

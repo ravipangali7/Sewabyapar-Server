@@ -1,10 +1,68 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Wishlist Details</h1><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:wishlist_delete' wishlist.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:wishlist_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Wishlist Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ wishlist.user.name }}</dd><dt class="col-sm-3">Product:</dt><dd class="col-sm-9">{{ wishlist.product.name }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ wishlist.created_at|date:"M d, Y H:i" }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Wishlist Details</h1>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:wishlist_delete' wishlist.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:wishlist_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="heart"></i> Wishlist Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' wishlist.user.pk %}" class="text-decoration-none">{{ wishlist.user.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Product:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:product_detail' wishlist.product.pk %}" class="text-decoration-none">{{ wishlist.product.name }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="clock"></i> Timestamps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ wishlist.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ wishlist.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

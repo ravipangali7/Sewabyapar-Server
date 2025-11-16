@@ -1,10 +1,207 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Driver Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:driver_update' driver.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:driver_delete' driver.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:driver_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Driver Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ driver.user.name }}</dd><dt class="col-sm-3">License:</dt><dd class="col-sm-9">{{ driver.license }}</dd><dt class="col-sm-3">Status:</dt><dd class="col-sm-9">{% if driver.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ driver.created_at|date:"M d, Y" }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Driver Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:driver_update' driver.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:driver_delete' driver.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:driver_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            {% if driver.is_active %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 16px; height: 16px;"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if driver.is_active %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Vehicles</h6>
+                            <h4 class="mb-0">{{ driver.vehicles.count|default:0 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="truck"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">User</h6>
+                            <div class="fs-6">{{ driver.user.name|truncatewords:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="user"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Created</h6>
+                            <div class="fs-6">{{ driver.created_at|date:"M Y" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="user"></i> Driver Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' driver.user.pk %}" class="text-decoration-none">{{ driver.user.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="id-card" style="width: 16px; height: 16px;"></i> License:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info">{{ driver.license }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicles -->
+            {% if driver.vehicles.all %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="truck"></i> Vehicles ({{ driver.vehicles.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Vehicle No</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vehicle in driver.vehicles.all %}
+                                <tr>
+                                    <td>{{ vehicle.name }}</td>
+                                    <td><span class="badge bg-info">{{ vehicle.vehicle_no }}</span></td>
+                                    <td>
+                                        {% if vehicle.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:taxi:vehicle_detail' vehicle.pk %}" class="btn btn-sm btn-info">
+                                            <i class="align-middle" data-feather="eye" style="width: 14px; height: 14px;"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Status & Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if driver.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ driver.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ driver.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

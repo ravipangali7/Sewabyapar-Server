@@ -1,6 +1,6 @@
 """Core app URLs"""
 from django.urls import path
-from myadmin.views.core import user_views, address_views, otp_views, notification_views
+from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views
 
 app_name = 'core'
 
@@ -13,6 +13,12 @@ urlpatterns = [
     path('users/<int:pk>/delete/', user_views.UserDeleteView.as_view(), name='user_delete'),
     path('users/<int:pk>/verify-kyc/', user_views.verify_kyc, name='user_verify_kyc'),
     path('users/bulk-delete/', user_views.UserBulkDeleteView.as_view(), name='user_bulk_delete'),
+    
+    # KYC URLs
+    path('kyc/', kyc_views.KYCListView.as_view(), name='kyc_list'),
+    path('kyc/<int:user_id>/', kyc_views.KYCVerificationView.as_view(), name='kyc_verification'),
+    path('kyc/<int:user_id>/verify/', kyc_views.KYCVerifyView.as_view(), name='kyc_verify'),
+    path('kyc/bulk-verify/', kyc_views.KYCBulkVerifyView.as_view(), name='kyc_bulk_verify'),
     
     # Address URLs
     path('addresses/', address_views.AddressListView.as_view(), name='address_list'),

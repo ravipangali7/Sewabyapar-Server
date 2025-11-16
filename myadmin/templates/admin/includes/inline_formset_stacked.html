@@ -1,0 +1,58 @@
+{% if formset %}
+<div class="card mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            {% if formset.prefix == 'seater_set' %}Seaters
+            {% else %}{{ formset.prefix|title }} Items{% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {{ formset.management_form }}
+        <div id="{{ formset.prefix }}-forms">
+            {% for form in formset %}
+            <div class="card mb-3 form-row" data-form-index="{{ forloop.counter0 }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">Item #{{ forloop.counter }}</h6>
+                        {% if form.DELETE %}
+                        <div class="form-check">
+                            {{ form.DELETE }}
+                            <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
+                                Delete
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        {% for field in form.visible_fields %}
+                            {% if field.name != 'DELETE' %}
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ field.id_for_label }}" class="form-label">
+                                        {{ field.label|capfirst }}
+                                        {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {% if field.errors %}
+                                        <div class="text-danger small">{{ field.errors }}</div>
+                                    {% endif %}
+                                    {{ field }}
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% for hidden in form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-sm btn-primary" id="add-{{ formset.prefix }}-row">
+            <i class="align-middle" data-feather="plus"></i> Add Another
+        </button>
+    </div>
+</div>
+{% endif %}
+

@@ -1,10 +1,148 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">CMS Page Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:website:cms_update' cms_page.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:website:cms_delete' cms_page.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:website:cms_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">CMS Page Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Title:</dt><dd class="col-sm-9">{{ cms_page.title }}</dd><dt class="col-sm-3">Slug:</dt><dd class="col-sm-9">{{ cms_page.slug }}</dd><dt class="col-sm-3">On Footer:</dt><dd class="col-sm-9">{% if cms_page.on_footer %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</dd><dt class="col-sm-3">On Menu:</dt><dd class="col-sm-9">{% if cms_page.on_menu %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</dd><dt class="col-sm-3">Description:</dt><dd class="col-sm-9">{{ cms_page.description|safe }}</dd><dt class="col-sm-3">Created:</dt><dd class="col-sm-9">{{ cms_page.created_at|date:"M d, Y" }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">CMS Page Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:website:cms_update' cms_page.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:website:cms_delete' cms_page.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:website:cms_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">On Footer</h6>
+                            {% if cms_page.on_footer %}
+                                <span class="badge bg-success fs-6">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">No</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if cms_page.on_footer %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">On Menu</h6>
+                            {% if cms_page.on_menu %}
+                                <span class="badge bg-success fs-6">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">No</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if cms_page.on_menu %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="file-text"></i> CMS Page Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Title:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ cms_page.title }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Slug:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info">{{ cms_page.slug }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Description:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ cms_page.description|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Visibility Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="layout" style="width: 16px; height: 16px;"></i> On Footer:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if cms_page.on_footer %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Yes
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="menu" style="width: 16px; height: 16px;"></i> On Menu:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if cms_page.on_menu %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Yes
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ cms_page.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ cms_page.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

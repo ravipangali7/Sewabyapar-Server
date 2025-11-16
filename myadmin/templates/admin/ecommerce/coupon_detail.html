@@ -1,10 +1,240 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Coupon Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:coupon_update' coupon.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:coupon_delete' coupon.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:coupon_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Coupon Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Code:</dt><dd class="col-sm-9">{{ coupon.code }}</dd><dt class="col-sm-3">Description:</dt><dd class="col-sm-9">{{ coupon.description|default:"-" }}</dd><dt class="col-sm-3">Discount Type:</dt><dd class="col-sm-9">{{ coupon.get_discount_type_display }}</dd><dt class="col-sm-3">Discount Value:</dt><dd class="col-sm-9">{{ coupon.discount_value }}</dd><dt class="col-sm-3">Minimum Amount:</dt><dd class="col-sm-9">{{ coupon.minimum_amount|default:"-" }}</dd><dt class="col-sm-3">Usage Limit:</dt><dd class="col-sm-9">{{ coupon.usage_limit|default:"Unlimited" }}</dd><dt class="col-sm-3">Used Count:</dt><dd class="col-sm-9">{{ coupon.used_count }}</dd><dt class="col-sm-3">Status:</dt><dd class="col-sm-9">{% if coupon.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</dd><dt class="col-sm-3">Valid From:</dt><dd class="col-sm-9">{{ coupon.valid_from|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Valid Until:</dt><dd class="col-sm-9">{{ coupon.valid_until|date:"M d, Y H:i" }}</dd><dt class="col-sm-3">Is Valid:</dt><dd class="col-sm-9">{% if coupon.is_valid %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Coupon Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:coupon_update' coupon.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:coupon_delete' coupon.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:coupon_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            {% if coupon.is_active %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 16px; height: 16px;"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if coupon.is_active %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Discount</h6>
+                            <h4 class="mb-0">
+                                {% if coupon.discount_type == 'percentage' %}
+                                    {{ coupon.discount_value }}%
+                                {% else %}
+                                    ₹{{ coupon.discount_value|floatformat:2 }}
+                                {% endif %}
+                            </h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="percent"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Usage</h6>
+                            <h4 class="mb-0">{{ coupon.used_count }}/{{ coupon.usage_limit|default:"∞" }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Valid</h6>
+                            {% if coupon.is_valid %}
+                                <span class="badge bg-success fs-6">Valid</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">Invalid</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if coupon.is_valid %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Information -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="tag"></i> Coupon Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Code:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info fs-5">{{ coupon.code }}</span>
+                        </div>
+                    </div>
+                    {% if coupon.description %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Description:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ coupon.description|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="percent" style="width: 16px; height: 16px;"></i> Discount Type:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info">{{ coupon.get_discount_type_display }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Discount Value:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">
+                                {% if coupon.discount_type == 'percentage' %}
+                                    {{ coupon.discount_value }}%
+                                {% else %}
+                                    ₹{{ coupon.discount_value|floatformat:2 }}
+                                {% endif %}
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="shopping-cart" style="width: 16px; height: 16px;"></i> Minimum Amount:</strong></div>
+                        <div class="col-sm-8">
+                            {% if coupon.minimum_amount %}
+                                ₹{{ coupon.minimum_amount|floatformat:2 }}
+                            {% else %}
+                                <span class="text-muted">No minimum</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="users" style="width: 16px; height: 16px;"></i> Usage Limit:</strong></div>
+                        <div class="col-sm-8">
+                            {{ coupon.usage_limit|default:"Unlimited" }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Used Count:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-secondary fs-6">{{ coupon.used_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="calendar"></i> Validity Period
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Valid From:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ coupon.valid_from|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ coupon.valid_from|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Valid Until:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ coupon.valid_until|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ coupon.valid_until|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Is Valid:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if coupon.is_valid %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Yes
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 14px; height: 14px;"></i> No
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if coupon.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

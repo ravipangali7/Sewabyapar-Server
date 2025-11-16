@@ -1,10 +1,43 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Place Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:shared:place_update' place.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:shared:place_delete' place.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:shared:place_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Place Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Name:</dt><dd class="col-sm-9">{{ place.name }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Place Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:shared:place_update' place.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:shared:place_delete' place.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shared:place_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="map-pin"></i> Place Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Name:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ place.name }}</h5></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

@@ -1,5 +1,6 @@
 """Forms for shared models"""
 from django import forms
+from django.forms.models import inlineformset_factory
 from shared.models import Place, FeedbackComplain, FeedbackComplainReply
 
 
@@ -35,4 +36,15 @@ class FeedbackComplainReplyForm(forms.ModelForm):
             'is_admin_reply': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
+
+
+# Inline Formset for FeedbackComplainReply
+FeedbackComplainReplyFormSet = inlineformset_factory(
+    FeedbackComplain,
+    FeedbackComplainReply,
+    form=FeedbackComplainReplyForm,
+    fields=['is_admin_reply', 'message'],
+    extra=0,
+    can_delete=True,
+)
 

@@ -20,9 +20,20 @@
                 </div>
                 <div class="card-body">
                     <form method="get" class="mb-3">
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="search" placeholder="Search users..." value="{{ search }}">
-                            <button class="btn btn-primary" type="submit">Search</button>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="search" placeholder="Search users..." value="{{ search }}">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" name="kyc_status">
+                                    <option value="all" {% if kyc_status == 'all' %}selected{% endif %}>All KYC Status</option>
+                                    <option value="pending" {% if kyc_status == 'pending' %}selected{% endif %}>Pending KYC</option>
+                                    <option value="verified" {% if kyc_status == 'verified' %}selected{% endif %}>Verified KYC</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">Search</button>
+                            </div>
                         </div>
                     </form>
                     <form method="post" action="{% url 'myadmin:core:user_bulk_delete' %}" id="bulk-action-form" class="mb-3">
@@ -61,9 +72,15 @@
                                 <td>{{ user.email|default:"-" }}</td>
                                 <td>
                                     {% if user.is_kyc_verified %}
-                                        <span class="badge bg-success">Verified</span>
+                                        <span class="badge bg-success">
+                                            <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Verified
+                                        </span>
+                                    {% elif user.national_id or user.national_id_document or user.pan_no or user.pan_document %}
+                                        <span class="badge bg-warning">
+                                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i> Pending
+                                        </span>
                                     {% else %}
-                                        <span class="badge bg-warning">Pending</span>
+                                        <span class="badge bg-secondary">Not Submitted</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -75,8 +92,17 @@
                                 </td>
                                 <td>{{ user.created_at|date:"M d, Y" }}</td>
                                 <td>
-                                    <a href="{% url 'myadmin:core:user_detail' user.pk %}" class="btn btn-sm btn-info">View</a>
-                                    <a href="{% url 'myadmin:core:user_update' user.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                                    <a href="{% url 'myadmin:core:user_detail' user.pk %}" class="btn btn-sm btn-info">
+                                        <i class="align-middle" data-feather="eye" style="width: 14px; height: 14px;"></i> View
+                                    </a>
+                                    <a href="{% url 'myadmin:core:user_update' user.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="align-middle" data-feather="edit" style="width: 14px; height: 14px;"></i> Edit
+                                    </a>
+                                    {% if user.national_id or user.national_id_document or user.pan_no or user.pan_document %}
+                                        <a href="{% url 'myadmin:core:kyc_verification' user_id=user.pk %}" class="btn btn-sm btn-success">
+                                            <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> KYC
+                                        </a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -121,6 +147,11 @@ function deselectAll() {
     const checkboxes = document.querySelectorAll('.item-checkbox');
     checkboxes.forEach(cb => cb.checked = false);
     document.getElementById('select-all-checkbox').checked = false;
+}
+
+// Initialize Feather icons
+if (typeof feather !== 'undefined') {
+    feather.replace();
 }
 </script>
 {% endblock %}

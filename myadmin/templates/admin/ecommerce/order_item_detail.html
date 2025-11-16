@@ -1,10 +1,170 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Order Item Details</h1><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:order_item_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Order Item Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Order:</dt><dd class="col-sm-9"><a href="{% url 'myadmin:ecommerce:order_detail' order_item.order.pk %}">{{ order_item.order.order_number }}</a></dd><dt class="col-sm-3">Product:</dt><dd class="col-sm-9">{{ order_item.product.name }}</dd><dt class="col-sm-3">Store:</dt><dd class="col-sm-9">{{ order_item.store.name }}</dd><dt class="col-sm-3">Quantity:</dt><dd class="col-sm-9">{{ order_item.quantity }}</dd><dt class="col-sm-3">Price:</dt><dd class="col-sm-9">₹{{ order_item.price }}</dd><dt class="col-sm-3">Total:</dt><dd class="col-sm-9">₹{{ order_item.total }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Order Item Details</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:order_item_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Total</h6>
+                            <h4 class="mb-0">₹{{ order_item.total|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Quantity</h6>
+                            <h4 class="mb-0">{{ order_item.quantity }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="package"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Unit Price</h6>
+                            <h4 class="mb-0">₹{{ order_item.price|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="tag"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Order</h6>
+                            <div class="fs-6">{{ order_item.order.order_number|truncatechars:15 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="shopping-cart"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="list"></i> Order Item Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="shopping-cart" style="width: 16px; height: 16px;"></i> Order:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:order_detail' order_item.order.pk %}" class="text-decoration-none">
+                                <span class="badge bg-info">{{ order_item.order.order_number }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Product:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:product_detail' order_item.product.pk %}" class="text-decoration-none">{{ order_item.product.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="store" style="width: 16px; height: 16px;"></i> Store:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:store_detail' order_item.store.pk %}" class="text-decoration-none">{{ order_item.store.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Quantity:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-secondary fs-6">{{ order_item.quantity }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> Unit Price:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ order_item.price|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Total:</strong></div>
+                        <div class="col-sm-8">
+                            <h4 class="mb-0 text-primary">₹{{ order_item.total|floatformat:2 }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Calculation
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 bg-light rounded">
+                        <div class="mb-2">
+                            <strong>Quantity:</strong> {{ order_item.quantity }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>×</strong>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Unit Price:</strong> ₹{{ order_item.price|floatformat:2 }}
+                        </div>
+                        <hr>
+                        <div>
+                            <strong>Total:</strong> <span class="text-primary fs-5">₹{{ order_item.total|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

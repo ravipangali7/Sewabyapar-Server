@@ -1,32 +1,121 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
     <div class="mb-3">
         <h1 class="h3 d-inline align-middle">Address Details</h1>
-        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:address_update' address.pk %}">Edit</a>
-        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:address_delete' address.pk %}">Delete</a>
-        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:address_list' %}">Back</a>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:address_update' address.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:address_delete' address.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:address_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
     </div>
+
     <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header"><h5 class="card-title mb-0">Address Information</h5></div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="map-pin"></i> Address Information
+                    </h5>
+                </div>
                 <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">User:</dt><dd class="col-sm-9">{{ address.user.name }}</dd>
-                        <dt class="col-sm-3">Title:</dt><dd class="col-sm-9">{{ address.title }}</dd>
-                        <dt class="col-sm-3">Full Name:</dt><dd class="col-sm-9">{{ address.full_name }}</dd>
-                        <dt class="col-sm-3">Phone:</dt><dd class="col-sm-9">{{ address.phone }}</dd>
-                        <dt class="col-sm-3">Address:</dt><dd class="col-sm-9">{{ address.address }}</dd>
-                        <dt class="col-sm-3">City:</dt><dd class="col-sm-9">{{ address.city }}</dd>
-                        <dt class="col-sm-3">State:</dt><dd class="col-sm-9">{{ address.state }}</dd>
-                        <dt class="col-sm-3">Zip Code:</dt><dd class="col-sm-9">{{ address.zip_code }}</dd>
-                        <dt class="col-sm-3">Default:</dt><dd class="col-sm-9">{% if address.is_default %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</dd>
-                    </dl>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' address.user.pk %}" class="text-decoration-none">{{ address.user.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> Title:</strong></div>
+                        <div class="col-sm-8">{{ address.title }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Full Name:</strong></div>
+                        <div class="col-sm-8">{{ address.full_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
+                        <div class="col-sm-8">{{ address.phone }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map-pin" style="width: 16px; height: 16px;"></i> Address:</strong></div>
+                        <div class="col-sm-8">{{ address.address }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map" style="width: 16px; height: 16px;"></i> City:</strong></div>
+                        <div class="col-sm-8">{{ address.city }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map" style="width: 16px; height: 16px;"></i> State:</strong></div>
+                        <div class="col-sm-8">{{ address.state }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Zip Code:</strong></div>
+                        <div class="col-sm-8">{{ address.zip_code }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="star" style="width: 16px; height: 16px;"></i> Default:</strong></div>
+                        <div class="col-sm-8">
+                            {% if address.is_default %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Yes
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="clock"></i> Timestamps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ address.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ address.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="edit" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ address.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ address.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    {% if address.latitude and address.longitude %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map" style="width: 16px; height: 16px;"></i> Coordinates:</strong></div>
+                        <div class="col-sm-8">
+                            <small class="text-muted">Lat: {{ address.latitude }}, Lng: {{ address.longitude }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

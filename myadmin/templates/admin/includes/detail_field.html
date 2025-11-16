@@ -1,0 +1,33 @@
+{% comment %}
+Reusable detail field component
+Usage: {% include 'admin/includes/detail_field.html' with label="Field Label" value=object.field icon="icon-name" badge_type="success" %}
+{% endcomment %}
+<div class="row mb-3">
+    <div class="col-sm-4">
+        <strong>
+            {% if icon %}
+                <i class="align-middle" data-feather="{{ icon }}" style="width: 16px; height: 16px;"></i>
+            {% endif %}
+            {{ label }}:
+        </strong>
+    </div>
+    <div class="col-sm-8">
+        {% if badge_type %}
+            <span class="badge bg-{{ badge_type }}">
+                {% if badge_icon %}
+                    <i class="align-middle" data-feather="{{ badge_icon }}" style="width: 14px; height: 14px;"></i>
+                {% endif %}
+                {{ value }}
+            </span>
+        {% elif link_url %}
+            <a href="{{ link_url }}" class="text-decoration-none">
+                {{ value|default:"-" }}
+            </a>
+        {% else %}
+            <span class="{% if value == '-' or not value %}text-muted{% endif %}">
+                {{ value|default:"-" }}
+            </span>
+        {% endif %}
+    </div>
+</div>
+

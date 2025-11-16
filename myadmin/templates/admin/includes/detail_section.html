@@ -1,0 +1,24 @@
+{% comment %}
+Reusable detail section card component
+Usage: {% include 'admin/includes/detail_section.html' with title="Section Title" icon="icon-name" fields=field_list %}
+{% endcomment %}
+<div class="card mb-3">
+    <div class="card-header {% if header_class %}{{ header_class }}{% endif %}">
+        <h5 class="card-title mb-0">
+            {% if icon %}
+                <i class="align-middle" data-feather="{{ icon }}"></i>
+            {% endif %}
+            {{ title }}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if fields %}
+            {% for field in fields %}
+                {% include 'admin/includes/detail_field.html' with label=field.label value=field.value icon=field.icon badge_type=field.badge_type badge_icon=field.badge_icon link_url=field.link_url %}
+            {% endfor %}
+        {% else %}
+            {{ content|safe }}
+        {% endif %}
+    </div>
+</div>
+

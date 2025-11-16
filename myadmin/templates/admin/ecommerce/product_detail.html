@@ -1,10 +1,308 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Product Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:product_update' product.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:product_delete' product.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:product_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Product Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Name:</dt><dd class="col-sm-9">{{ product.name }}</dd><dt class="col-sm-3">Store:</dt><dd class="col-sm-9">{{ product.store.name }}</dd><dt class="col-sm-3">Category:</dt><dd class="col-sm-9">{{ product.category.name }}</dd><dt class="col-sm-3">Price:</dt><dd class="col-sm-9">₹{{ product.price }}</dd><dt class="col-sm-3">SKU:</dt><dd class="col-sm-9">{{ product.sku }}</dd><dt class="col-sm-3">Stock:</dt><dd class="col-sm-9">{{ product.stock_quantity }}</dd><dt class="col-sm-3">Status:</dt><dd class="col-sm-9">{% if product.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</dd><dt class="col-sm-3">Description:</dt><dd class="col-sm-9">{{ product.description }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Product Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:product_update' product.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:product_delete' product.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:product_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Price</h6>
+                            <h4 class="mb-0">₹{{ product.price|floatformat:2 }}</h4>
+                            {% if product.compare_price %}
+                            <small class="text-muted text-decoration-line-through">₹{{ product.compare_price|floatformat:2 }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Stock Quantity</h6>
+                            <h4 class="mb-0">{{ product.stock_quantity }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="package"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            {% if product.is_active %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="align-middle" data-feather="x-circle" style="width: 16px; height: 16px;"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if product.is_active %}check-circle{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Featured</h6>
+                            {% if product.is_featured %}
+                                <span class="badge bg-warning fs-6">
+                                    <i class="align-middle" data-feather="star" style="width: 16px; height: 16px;"></i> Featured
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">Regular</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if product.is_featured %}star{% else %}star{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Information -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="package"></i> Product Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Name:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ product.name }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> SKU:</strong></div>
+                        <div class="col-sm-8"><span class="badge bg-info">{{ product.sku }}</span></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="shopping-bag" style="width: 16px; height: 16px;"></i> Store:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:store_detail' product.store.pk %}" class="text-decoration-none">{{ product.store.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="grid" style="width: 16px; height: 16px;"></i> Category:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:category_detail' product.category.pk %}" class="text-decoration-none">{{ product.category.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Price:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ product.price|floatformat:2 }}</h5>
+                            {% if product.compare_price %}
+                            <small class="text-muted text-decoration-line-through">₹{{ product.compare_price|floatformat:2 }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Stock:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge {% if product.stock_quantity > 0 %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                                {{ product.stock_quantity }} units
+                            </span>
+                        </div>
+                    </div>
+                    {% if product.weight %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="box" style="width: 16px; height: 16px;"></i> Weight:</strong></div>
+                        <div class="col-sm-8">{{ product.weight }} kg</div>
+                    </div>
+                    {% endif %}
+                    {% if product.dimensions %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="maximize" style="width: 16px; height: 16px;"></i> Dimensions:</strong></div>
+                        <div class="col-sm-8">{{ product.dimensions }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Description:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ product.description|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Status & Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if product.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="star" style="width: 16px; height: 16px;"></i> Featured:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if product.is_featured %}
+                                <span class="badge bg-warning">Featured</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Regular</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ product.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ product.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="edit" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ product.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ product.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Images -->
+    {% if product.images.all %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="image"></i> Product Images
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for image in product.images.all %}
+                        <div class="col-md-3 col-sm-4 mb-3">
+                            <div class="card">
+                                <a href="{{ image.image.url }}" target="_blank" data-bs-toggle="modal" data-bs-target="#imageModal" data-image="{{ image.image.url }}" data-title="{{ image.alt_text|default:product.name }}">
+                                    <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.name }}" class="card-img-top" style="height: 200px; object-fit: cover; cursor: pointer;">
+                                </a>
+                                <div class="card-body p-2">
+                                    <small class="text-muted">
+                                        {% if image.is_primary %}
+                                            <span class="badge bg-primary">Primary</span>
+                                        {% endif %}
+                                        {{ image.alt_text|default:"No alt text" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">Product Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="Product Image" class="img-fluid" style="max-height: 80vh;">
+            </div>
+            <div class="modal-footer">
+                <a id="modalImageLink" href="" target="_blank" class="btn btn-primary">
+                    <i class="align-middle" data-feather="download"></i> Open Full Size
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageModal = document.getElementById('imageModal');
+    if (imageModal) {
+        imageModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const imageUrl = button.getAttribute('data-image');
+            const title = button.getAttribute('data-title');
+            
+            document.getElementById('modalImage').src = imageUrl;
+            document.getElementById('modalImageLink').href = imageUrl;
+            document.getElementById('imageModalLabel').textContent = title || 'Product Image';
+        });
+    }
+    
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+{% endblock %}

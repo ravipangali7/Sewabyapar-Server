@@ -1,6 +1,7 @@
 """Forms for ecommerce models"""
 from django import forms
-from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage
+from django.forms.models import inlineformset_factory
+from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem
 
 
 class ProductForm(forms.ModelForm):
@@ -123,4 +124,55 @@ class ProductImageForm(forms.ModelForm):
             'alt_text': forms.TextInput(attrs={'class': 'form-control'}),
             'is_primary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+# Inline Formset for ProductImage
+ProductImageFormSet = inlineformset_factory(
+    Product,
+    ProductImage,
+    form=ProductImageForm,
+    fields=['image', 'alt_text', 'is_primary'],
+    extra=1,
+    can_delete=True,
+)
+
+
+# Inline Formset for OrderItem
+class OrderItemForm(forms.ModelForm):
+    class Meta:
+        model = OrderItem
+        fields = ['product', 'store', 'quantity', 'price', 'total']
+        widgets = {
+            'product': forms.Select(attrs={'class': 'form-select'}),
+            'store': forms.Select(attrs={'class': 'form-select'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'total': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        quantity = cleaned_data.get('quantity', 0) or 0
+        price = cleaned_data.get('price', 0) or 0
+        cleaned_data['total'] = quantity * price
+        return cleaned_data
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        quantity = instance.quantity or 0
+        price = instance.price or 0
+        instance.total = quantity * price
+        if commit:
+            instance.save()
+        return instance
+
+
+OrderItemFormSet = inlineformset_factory(
+    Order,
+    OrderItem,
+    form=OrderItemForm,
+    fields=['product', 'store', 'quantity', 'price', 'total'],
+    extra=0,
+    can_delete=True,
+)
 

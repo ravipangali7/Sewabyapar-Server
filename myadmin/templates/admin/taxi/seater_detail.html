@@ -1,10 +1,137 @@
 {% extends 'admin/layouts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Seater Details</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:seater_update' seater.pk %}">Edit</a><a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:seater_delete' seater.pk %}">Delete</a><a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:seater_list' %}">Back</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Seater Information</h5></div><div class="card-body">
-        <dl class="row"><dt class="col-sm-3">Trip:</dt><dd class="col-sm-9">{{ seater.trip }}</dd><dt class="col-sm-3">Seat:</dt><dd class="col-sm-9">{{ seater.seat }}</dd><dt class="col-sm-3">Price:</dt><dd class="col-sm-9">₹{{ seater.price }}</dd></dl>
-    </div></div></div></div>
-</div>
-{% endblock %}
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Seater Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:taxi:seater_update' seater.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:taxi:seater_delete' seater.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:taxi:seater_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Price</h6>
+                            <h4 class="mb-0">₹{{ seater.price|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Seat</h6>
+                            <span class="badge bg-info fs-6">{{ seater.seat }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Trip</h6>
+                            <div class="fs-6">{{ seater.trip|truncatewords:3 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="map"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="users"></i> Seater Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map" style="width: 16px; height: 16px;"></i> Trip:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:taxi:trip_detail' seater.trip.pk %}" class="text-decoration-none">{{ seater.trip }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="users" style="width: 16px; height: 16px;"></i> Seat:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info fs-6">{{ seater.seat }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Price:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ seater.price|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 bg-light rounded">
+                        <div class="mb-2">
+                            <strong>Trip Route:</strong><br>
+                            <small>{{ seater.trip.from_place.name }} → {{ seater.trip.to_place.name }}</small>
+                        </div>
+                        <hr>
+                        <div class="mb-2">
+                            <strong>Seat Type:</strong> {{ seater.seat }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Price:</strong> ₹{{ seater.price|floatformat:2 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

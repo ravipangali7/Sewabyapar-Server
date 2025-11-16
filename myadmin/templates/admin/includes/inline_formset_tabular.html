@@ -1,0 +1,65 @@
+{% if formset %}
+<div class="card mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            {% if formset.prefix == 'productimage_set' %}Product Images
+            {% elif formset.prefix == 'orderitem_set' %}Order Items
+            {% elif formset.prefix == 'feedbackcomplainreply_set' %}Replies
+            {% else %}{{ formset.prefix|title }} Items{% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {{ formset.management_form }}
+        <div class="table-responsive">
+            <table class="table table-bordered" id="{{ formset.prefix }}-table">
+                <thead>
+                    <tr>
+                        {% for field in formset.empty_form.visible_fields %}
+                            {% if field.name != 'DELETE' %}
+                                <th>{{ field.label|capfirst }}</th>
+                            {% endif %}
+                        {% endfor %}
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody id="{{ formset.prefix }}-tbody">
+                    {% for form in formset %}
+                    <tr class="form-row" data-form-index="{{ forloop.counter0 }}">
+                        {% for field in form.visible_fields %}
+                            {% if field.name != 'DELETE' %}
+                                <td>
+                                    {% if field.errors %}
+                                        <div class="text-danger small">{{ field.errors }}</div>
+                                    {% endif %}
+                                    {{ field }}
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        {% endfor %}
+                        <td>
+                            {% if form.DELETE %}
+                                <div class="form-check">
+                                    {{ form.DELETE }}
+                                    <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
+                                        Delete
+                                    </label>
+                                </div>
+                            {% endif %}
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-primary mt-2" id="add-{{ formset.prefix }}-row">
+            <i class="align-middle" data-feather="plus"></i> Add Another
+        </button>
+    </div>
+</div>
+{% endif %}
+
