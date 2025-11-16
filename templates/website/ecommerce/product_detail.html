@@ -9,12 +9,12 @@
         <div class="w-full">
             {% if product.images.first %}
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-auto object-cover aspect-square">
+                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-auto object-fill" style="aspect-ratio: 4/3;">
             </div>
             {% if product.images.count > 1 %}
             <div class="grid grid-cols-4 gap-2 mt-4">
                 {% for image in product.images.all|slice:":4" %}
-                <img src="{{ image.image.url }}" alt="{{ product.name }}" class="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity">
+                <img src="{{ image.image.url }}" alt="{{ product.name }}" class="w-full h-20 object-fill rounded-lg cursor-pointer hover:opacity-75 transition-opacity" style="aspect-ratio: 4/3;">
                 {% endfor %}
             </div>
             {% endif %}
@@ -138,11 +138,11 @@
             <a href="{% url 'website:product_detail' related_product.id %}" class="group">
                 <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                     {% if related_product.images.first %}
-                    <div class="aspect-square overflow-hidden bg-gray-100">
-                        <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    <div class="overflow-hidden bg-gray-100" style="aspect-ratio: 4/3;">
+                        <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300">
                     </div>
                     {% else %}
-                    <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <div class="bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center" style="aspect-ratio: 4/3;">
                         <span class="text-gray-400">No Image</span>
                     </div>
                     {% endif %}

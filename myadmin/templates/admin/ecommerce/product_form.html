@@ -31,6 +31,22 @@
         </div>
     </div>
 </div>
+
+<!-- Cropper.js CSS -->
+<link href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet">
+<!-- SweetAlert2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<!-- Cropper.js JS -->
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+
+<!-- Image Cropper Module -->
+<script src="{% static 'myadmin/js/image_cropper.js' %}"></script>
+
 <script src="{% static 'myadmin/js/inline_forms.js' %}"></script>
 <script>
     if (typeof feather !== 'undefined') {

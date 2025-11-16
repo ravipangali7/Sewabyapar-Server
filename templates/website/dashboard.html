@@ -203,9 +203,9 @@
                 <div class="flex gap-4" style="min-width: max-content;">
                     {% for product in featured_products %}
                     <a href="{% url 'website:product_detail' product.id %}" class="product-card bg-white rounded-xl shadow-md overflow-hidden flex-shrink-0" style="width: 160px;">
-                        <div class="aspect-square overflow-hidden bg-gray-100">
+                        <div class="overflow-hidden bg-gray-100" style="aspect-ratio: 4/3;">
                             {% if product.images.first %}
-                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-fill">
                             {% else %}
                             <div class="w-full h-full flex items-center justify-center">
                                 <span class="text-gray-400 text-xs">No Image</span>

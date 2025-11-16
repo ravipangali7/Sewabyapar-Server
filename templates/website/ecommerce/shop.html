@@ -21,9 +21,9 @@
             {% for product in featured_products %}
             <a href="{% url 'website:product_detail' product.id %}" class="group">
                 <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div class="aspect-square overflow-hidden bg-gray-100">
+                    <div class="overflow-hidden bg-gray-100" style="aspect-ratio: 4/3;">
                         {% if product.images.first %}
-                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300">
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center">
                             <span class="text-gray-400">No Image</span>
@@ -85,9 +85,9 @@
             {% for product in recent_products %}
             <a href="{% url 'website:product_detail' product.id %}" class="group">
                 <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div class="aspect-square overflow-hidden bg-gray-100">
+                    <div class="overflow-hidden bg-gray-100" style="aspect-ratio: 4/3;">
                         {% if product.images.first %}
-                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300">
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center">
                             <span class="text-gray-400">No Image</span>

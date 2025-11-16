@@ -27,6 +27,7 @@
                                     <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
                                     <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
                                     <option value="verified" {% if status == 'verified' %}selected{% endif %}>Verified</option>
+                                    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -70,7 +71,7 @@
                                 {% for user in kyc_users %}
                                 <tr>
                                     <td>
-                                        {% if not user.is_kyc_verified %}
+                                        {% if not user.is_kyc_verified and not user.kyc_rejected_at %}
                                         <input type="checkbox" name="selected_items" value="{{ user.pk }}" class="item-checkbox">
                                         {% endif %}
                                     </td>
@@ -119,6 +120,13 @@
                                             {% if user.kyc_verified_at %}
                                                 <br><small class="text-muted">{{ user.kyc_verified_at|date:"M d, Y" }}</small>
                                             {% endif %}
+                                        {% elif user.kyc_rejected_at %}
+                                            <span class="badge bg-danger">
+                                                <i class="align-middle" data-feather="x-circle" style="width: 14px; height: 14px;"></i> Rejected
+                                            </span>
+                                            {% if user.kyc_rejected_at %}
+                                                <br><small class="text-muted">{{ user.kyc_rejected_at|date:"M d, Y" }}</small>
+                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-warning">
                                                 <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i> Pending
@@ -144,6 +152,11 @@
                                                 <i class="align-middle" data-feather="check"></i> Verify
                                             </button>
                                         </form>
+                                        {% endif %}
+                                        {% if not user.is_kyc_verified %}
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ user.pk }}">
+                                            <i class="align-middle" data-feather="x-circle"></i> Reject
+                                        </button>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -195,6 +208,46 @@
         </div>
     </div>
 </div>
+
+<!-- Reject Modals for each user -->
+{% for user in kyc_users %}
+{% if not user.is_kyc_verified %}
+<div class="modal fade" id="rejectModal{{ user.pk }}" tabindex="-1" aria-labelledby="rejectModalLabel{{ user.pk }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="rejectModalLabel{{ user.pk }}">
+                    <i class="align-middle" data-feather="x-circle"></i> Reject KYC Verification
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'myadmin:core:kyc_reject' user_id=user.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="align-middle" data-feather="alert-triangle"></i>
+                        <strong>Warning:</strong> You are about to reject KYC verification for <strong>{{ user.name }}</strong>. Please provide a reason for rejection.
+                    </div>
+                    <div class="mb-3">
+                        <label for="rejection_reason{{ user.pk }}" class="form-label">
+                            <strong>Rejection Reason <span class="text-danger">*</span></strong>
+                        </label>
+                        <textarea class="form-control" id="rejection_reason{{ user.pk }}" name="rejection_reason" rows="5" required placeholder="Please provide a detailed reason for rejecting this KYC verification..."></textarea>
+                        <small class="form-text text-muted">This reason will be visible to the user.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="align-middle" data-feather="x-circle"></i> Reject KYC
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 
 <script>
 function toggleAll() {

@@ -243,7 +243,7 @@
                         <div class="col-md-3 col-sm-4 mb-3">
                             <div class="card">
                                 <a href="{{ image.image.url }}" target="_blank" data-bs-toggle="modal" data-bs-target="#imageModal" data-image="{{ image.image.url }}" data-title="{{ image.alt_text|default:product.name }}">
-                                    <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.name }}" class="card-img-top" style="height: 200px; object-fit: cover; cursor: pointer;">
+                                    <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.name }}" class="card-img-top" style="height: 200px; width: 100%; object-fit: fill; cursor: pointer; aspect-ratio: 4/3;">
                                 </a>
                                 <div class="card-body p-2">
                                     <small class="text-muted">

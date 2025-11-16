@@ -80,6 +80,14 @@
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
+
+        // Initialize image cropper for new image inputs (if cropper is available)
+        if (typeof window.initImageCropper === 'function') {
+            const imageInputs = newRow.querySelectorAll('input[type="file"][name*="image"]');
+            imageInputs.forEach(function(input) {
+                window.initImageCropper(input);
+            });
+        }
     }
 
     function addStackedForm(formsetPrefix) {
@@ -143,6 +151,14 @@
         // Initialize Feather icons for new form
         if (typeof feather !== 'undefined') {
             feather.replace();
+        }
+
+        // Initialize image cropper for new image inputs (if cropper is available)
+        if (typeof window.initImageCropper === 'function') {
+            const imageInputs = newForm.querySelectorAll('input[type="file"][name*="image"]');
+            imageInputs.forEach(function(input) {
+                window.initImageCropper(input);
+            });
         }
     }
 

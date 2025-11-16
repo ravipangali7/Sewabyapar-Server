@@ -70,6 +70,8 @@ class User(AbstractUser):
     is_kyc_verified = models.BooleanField(default=False, help_text='Whether KYC has been verified by admin')
     kyc_submitted_at = models.DateTimeField(blank=True, null=True, help_text='When user submitted KYC information')
     kyc_verified_at = models.DateTimeField(blank=True, null=True, help_text='When KYC was verified by admin')
+    kyc_rejected_at = models.DateTimeField(blank=True, null=True, help_text='When KYC was rejected by admin')
+    kyc_rejection_reason = models.TextField(blank=True, null=True, help_text='Reason for KYC rejection')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

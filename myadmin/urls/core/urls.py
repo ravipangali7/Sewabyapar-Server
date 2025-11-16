@@ -18,6 +18,7 @@ urlpatterns = [
     path('kyc/', kyc_views.KYCListView.as_view(), name='kyc_list'),
     path('kyc/<int:user_id>/', kyc_views.KYCVerificationView.as_view(), name='kyc_verification'),
     path('kyc/<int:user_id>/verify/', kyc_views.KYCVerifyView.as_view(), name='kyc_verify'),
+    path('kyc/<int:user_id>/reject/', kyc_views.KYCRejectView.as_view(), name='kyc_reject'),
     path('kyc/bulk-verify/', kyc_views.KYCBulkVerifyView.as_view(), name='kyc_bulk_verify'),
     
     # Address URLs

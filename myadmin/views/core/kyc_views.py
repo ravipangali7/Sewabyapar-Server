@@ -31,9 +31,11 @@ class KYCListView(StaffRequiredMixin, ListView):
         # Filter by status
         status = self.request.GET.get('status', 'all')
         if status == 'pending':
-            queryset = queryset.filter(is_kyc_verified=False)
+            queryset = queryset.filter(is_kyc_verified=False, kyc_rejected_at__isnull=True)
         elif status == 'verified':
             queryset = queryset.filter(is_kyc_verified=True)
+        elif status == 'rejected':
+            queryset = queryset.filter(kyc_rejected_at__isnull=False)
         
         # Search
         search = self.request.GET.get('search')
@@ -83,6 +85,9 @@ class KYCVerifyView(StaffRequiredMixin, View):
             user = get_object_or_404(User, pk=user_id)
             user.is_kyc_verified = True
             user.kyc_verified_at = timezone.now()
+            # Clear rejection fields when verifying
+            user.kyc_rejected_at = None
+            user.kyc_rejection_reason = None
             user.save()
             messages.success(request, f'KYC verified for {user.name}.')
             
@@ -93,6 +98,35 @@ class KYCVerifyView(StaffRequiredMixin, View):
         except Exception as e:
             logger.error(f'Error verifying KYC: {str(e)}')
             messages.error(request, 'An error occurred while verifying KYC.')
+            return redirect('myadmin:core:kyc_verification', user_id=user_id)
+
+
+class KYCRejectView(StaffRequiredMixin, View):
+    """Reject user KYC with reason"""
+    def post(self, request, user_id):
+        try:
+            user = get_object_or_404(User, pk=user_id)
+            rejection_reason = request.POST.get('rejection_reason', '').strip()
+            
+            if not rejection_reason:
+                messages.error(request, 'Rejection reason is required.')
+                return redirect('myadmin:core:kyc_verification', user_id=user_id)
+            
+            user.is_kyc_verified = False
+            user.kyc_rejected_at = timezone.now()
+            user.kyc_rejection_reason = rejection_reason
+            # Clear verification fields when rejecting
+            user.kyc_verified_at = None
+            user.save()
+            messages.success(request, f'KYC rejected for {user.name}.')
+            
+            # Redirect based on referrer
+            if 'kyc_list' in request.META.get('HTTP_REFERER', ''):
+                return redirect('myadmin:core:kyc_list')
+            return redirect('myadmin:core:kyc_verification', user_id=user_id)
+        except Exception as e:
+            logger.error(f'Error rejecting KYC: {str(e)}')
+            messages.error(request, 'An error occurred while rejecting KYC.')
             return redirect('myadmin:core:kyc_verification', user_id=user_id)
 
 
