@@ -203,7 +203,7 @@
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="/" class="text-gray-700 hover:text-red-600 font-medium transition-colors">HOME</a>
                     <a href="{% url 'website:shop' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">SHOP</a>
-                    <a href="{% url 'website:taxi' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">TAXI</a>
+                    <a href="{% url 'website:taxi' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors" style="display: none;">TAXI</a>
                     {% if user.is_authenticated %}
                     <a href="{% url 'website:profile' %}" class="text-gray-700 hover:text-red-600 font-medium transition-colors">PROFILE</a>
                     {% endif %}
@@ -250,7 +250,7 @@
                 <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white">
                     <a href="/" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">HOME</a>
                     <a href="{% url 'website:shop' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">SHOP</a>
-                    <a href="{% url 'website:taxi' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">TAXI</a>
+                    <a href="{% url 'website:taxi' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center" style="display: none;">TAXI</a>
                     {% if user.is_authenticated %}
                     <a href="{% url 'website:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg transition-colors min-h-[44px] flex items-center">PROFILE</a>
                     {% endif %}
@@ -306,13 +306,13 @@
                 </svg>
                 <span class="text-xs">Shop</span>
             </a>
-            <a href="{% url 'website:taxi' %}" class="bottom-nav-item" data-nav="taxi">
+            <a href="{% url 'website:taxi' %}" class="bottom-nav-item" data-nav="taxi" style="display: none;">
                 <svg class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
                 <span class="text-xs">Taxi</span>
             </a>
-            <div class="bottom-nav-item opacity-50 cursor-not-allowed" data-nav="flight">
+            <div class="bottom-nav-item opacity-50 cursor-not-allowed" data-nav="flight" style="display: none;">
                 <svg class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
@@ -444,15 +444,6 @@
                     item.classList.add('active');
                 }
             });
-            
-            // Handle flight booking click
-            const flightNav = document.querySelector('.bottom-nav-item[data-nav="flight"]');
-            if (flightNav) {
-                flightNav.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    alert('Flight booking is coming soon!');
-                });
-            }
         })();
     </script>
     

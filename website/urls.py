@@ -34,6 +34,7 @@ urlpatterns = [
     path('login/', auth.login_view, name='login'),
     path('logout/', auth.logout_view, name='logout'),
     path('register/', auth.register_view, name='register'),
+    path('register/send-otp/', auth.send_otp_view, name='send_registration_otp'),
     path('forgot-password/', auth.forgot_password_view, name='forgot_password'),
     path('reset-password/', auth.reset_password_view, name='reset_password'),
     
