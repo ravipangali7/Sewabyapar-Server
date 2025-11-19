@@ -56,6 +56,7 @@ class Services(models.Model):
     slug = models.SlugField(max_length=200, unique=True, blank=True, help_text="URL-friendly version of title")
     image = models.ImageField(upload_to='website/services/', blank=True, null=True, help_text="Service image")
     description = models.TextField(help_text="Service description")
+    url = models.URLField(blank=True, null=True, help_text="Service URL for redirect")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

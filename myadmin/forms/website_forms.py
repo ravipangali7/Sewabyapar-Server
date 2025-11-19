@@ -36,12 +36,13 @@ class MySettingForm(forms.ModelForm):
 class ServicesForm(forms.ModelForm):
     class Meta:
         model = Services
-        fields = ['title', 'slug', 'image', 'description']
+        fields = ['title', 'slug', 'image', 'description', 'url']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'slug': forms.TextInput(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'url': forms.URLInput(attrs={'class': 'form-control'}),
         }
 
 
