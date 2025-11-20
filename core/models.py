@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 class UserManager(BaseUserManager):
     """Custom user manager for phone-based authentication"""
     
-    def create_user(self, phone, name, password=None, email=None, country_code='+977', country='Nepal', **extra_fields):
+    def create_user(self, phone, name, password=None, email=None, country_code='+91', country='India', **extra_fields):
         """Create and return a regular user with phone as username"""
         if not phone:
             raise ValueError('The phone field must be set')
@@ -28,7 +28,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
     
-    def create_superuser(self, phone, name, password=None, email=None, country_code='+977', country='Nepal', **extra_fields):
+    def create_superuser(self, phone, name, password=None, email=None, country_code='+91', country='India', **extra_fields):
         """Create and return a superuser with phone as username"""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -57,8 +57,8 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, unique=True)
     name = models.CharField(max_length=100)
     email = models.EmailField(blank=True, null=True)
-    country_code = models.CharField(max_length=5, choices=COUNTRY_CODE_CHOICES, default='+977')
-    country = models.CharField(max_length=10, choices=COUNTRY_CHOICES, default='Nepal')
+    country_code = models.CharField(max_length=5, choices=COUNTRY_CODE_CHOICES, default='+91')
+    country = models.CharField(max_length=10, choices=COUNTRY_CHOICES, default='India')
     fcm_token = models.CharField(max_length=255, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
     
