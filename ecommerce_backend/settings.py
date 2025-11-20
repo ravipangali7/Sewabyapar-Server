@@ -213,6 +213,29 @@ FAST2SMS_LANGUAGE = 'english'
 # OTP Configuration
 OTP_EXPIRY_MINUTES = 10
 
+# PhonePe Payment Gateway Configuration
+PHONEPE_CLIENT_ID = 'SU2511191730406050273204'
+PHONEPE_CLIENT_SECRET = '1d8957fd-15fa-4fef-a816-aa945943dcf8'
+PHONEPE_CLIENT_VERSION = 1
+
+# PhonePe API URLs
+PHONEPE_API_BASE_URL = 'https://api.phonepe.com/apis'
+PHONEPE_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/pay'
+PHONEPE_AUTHORIZATION_API_URL = f'{PHONEPE_API_BASE_URL}/identity-manager/v1/oauth/token'
+PHONEPE_ORDER_STATUS_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/order/{{merchant_order_id}}/status'
+PHONEPE_TRANSACTION_STATUS_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/transaction/{{transaction_id}}/status'
+
+# Base URL for payment redirects (update this for production)
+def get_base_url():
+    """Get the base URL for payment redirects"""
+    if DEBUG:
+        return 'http://localhost:8000'
+    else:
+        # Update this with your production domain
+        return 'http://147.93.153.157:9991'
+
+PHONEPE_BASE_URL = get_base_url()
+
 # CKEditor 5 Configuration
 customColorPalette = [
     {

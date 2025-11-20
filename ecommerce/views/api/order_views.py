@@ -24,7 +24,23 @@ def order_list_create(request):
             # Generate order number
             import uuid
             order_number = str(uuid.uuid4())[:8].upper()
+            
+            # Get payment method from request data
+            payment_method = serializer.validated_data.get('payment_method', 'cod')
+            
+            # Create order
             order = serializer.save(user=request.user, order_number=order_number)
+            
+            # Set payment status based on payment method
+            if payment_method == 'cod':
+                # For COD, payment is considered successful immediately
+                order.payment_status = 'success'
+                order.status = 'confirmed'
+            else:
+                # For online payment, payment status is pending until payment is completed
+                order.payment_status = 'pending'
+            
+            order.save()
             
             # Return the order with proper serializer that includes all fields
             order_serializer = OrderSerializer(order)

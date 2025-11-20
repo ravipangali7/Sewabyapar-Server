@@ -108,6 +108,18 @@ class Order(models.Model):
         ('refunded', 'Refunded'),
     ]
     
+    PAYMENT_METHOD_CHOICES = [
+        ('cod', 'Cash on Delivery'),
+        ('online', 'Online Payment'),
+    ]
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     order_number = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -117,6 +129,10 @@ class Order(models.Model):
     phone = models.CharField(max_length=20)
     email = models.EmailField()
     notes = models.TextField(blank=True)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='cod')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    phonepe_transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    phonepe_merchant_order_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

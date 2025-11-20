@@ -40,6 +40,34 @@
                         Add New Address
                     </a>
                 </form>
+                
+                <!-- Payment Method Selection -->
+                {% if addresses %}
+                <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 mt-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Payment Method</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-start p-4 sm:p-5 border-2 rounded-xl cursor-pointer hover:border-red-400 transition-colors border-red-600 bg-red-50 payment-method-option">
+                            <input type="radio" name="payment_method" value="cod" checked class="mt-1 mr-4 w-5 h-5 text-red-600 focus:ring-red-500">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <h3 class="font-semibold text-gray-900">Cash on Delivery (COD)</h3>
+                                </div>
+                                <p class="text-gray-600 text-sm">Pay cash when your order is delivered</p>
+                            </div>
+                        </label>
+                        <label class="flex items-start p-4 sm:p-5 border-2 rounded-xl cursor-pointer hover:border-red-400 transition-colors border-gray-200 payment-method-option">
+                            <input type="radio" name="payment_method" value="online" class="mt-1 mr-4 w-5 h-5 text-red-600 focus:ring-red-500">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <h3 class="font-semibold text-gray-900">Online Payment</h3>
+                                    <span class="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">PhonePe</span>
+                                </div>
+                                <p class="text-gray-600 text-sm">Pay securely using PhonePe</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
                 {% else %}
                 <div class="text-center py-8">
                     <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,11 +128,62 @@
     </div>
 </div>
 
+<!-- PhonePe Checkout Script -->
+<script src="https://mercury.phonepe.com/web/bundle/checkout.js"></script>
+
 <script>
+// Payment method selection handler
+document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.payment-method-option').forEach(option => {
+            option.classList.remove('border-red-600', 'bg-red-50');
+            option.classList.add('border-gray-200');
+        });
+        if (this.checked) {
+            const label = this.closest('.payment-method-option');
+            label.classList.remove('border-gray-200');
+            label.classList.add('border-red-600', 'bg-red-50');
+        }
+    });
+});
+
+// Check if PhonePe Checkout script is loaded
+function checkPhonePeCheckout() {
+    if (typeof window.PhonePeCheckout !== 'undefined') {
+        return true;
+    }
+    console.warn('PhonePe Checkout script not loaded');
+    return false;
+}
+
+// Payment callback handler
+function paymentCallback(response) {
+    const submitButton = document.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Place Order';
+    }
+    
+    if (response === 'CONCLUDED') {
+        // Payment successful - redirect will happen via callback URL
+        console.log('Payment completed successfully');
+    } else if (response === 'USER_CANCEL') {
+        alert('Payment was cancelled. Please try again.');
+    } else {
+        console.log('Payment response:', response);
+    }
+}
+
+// Form submission handler
 document.getElementById('checkout-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
-    const submitButton = this.querySelector('button[type="submit"]');
+    const submitButton = document.querySelector('button[type="submit"]');
+    const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'cod';
+    
+    // Add payment method to form data
+    formData.append('payment_method', paymentMethod);
+    
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Processing...';
@@ -120,9 +199,33 @@ document.getElementById('checkout-form')?.addEventListener('submit', function(e)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            window.location.href = "{% url 'website:order_detail' 0 %}".replace('0', data.order_id);
+            if (paymentMethod === 'online' && data.redirectUrl) {
+                // For online payment, initiate PhonePe checkout
+                if (checkPhonePeCheckout()) {
+                    try {
+                        window.PhonePeCheckout.transact({
+                            tokenUrl: data.redirectUrl,
+                            callback: paymentCallback,
+                            type: "REDIRECT"  // or "IFRAME"
+                        });
+                    } catch (error) {
+                        console.error('PhonePe checkout error:', error);
+                        alert('Error initiating payment. Please try again.');
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Place Order';
+                        }
+                    }
+                } else {
+                    // Fallback: redirect directly to PhonePe URL
+                    window.location.href = data.redirectUrl;
+                }
+            } else {
+                // For COD, redirect to order detail page
+                window.location.href = "{% url 'website:order_detail' 0 %}".replace('0', data.order_id);
+            }
         } else {
-            alert(data.message);
+            alert(data.message || 'An error occurred. Please try again.');
             if (submitButton) {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Place Order';

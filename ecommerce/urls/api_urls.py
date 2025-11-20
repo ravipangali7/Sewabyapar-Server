@@ -1,7 +1,7 @@
 from django.urls import path
 from ..views.api import (
     store_views, category_views, product_views,
-    cart_views, order_views, review_views, wishlist_views, coupon_views
+    cart_views, order_views, review_views, wishlist_views, coupon_views, payment_views
 )
 
 urlpatterns = [
@@ -41,5 +41,10 @@ urlpatterns = [
     # Coupon URLs
     path('coupons/', coupon_views.coupon_list, name='coupon-list'),
     path('coupons/<str:code>/', coupon_views.coupon_detail, name='coupon-detail'),
+    
+    # Payment URLs
+    path('payments/initiate/<int:order_id>/', payment_views.initiate_payment_view, name='initiate-payment'),
+    path('payments/status/', payment_views.payment_status, name='payment-status'),
+    path('payments/callback/', payment_views.payment_callback, name='payment-callback'),
 ]
 

@@ -134,8 +134,11 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'order_number', 'user', 'status', 'total_amount', 'shipping_address',
-                 'billing_address', 'phone', 'email', 'notes', 'items', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'order_number', 'created_at', 'updated_at']
+                 'billing_address', 'phone', 'email', 'notes', 'items', 'payment_method',
+                 'payment_status', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
+                 'created_at', 'updated_at']
+        read_only_fields = ['id', 'order_number', 'payment_status', 'phonepe_transaction_id',
+                           'phonepe_merchant_order_id', 'created_at', 'updated_at']
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
@@ -146,7 +149,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ['shipping_address', 'billing_address', 'phone', 'email', 'notes', 'items']
+        fields = ['shipping_address', 'billing_address', 'phone', 'email', 'notes', 'items', 'payment_method']
     
     def create(self, validated_data):
         items_data = validated_data.pop('items')

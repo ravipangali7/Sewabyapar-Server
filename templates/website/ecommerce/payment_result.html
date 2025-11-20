@@ -1,0 +1,231 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Payment Status - {% if settings %}{{ settings.name }}{% else %}Website{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+    <div class="mb-6 sm:mb-8">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Payment Status</h1>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="bg-white rounded-xl shadow-lg p-6 sm:p-8 text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+        <p class="text-gray-600">Checking payment status...</p>
+    </div>
+
+    <!-- Payment Status Display -->
+    <div id="payment-status" class="hidden">
+        <!-- Success State -->
+        <div id="success-state" class="hidden bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-green-800 mb-2">Payment Successful!</h2>
+                <p class="text-gray-600">Your payment has been processed successfully.</p>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-6 space-y-4">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Order Number</span>
+                    <span class="font-semibold text-gray-900" id="order-number">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Transaction ID</span>
+                    <span class="font-semibold text-gray-900" id="transaction-id">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Amount Paid</span>
+                    <span class="font-bold text-red-600 text-lg" id="amount-paid">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Payment Method</span>
+                    <span class="font-semibold text-gray-900" id="payment-method">-</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <a href="{% url 'website:orders' %}" class="block w-full bg-red-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl text-center">
+                    View My Orders
+                </a>
+            </div>
+        </div>
+
+        <!-- Failed State -->
+        <div id="failed-state" class="hidden bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-red-800 mb-2">Payment Failed</h2>
+                <p class="text-gray-600" id="failure-message">Your payment could not be processed. Please try again.</p>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-6 space-y-4">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Order Number</span>
+                    <span class="font-semibold text-gray-900" id="failed-order-number">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Amount</span>
+                    <span class="font-bold text-red-600 text-lg" id="failed-amount">-</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200 space-y-3">
+                <a href="{% url 'website:orders' %}" class="block w-full bg-gray-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-gray-700 transition-all shadow-lg hover:shadow-xl text-center">
+                    View My Orders
+                </a>
+                <a href="{% url 'website:checkout' %}" class="block w-full bg-red-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl text-center">
+                    Try Again
+                </a>
+            </div>
+        </div>
+
+        <!-- Pending State -->
+        <div id="pending-state" class="hidden bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-yellow-800 mb-2">Payment Pending</h2>
+                <p class="text-gray-600">Your payment is being processed. Please wait...</p>
+            </div>
+            
+            <div class="border-t border-gray-200 pt-6 space-y-4">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Order Number</span>
+                    <span class="font-semibold text-gray-900" id="pending-order-number">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Amount</span>
+                    <span class="font-bold text-red-600 text-lg" id="pending-amount">-</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <a href="{% url 'website:orders' %}" class="block w-full bg-gray-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-gray-700 transition-all shadow-lg hover:shadow-xl text-center">
+                    View My Orders
+                </a>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-red-800 mb-2">Error</h2>
+                <p class="text-gray-600" id="error-message">An error occurred while checking payment status.</p>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <a href="{% url 'website:orders' %}" class="block w-full bg-gray-600 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-gray-700 transition-all shadow-lg hover:shadow-xl text-center">
+                    View My Orders
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const merchantOrderId = urlParams.get('merchant_order_id');
+const transactionId = urlParams.get('transaction_id');
+
+// Check payment status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (!merchantOrderId && !transactionId) {
+        showError('No payment information found in URL');
+        return;
+    }
+    
+    checkPaymentStatus();
+});
+
+function checkPaymentStatus() {
+    const params = new URLSearchParams();
+    if (merchantOrderId) {
+        params.append('merchant_order_id', merchantOrderId);
+    }
+    if (transactionId) {
+        params.append('transaction_id', transactionId);
+    }
+    
+    fetch(`/api/payments/status/?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('payment-status').classList.remove('hidden');
+        
+        if (data.success && data.order) {
+            const order = data.order;
+            const paymentDetails = data.paymentDetails || {};
+            const paymentStatus = order.payment_status || paymentDetails.status || '';
+            
+            // Update order information
+            const orderNumberEl = document.getElementById('order-number') || document.getElementById('failed-order-number') || document.getElementById('pending-order-number');
+            const amountEl = document.getElementById('amount-paid') || document.getElementById('failed-amount') || document.getElementById('pending-amount');
+            const transactionIdEl = document.getElementById('transaction-id');
+            const paymentMethodEl = document.getElementById('payment-method');
+            
+            if (orderNumberEl) orderNumberEl.textContent = order.order_number || '-';
+            if (amountEl) amountEl.textContent = `₹${parseFloat(order.total_amount || 0).toFixed(2)}`;
+            if (transactionIdEl) transactionIdEl.textContent = order.phonepe_transaction_id || paymentDetails.transactionId || '-';
+            if (paymentMethodEl) paymentMethodEl.textContent = order.payment_method === 'online' ? 'PhonePe' : 'Cash on Delivery';
+            
+            // Show appropriate state
+            if (paymentStatus.toLowerCase() === 'success' || paymentStatus === 'SUCCESS' || paymentStatus === 'PAYMENT_SUCCESS' || paymentStatus === 'COMPLETED') {
+                document.getElementById('success-state').classList.remove('hidden');
+            } else if (paymentStatus.toLowerCase() === 'failed' || paymentStatus === 'FAILED' || paymentStatus === 'PAYMENT_FAILED' || paymentStatus === 'FAILURE') {
+                document.getElementById('failed-state').classList.remove('hidden');
+                const failureMessage = document.getElementById('failure-message');
+                if (failureMessage && paymentDetails.message) {
+                    failureMessage.textContent = paymentDetails.message;
+                }
+            } else {
+                document.getElementById('pending-state').classList.remove('hidden');
+                // Retry checking after 3 seconds
+                setTimeout(checkPaymentStatus, 3000);
+            }
+        } else {
+            showError(data.error || 'Failed to check payment status');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('payment-status').classList.remove('hidden');
+        showError('An error occurred while checking payment status');
+    });
+}
+
+function showError(message) {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('payment-status').classList.remove('hidden');
+    document.getElementById('error-state').classList.remove('hidden');
+    const errorMessageEl = document.getElementById('error-message');
+    if (errorMessageEl) {
+        errorMessageEl.textContent = message;
+    }
+}
+</script>
+{% endblock %}
+
