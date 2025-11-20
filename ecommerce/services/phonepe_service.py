@@ -94,8 +94,7 @@ def initiate_payment(amount, merchant_order_id, redirect_url, auth_token):
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {auth_token}',
-            'X-VERIFY': 'SHA256'  # PhonePe requires X-VERIFY header
+            'Authorization': f'Bearer {auth_token}'
         }
         
         response = requests.post(url, json=payload, headers=headers, timeout=30)
