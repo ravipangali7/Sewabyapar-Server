@@ -22,6 +22,7 @@ def get_authorization_token():
         
         payload = {
             'client_id': settings.PHONEPE_CLIENT_ID,
+            'client_version': settings.PHONEPE_CLIENT_VERSION,
             'client_secret': settings.PHONEPE_CLIENT_SECRET,
             'grant_type': 'client_credentials'
         }
@@ -78,23 +79,20 @@ def initiate_payment(amount, merchant_order_id, redirect_url, auth_token):
         amount_in_paise = int(float(amount) * 100)
         
         payload = {
-            'merchantId': settings.PHONEPE_CLIENT_ID,
-            'merchantTransactionId': merchant_order_id,
-            'merchantUserId': 'USER_ID',  # You can customize this
+            'merchantOrderId': merchant_order_id,
             'amount': amount_in_paise,
-            'redirectUrl': redirect_url,
-            'redirectMode': 'REDIRECT',
-            'callbackUrl': redirect_url,
-            'mobileNumber': '',  # Optional
-            'paymentInstrument': {
-                'type': 'PAY_PAGE'
+            'paymentFlow': {
+                'type': 'PG_CHECKOUT',
+                'merchantUrls': {
+                    'redirectUrl': redirect_url
+                }
             }
         }
         
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {auth_token}'
+            'Authorization': f'O-Bearer {auth_token}'
         }
         
         response = requests.post(url, json=payload, headers=headers, timeout=30)
@@ -129,8 +127,9 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token):
         )
         
         headers = {
+            'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {auth_token}'
+            'Authorization': f'O-Bearer {auth_token}'
         }
         
         response = requests.get(url, headers=headers, timeout=30)
@@ -165,8 +164,9 @@ def check_payment_status_by_transaction_id(transaction_id, auth_token):
         )
         
         headers = {
+            'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorization': f'Bearer {auth_token}'
+            'Authorization': f'O-Bearer {auth_token}'
         }
         
         response = requests.get(url, headers=headers, timeout=30)
