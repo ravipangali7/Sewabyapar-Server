@@ -219,6 +219,7 @@ PHONEPE_CLIENT_SECRET = '1d8957fd-15fa-4fef-a816-aa945943dcf8'
 PHONEPE_CLIENT_VERSION = 1
 
 # PhonePe API URLs
+PHONEPE_ENV = 'PRODUCTION'  # Change to 'PRODUCTION' when going live
 PHONEPE_API_BASE_URL = 'https://api.phonepe.com/apis'
 PHONEPE_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/pay'
 PHONEPE_AUTHORIZATION_API_URL = f'{PHONEPE_API_BASE_URL}/identity-manager/v1/oauth/token'
