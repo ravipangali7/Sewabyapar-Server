@@ -88,6 +88,25 @@
                 </div>
             </div>
         </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Payment Status</h6>
+                            <span class="badge bg-{% if order.payment_status == 'success' %}success{% elif order.payment_status == 'failed' %}danger{% elif order.payment_status == 'cancelled' %}secondary{% else %}warning{% endif %} fs-6">
+                                {{ order.get_payment_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if order.payment_status == 'success' %}check-circle{% elif order.payment_status == 'failed' %}x-circle{% else %}clock{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row">
@@ -132,6 +151,22 @@
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Total Amount:</strong></div>
                         <div class="col-sm-8">
                             <h5 class="mb-0">₹{{ order.total_amount|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="credit-card" style="width: 16px; height: 16px;"></i> Payment Method:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-{% if order.payment_method == 'online' %}info{% else %}secondary{% endif %} fs-6">
+                                {{ order.get_payment_method_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Payment Status:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-{% if order.payment_status == 'success' %}success{% elif order.payment_status == 'failed' %}danger{% elif order.payment_status == 'cancelled' %}secondary{% else %}warning{% endif %} fs-6">
+                                {{ order.get_payment_status_display }}
+                            </span>
                         </div>
                     </div>
                     <div class="row mb-3">

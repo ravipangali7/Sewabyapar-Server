@@ -124,22 +124,22 @@ WSGI_APPLICATION = 'ecommerce_backend.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    # }
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'sewabyapar',
-        'USER': 'sewabyapar',
-        'PASSWORD': 'Sewabyapar453',
-        'HOST': 'localhost',
-        'PORT': 3306,
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'sewabyapar',
+    #     'USER': 'sewabyapar',
+    #     'PASSWORD': 'Sewabyapar453',
+    #     'HOST': 'localhost',
+    #     'PORT': 3306,
+    #     'OPTIONS': {
+    #         'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+    #         'charset': 'utf8mb4',
+    #     },
+    # }
 }
 
 
@@ -228,12 +228,7 @@ PHONEPE_TRANSACTION_STATUS_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/tra
 
 # Base URL for payment redirects (update this for production)
 def get_base_url():
-    """Get the base URL for payment redirects"""
-    if DEBUG:
-        return 'http://localhost:8000'
-    else:
-        # Update this with your production domain
-        return 'http://147.93.153.157:9991'
+    return "https://www.sewabyapar.com"
 
 PHONEPE_BASE_URL = get_base_url()
 
