@@ -5,7 +5,7 @@ Initializes the StandardCheckoutClient singleton instance
 from phonepe.sdk.pg.payments.v2.standard_checkout_client import StandardCheckoutClient
 from phonepe.sdk.pg.env import Env
 from django.conf import settings
-from phonepe.sdk.pg.exceptions import PhonePeException
+from phonepe.sdk.pg.common.exceptions import PhonePeException
 
 
 def get_phonepe_client():

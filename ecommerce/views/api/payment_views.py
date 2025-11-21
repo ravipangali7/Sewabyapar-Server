@@ -116,7 +116,7 @@ from ...services.phonepe_service import (
 #         )
 
 # Add this import at the top
-from phonepe.sdk.pg.exceptions import PhonePeException
+from phonepe.sdk.pg.common.exceptions import PhonePeException
 
 # Update the initiate_payment_view function
 @api_view(['POST'])

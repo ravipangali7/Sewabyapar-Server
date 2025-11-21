@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 from django.conf import settings
 from phonepe.sdk.pg.payments.v2.models.request.standard_checkout_pay_request import StandardCheckoutPayRequest
-from phonepe.sdk.pg.exceptions import PhonePeException
+from phonepe.sdk.pg.common.exceptions import PhonePeException
 from .phonepe_client import get_phonepe_client
 
 
