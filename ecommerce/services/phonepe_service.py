@@ -5,7 +5,7 @@ Handles all PhonePe API interactions using the official Python SDK
 from datetime import datetime
 import uuid
 from django.conf import settings
-from phonepe.sdk.pg.payments.v2.models.request import StandardCheckoutPayRequest
+from phonepe.sdk.pg.payments.v2.models.request.standard_checkout_pay_request import StandardCheckoutPayRequest
 from phonepe.sdk.pg.exceptions import PhonePeException
 from .phonepe_client import get_phonepe_client
 
@@ -42,8 +42,8 @@ def initiate_payment(amount, merchant_order_id, redirect_url, auth_token=None):
         # Convert amount from rupees to paise (PhonePe expects amount in smallest currency unit)
         amount_in_paise = int(float(amount) * 100)
         
-        # Build payment request using SDK
-        pay_request = StandardCheckoutPayRequest(
+        # Build payment request using SDK's build_request method
+        pay_request = StandardCheckoutPayRequest.build_request(
             merchant_order_id=merchant_order_id,
             amount=amount_in_paise,
             redirect_url=redirect_url
@@ -53,7 +53,13 @@ def initiate_payment(amount, merchant_order_id, redirect_url, auth_token=None):
         response = client.pay(pay_request)
         
         # Extract redirect URL from response
-        redirect_url_from_response = response.data.redirect_url
+        # SDK may return redirect_url directly or in response.data
+        if hasattr(response, 'redirect_url'):
+            redirect_url_from_response = response.redirect_url
+        elif hasattr(response, 'data') and hasattr(response.data, 'redirect_url'):
+            redirect_url_from_response = response.data.redirect_url
+        else:
+            raise ValueError("No redirect_url found in PhonePe response")
         
         return {
             'success': True,
