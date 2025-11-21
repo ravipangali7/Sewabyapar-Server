@@ -99,20 +99,45 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
         # Get order status using SDK
         response = client.get_order_status(merchant_order_id=merchant_order_id)
         
-        # Format response to match existing structure
-        order_data = response.data
+        # PhonePe SDK OrderStatusResponse has attributes directly accessible:
+        # - state: Order state (COMPLETED, FAILED, PENDING)
+        # - order_id: PhonePe order ID
+        # - amount: Order amount in paise
+        # - expire_at: Order expiry time
+        # - payment_details: List of payment attempt details
+        
+        # Access attributes directly from response object
+        state = getattr(response, 'state', None)
+        order_id = getattr(response, 'order_id', None)
+        amount = getattr(response, 'amount', None)
+        payment_details_list = getattr(response, 'payment_details', [])
+        
+        # Extract transaction details from payment_details if available
+        transaction_id = None
+        payment_method = None
+        payment_status = state
+        
+        # payment_details is a list, get the latest payment attempt
+        if payment_details_list and len(payment_details_list) > 0:
+            latest_payment = payment_details_list[-1]  # Get the most recent payment attempt
+            transaction_id = getattr(latest_payment, 'transaction_id', None)
+            payment_method = getattr(latest_payment, 'payment_method', None)
+            # Payment details might have its own status
+            payment_status = getattr(latest_payment, 'status', state) or state
         
         return {
             'success': True,
             'data': {
-                'merchantOrderId': order_data.merchant_order_id,
-                'state': order_data.state,
-                'amount': order_data.amount,
+                'merchantOrderId': merchant_order_id,
+                'orderId': order_id,
+                'state': state,
+                'amount': amount,
                 'paymentDetails': {
-                    'status': order_data.state,
-                    'amount': order_data.amount,
-                    'transactionId': getattr(order_data, 'transaction_id', None),
-                    'paymentMethod': getattr(order_data, 'payment_method', None)
+                    'status': payment_status,
+                    'state': state,
+                    'amount': amount,
+                    'transactionId': transaction_id,
+                    'paymentMethod': payment_method
                 }
             }
         }

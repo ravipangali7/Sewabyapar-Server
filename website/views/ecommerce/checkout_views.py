@@ -251,16 +251,23 @@ def payment_result_view(request):
                 logger.info(f"PhonePe API response received: {payment_status_data}")
                 
                 # Extract payment status from PhonePe response
-                # PhonePe returns status in 'state' field and also in paymentDetails.status
+                # PhonePe SDK returns 'state' as primary field (COMPLETED, FAILED, PENDING)
+                # and also provides status in paymentDetails
                 payment_state = payment_status_data.get('state', '').upper()
                 payment_details = payment_status_data.get('paymentDetails', {}) or payment_status_data
-                payment_status_value = payment_details.get('status', payment_state).upper()
+                payment_status_value = payment_details.get('status', '').upper()
                 
-                # If state is available, use it as primary source
+                # Use state as primary source (PhonePe's main status field)
+                # State values: COMPLETED, FAILED, PENDING
                 if payment_state:
                     payment_status_value = payment_state
+                elif payment_status_value:
+                    # Fallback to status if state not available
+                    pass
+                else:
+                    payment_status_value = ''
                 
-                logger.info(f"Payment status from PhonePe: {payment_status_value}")
+                logger.info(f"Payment status from PhonePe - state: {payment_state}, status: {payment_status_value}")
                 
                 # Update order if found
                 if order:
@@ -269,18 +276,19 @@ def payment_result_view(request):
                         order.payment_method = 'online'
                         logger.info(f"Updated payment_method to 'online' for order {order.id}")
                     
-                    # Map PhonePe status values to our payment_status field
-                    # PhonePe status values: PAYMENT_SUCCESS, PAYMENT_PENDING, PAYMENT_ERROR, etc.
-                    if payment_status_value in ['PAYMENT_SUCCESS', 'SUCCESS', 'COMPLETED', 'PAID']:
+                    # Map PhonePe state/status values to our payment_status field
+                    # PhonePe SDK state values: COMPLETED, FAILED, PENDING (primary)
+                    # Also handles: PAYMENT_SUCCESS, PAYMENT_PENDING, PAYMENT_ERROR, etc.
+                    if payment_status_value in ['COMPLETED', 'PAYMENT_SUCCESS', 'SUCCESS', 'PAID']:
                         order.payment_status = 'success'
                         order.status = 'confirmed'
-                        logger.info(f"Order {order.id} marked as payment success")
-                    elif payment_status_value in ['PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILED', 'FAILURE', 'ERROR']:
+                        logger.info(f"Order {order.id} marked as payment success (status: {payment_status_value})")
+                    elif payment_status_value in ['FAILED', 'PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILURE', 'ERROR']:
                         order.payment_status = 'failed'
-                        logger.info(f"Order {order.id} marked as payment failed")
-                    elif payment_status_value in ['PAYMENT_PENDING', 'PENDING', 'INITIATED', 'AUTHORIZED']:
+                        logger.info(f"Order {order.id} marked as payment failed (status: {payment_status_value})")
+                    elif payment_status_value in ['PENDING', 'PAYMENT_PENDING', 'INITIATED', 'AUTHORIZED']:
                         order.payment_status = 'pending'
-                        logger.info(f"Order {order.id} marked as payment pending")
+                        logger.info(f"Order {order.id} marked as payment pending (status: {payment_status_value})")
                     else:
                         # Unknown status - keep as pending but log it
                         order.payment_status = 'pending'

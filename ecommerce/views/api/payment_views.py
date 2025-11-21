@@ -254,16 +254,22 @@ def payment_status(request):
         # Update order payment status if order found
         if order:
             payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
+            # Check both 'status' and 'state' fields (PhonePe uses 'state' as primary)
             payment_status_value = payment_data.get('status', '').upper()
+            payment_state = status_response.get('data', {}).get('state', '').upper()
             
-            if payment_status_value in ['SUCCESS', 'PAYMENT_SUCCESS', 'COMPLETED']:
+            # Use state if available, otherwise use status
+            status_to_check = payment_state or payment_status_value
+            
+            # Map PhonePe state values: COMPLETED, FAILED, PENDING
+            if status_to_check in ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID']:
                 order.payment_status = 'success'
                 order.status = 'confirmed'
                 if payment_data.get('transactionId'):
                     order.phonepe_transaction_id = payment_data.get('transactionId')
-            elif payment_status_value in ['FAILED', 'PAYMENT_FAILED', 'FAILURE']:
+            elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
                 order.payment_status = 'failed'
-            elif payment_status_value in ['PENDING', 'INITIATED']:
+            elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
                 order.payment_status = 'pending'
             
             order.save()
@@ -333,16 +339,22 @@ def payment_callback(request):
         
         # Update order payment status
         payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
+        # Check both 'status' and 'state' fields (PhonePe uses 'state' as primary)
         payment_status_value = payment_data.get('status', '').upper()
+        payment_state = status_response.get('data', {}).get('state', '').upper()
         
-        if payment_status_value in ['SUCCESS', 'PAYMENT_SUCCESS', 'COMPLETED']:
+        # Use state if available, otherwise use status
+        status_to_check = payment_state or payment_status_value
+        
+        # Map PhonePe state values: COMPLETED, FAILED, PENDING
+        if status_to_check in ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID']:
             order.payment_status = 'success'
             order.status = 'confirmed'
             if payment_data.get('transactionId'):
                 order.phonepe_transaction_id = payment_data.get('transactionId')
-        elif payment_status_value in ['FAILED', 'PAYMENT_FAILED', 'FAILURE']:
+        elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
             order.payment_status = 'failed'
-        elif payment_status_value in ['PENDING', 'INITIATED']:
+        elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
             order.payment_status = 'pending'
         
         order.save()
