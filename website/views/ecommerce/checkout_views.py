@@ -15,6 +15,9 @@ from ecommerce.services.phonepe_service import (
 )
 import random
 import string
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def process_checkout(request):
@@ -206,7 +209,7 @@ def checkout_view(request):
 
 @login_required
 def payment_result_view(request):
-    """Payment result page - handles PhonePe callback"""
+    """Payment result page - handles PhonePe callback and verifies transaction status via PhonePe API"""
     try:
         site_settings = MySetting.objects.first()
     except MySetting.DoesNotExist:
@@ -220,49 +223,128 @@ def payment_result_view(request):
     
     order = None
     payment_status_data = None
+    api_error = None
     
-    # Try to find order
+    # Try to find order in database
     if merchant_order_id:
         try:
             order = Order.objects.get(phonepe_merchant_order_id=merchant_order_id, user=request.user)
+            logger.info(f"Order found for merchant_order_id: {merchant_order_id}, Order ID: {order.id}")
         except Order.DoesNotExist:
-            pass
+            logger.warning(f"Order not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
     elif transaction_id:
         try:
             order = Order.objects.get(phonepe_transaction_id=transaction_id, user=request.user)
+            logger.info(f"Order found for transaction_id: {transaction_id}, Order ID: {order.id}")
         except Order.DoesNotExist:
-            pass
+            logger.warning(f"Order not found for transaction_id: {transaction_id}, user: {request.user.id}")
     
-    # Check payment status if order found
-    if order:
+    # Always call PhonePe API to verify transaction status when merchant_order_id is present
+    # This ensures we get the latest status from PhonePe, even if order exists in DB
+    if merchant_order_id:
         try:
-            # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
-            if merchant_order_id:
-                status_response = check_payment_status_by_order_id(merchant_order_id)
-            elif transaction_id:
-                status_response = check_payment_status_by_transaction_id(transaction_id)
+            logger.info(f"Calling PhonePe API to check payment status for merchant_order_id: {merchant_order_id}")
+            status_response = check_payment_status_by_order_id(merchant_order_id)
+            
+            if 'error' not in status_response:
+                payment_status_data = status_response.get('data', {})
+                logger.info(f"PhonePe API response received: {payment_status_data}")
+                
+                # Extract payment status from PhonePe response
+                # PhonePe returns status in 'state' field and also in paymentDetails.status
+                payment_state = payment_status_data.get('state', '').upper()
+                payment_details = payment_status_data.get('paymentDetails', {}) or payment_status_data
+                payment_status_value = payment_details.get('status', payment_state).upper()
+                
+                # If state is available, use it as primary source
+                if payment_state:
+                    payment_status_value = payment_state
+                
+                logger.info(f"Payment status from PhonePe: {payment_status_value}")
+                
+                # Update order if found
+                if order:
+                    # Ensure payment_method is 'online' for PhonePe orders
+                    if order.payment_method != 'online':
+                        order.payment_method = 'online'
+                        logger.info(f"Updated payment_method to 'online' for order {order.id}")
+                    
+                    # Map PhonePe status values to our payment_status field
+                    # PhonePe status values: PAYMENT_SUCCESS, PAYMENT_PENDING, PAYMENT_ERROR, etc.
+                    if payment_status_value in ['PAYMENT_SUCCESS', 'SUCCESS', 'COMPLETED', 'PAID']:
+                        order.payment_status = 'success'
+                        order.status = 'confirmed'
+                        logger.info(f"Order {order.id} marked as payment success")
+                    elif payment_status_value in ['PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILED', 'FAILURE', 'ERROR']:
+                        order.payment_status = 'failed'
+                        logger.info(f"Order {order.id} marked as payment failed")
+                    elif payment_status_value in ['PAYMENT_PENDING', 'PENDING', 'INITIATED', 'AUTHORIZED']:
+                        order.payment_status = 'pending'
+                        logger.info(f"Order {order.id} marked as payment pending")
+                    else:
+                        # Unknown status - keep as pending but log it
+                        order.payment_status = 'pending'
+                        logger.warning(f"Unknown payment status '{payment_status_value}' for order {order.id}, set to pending")
+                    
+                    # Update transaction ID if available
+                    transaction_id_from_api = payment_details.get('transactionId') or payment_status_data.get('transactionId')
+                    if transaction_id_from_api and not order.phonepe_transaction_id:
+                        order.phonepe_transaction_id = transaction_id_from_api
+                        logger.info(f"Updated transaction_id for order {order.id}: {transaction_id_from_api}")
+                    
+                    order.save()
+                    logger.info(f"Order {order.id} saved with payment_status: {order.payment_status}")
+                else:
+                    # Order not found in DB but PhonePe has record - log this case
+                    logger.warning(f"PhonePe API returned status but order not found in DB for merchant_order_id: {merchant_order_id}")
             else:
-                status_response = {}
+                # PhonePe API returned an error
+                api_error = status_response.get('error', 'Unknown error')
+                logger.error(f"PhonePe API error for merchant_order_id {merchant_order_id}: {api_error}")
+                
+                # If order exists but API call failed, we still show the order
+                # but payment status might be outdated
+                if order:
+                    logger.warning(f"PhonePe API call failed for existing order {order.id}, using current DB status")
+        
+        except Exception as e:
+            api_error = str(e)
+            logger.error(f"Exception while calling PhonePe API for merchant_order_id {merchant_order_id}: {str(e)}", exc_info=True)
+            
+            # If order exists but API call failed, we still show the order
+            if order:
+                logger.warning(f"PhonePe API call exception for existing order {order.id}, using current DB status")
+    
+    elif transaction_id:
+        # Try to check by transaction_id (though PhonePe SDK primarily uses merchant_order_id)
+        try:
+            logger.info(f"Calling PhonePe API to check payment status for transaction_id: {transaction_id}")
+            status_response = check_payment_status_by_transaction_id(transaction_id)
             
             if 'error' not in status_response:
                 payment_status_data = status_response.get('data', {})
                 payment_details = payment_status_data.get('paymentDetails', {}) or payment_status_data
                 payment_status_value = payment_details.get('status', '').upper()
                 
-                # Update order payment status
-                if payment_status_value in ['SUCCESS', 'PAYMENT_SUCCESS', 'COMPLETED']:
-                    order.payment_status = 'success'
-                    order.status = 'confirmed'
-                    if payment_details.get('transactionId'):
-                        order.phonepe_transaction_id = payment_details.get('transactionId')
-                elif payment_status_value in ['FAILED', 'PAYMENT_FAILED', 'FAILURE']:
-                    order.payment_status = 'failed'
-                elif payment_status_value in ['PENDING', 'INITIATED']:
-                    order.payment_status = 'pending'
-                
-                order.save()
+                if order:
+                    if order.payment_method != 'online':
+                        order.payment_method = 'online'
+                    
+                    if payment_status_value in ['PAYMENT_SUCCESS', 'SUCCESS', 'COMPLETED', 'PAID']:
+                        order.payment_status = 'success'
+                        order.status = 'confirmed'
+                    elif payment_status_value in ['PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILED', 'FAILURE']:
+                        order.payment_status = 'failed'
+                    elif payment_status_value in ['PAYMENT_PENDING', 'PENDING', 'INITIATED']:
+                        order.payment_status = 'pending'
+                    
+                    order.save()
+            else:
+                api_error = status_response.get('error', 'Unknown error')
+                logger.error(f"PhonePe API error for transaction_id {transaction_id}: {api_error}")
         except Exception as e:
-            print(f"Error checking payment status: {str(e)}")
+            api_error = str(e)
+            logger.error(f"Exception while calling PhonePe API for transaction_id {transaction_id}: {str(e)}", exc_info=True)
     
     context = {
         'settings': site_settings,
@@ -272,6 +354,7 @@ def payment_result_view(request):
         'payment_status_data': payment_status_data,
         'merchant_order_id': merchant_order_id,
         'transaction_id': transaction_id,
+        'api_error': api_error,
     }
     
     return render(request, 'website/ecommerce/payment_result.html', context)
