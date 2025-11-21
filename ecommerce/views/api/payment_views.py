@@ -10,7 +10,6 @@ from django.conf import settings
 from ...models import Order
 from ...serializers import OrderSerializer
 from ...services.phonepe_service import (
-    get_authorization_token,
     initiate_payment,
     check_payment_status_by_order_id,
     check_payment_status_by_transaction_id,
@@ -230,31 +229,16 @@ def payment_status(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get authorization token
-        auth_response = get_authorization_token()
-        if 'error' in auth_response:
-            return Response(
-                {'error': auth_response['error']},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        access_token = auth_response.get('access_token')
-        if not access_token:
-            return Response(
-                {'error': 'Failed to get access token from PhonePe'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        # Check payment status
+        # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
         if merchant_order_id:
-            status_response = check_payment_status_by_order_id(merchant_order_id, access_token)
+            status_response = check_payment_status_by_order_id(merchant_order_id)
             # Try to find order by merchant_order_id
             try:
                 order = Order.objects.get(phonepe_merchant_order_id=merchant_order_id, user=request.user)
             except Order.DoesNotExist:
                 order = None
         else:
-            status_response = check_payment_status_by_transaction_id(transaction_id, access_token)
+            status_response = check_payment_status_by_transaction_id(transaction_id)
             # Try to find order by transaction_id
             try:
                 order = Order.objects.get(phonepe_transaction_id=transaction_id, user=request.user)
@@ -335,26 +319,11 @@ def payment_callback(request):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Get authorization token
-        auth_response = get_authorization_token()
-        if 'error' in auth_response:
-            return Response(
-                {'error': auth_response['error']},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        access_token = auth_response.get('access_token')
-        if not access_token:
-            return Response(
-                {'error': 'Failed to get access token from PhonePe'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        # Check payment status
+        # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
         if merchant_order_id:
-            status_response = check_payment_status_by_order_id(merchant_order_id, access_token)
+            status_response = check_payment_status_by_order_id(merchant_order_id)
         else:
-            status_response = check_payment_status_by_transaction_id(transaction_id, access_token)
+            status_response = check_payment_status_by_transaction_id(transaction_id)
         
         if 'error' in status_response:
             return Response(

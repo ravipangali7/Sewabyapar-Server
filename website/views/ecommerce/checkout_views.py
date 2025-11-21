@@ -8,7 +8,6 @@ from ecommerce.models import Cart, Order, OrderItem, Coupon
 from core.models import Address
 from website.models import MySetting, CMSPages
 from ecommerce.services.phonepe_service import (
-    get_authorization_token,
     initiate_payment,
     generate_merchant_order_id,
     check_payment_status_by_order_id,
@@ -85,21 +84,6 @@ def process_checkout(request):
     # For online payment, initiate PhonePe payment
     if payment_method == 'online':
         try:
-            # Get authorization token
-            auth_response = get_authorization_token()
-            if 'error' in auth_response:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Payment initiation failed: {auth_response["error"]}'
-                })
-            
-            access_token = auth_response.get('access_token')
-            if not access_token:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Failed to get access token from PhonePe'
-                })
-            
             # Generate merchant order ID
             merchant_order_id = generate_merchant_order_id()
             order.phonepe_merchant_order_id = merchant_order_id
@@ -108,12 +92,11 @@ def process_checkout(request):
             # Build redirect URL
             redirect_url = f"{settings.PHONEPE_BASE_URL}/payment/result/?merchant_order_id={merchant_order_id}"
             
-            # Initiate payment
+            # Initiate payment using SDK (no auth_token needed - SDK handles auth internally)
             payment_response = initiate_payment(
                 amount=float(order.total_amount),
                 merchant_order_id=merchant_order_id,
-                redirect_url=redirect_url,
-                auth_token=access_token
+                redirect_url=redirect_url
             )
             
             if 'error' in payment_response:
@@ -253,36 +236,31 @@ def payment_result_view(request):
     # Check payment status if order found
     if order:
         try:
-            # Get authorization token
-            auth_response = get_authorization_token()
-            if 'error' not in auth_response:
-                access_token = auth_response.get('access_token')
-                if access_token:
-                    # Check payment status
-                    if merchant_order_id:
-                        status_response = check_payment_status_by_order_id(merchant_order_id, access_token)
-                    elif transaction_id:
-                        status_response = check_payment_status_by_transaction_id(transaction_id, access_token)
-                    else:
-                        status_response = {}
-                    
-                    if 'error' not in status_response:
-                        payment_status_data = status_response.get('data', {})
-                        payment_details = payment_status_data.get('paymentDetails', {}) or payment_status_data
-                        payment_status_value = payment_details.get('status', '').upper()
-                        
-                        # Update order payment status
-                        if payment_status_value in ['SUCCESS', 'PAYMENT_SUCCESS', 'COMPLETED']:
-                            order.payment_status = 'success'
-                            order.status = 'confirmed'
-                            if payment_details.get('transactionId'):
-                                order.phonepe_transaction_id = payment_details.get('transactionId')
-                        elif payment_status_value in ['FAILED', 'PAYMENT_FAILED', 'FAILURE']:
-                            order.payment_status = 'failed'
-                        elif payment_status_value in ['PENDING', 'INITIATED']:
-                            order.payment_status = 'pending'
-                        
-                        order.save()
+            # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
+            if merchant_order_id:
+                status_response = check_payment_status_by_order_id(merchant_order_id)
+            elif transaction_id:
+                status_response = check_payment_status_by_transaction_id(transaction_id)
+            else:
+                status_response = {}
+            
+            if 'error' not in status_response:
+                payment_status_data = status_response.get('data', {})
+                payment_details = payment_status_data.get('paymentDetails', {}) or payment_status_data
+                payment_status_value = payment_details.get('status', '').upper()
+                
+                # Update order payment status
+                if payment_status_value in ['SUCCESS', 'PAYMENT_SUCCESS', 'COMPLETED']:
+                    order.payment_status = 'success'
+                    order.status = 'confirmed'
+                    if payment_details.get('transactionId'):
+                        order.phonepe_transaction_id = payment_details.get('transactionId')
+                elif payment_status_value in ['FAILED', 'PAYMENT_FAILED', 'FAILURE']:
+                    order.payment_status = 'failed'
+                elif payment_status_value in ['PENDING', 'INITIATED']:
+                    order.payment_status = 'pending'
+                
+                order.save()
         except Exception as e:
             print(f"Error checking payment status: {str(e)}")
     
