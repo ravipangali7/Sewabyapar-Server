@@ -134,7 +134,18 @@ def user_logout(request):
 @permission_classes([permissions.IsAuthenticated])
 def user_profile(request):
     """Get current user profile"""
-    return Response(UserSerializer(request.user).data)
+    user_data = UserSerializer(request.user).data
+    
+    # Determine user type for response
+    if request.user.is_merchant:
+        user_type = 'merchant'
+    elif request.user.is_driver:
+        user_type = 'driver'
+    else:
+        user_type = 'customer'
+    
+    user_data['user_type'] = user_type
+    return Response(user_data)
 
 
 def generate_otp():
