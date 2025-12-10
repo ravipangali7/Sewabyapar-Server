@@ -7,7 +7,7 @@
         <table class="table table-hover"><thead><tr><th>Feedback</th><th>User</th><th>Type</th><th>Message</th><th>Created</th><th>Actions</th></tr></thead><tbody>
             {% for reply in replies %}<tr><td>{{ reply.feedback_complain.subject }}</td><td>{{ reply.user.name }}</td><td>{% if reply.is_admin_reply %}<span class="badge bg-primary">Admin</span>{% else %}<span class="badge bg-secondary">Customer</span>{% endif %}</td><td>{{ reply.message|truncatewords:10 }}</td><td>{{ reply.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:shared:feedback_reply_detail' reply.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:shared:feedback_reply_update' reply.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="6" class="text-center">No replies found</td></tr>{% endfor %}
         </tbody></table>
-        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+        {% include 'admin/includes/pagination.html' %}
     </div></div></div></div>
 </div>
 {% endblock %}

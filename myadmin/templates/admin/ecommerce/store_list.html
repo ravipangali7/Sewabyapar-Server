@@ -7,7 +7,7 @@
         <table class="table table-hover"><thead><tr><th>Name</th><th>Owner</th><th>Phone</th><th>Email</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody>
             {% for store in stores %}<tr><td>{{ store.name }}</td><td>{{ store.owner.name }}</td><td>{{ store.phone }}</td><td>{{ store.email }}</td><td>{% if store.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td><td>{{ store.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:ecommerce:store_detail' store.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:ecommerce:store_update' store.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="7" class="text-center">No stores found</td></tr>{% endfor %}
         </tbody></table>
-        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+        {% include 'admin/includes/pagination.html' %}
     </div></div></div></div>
 </div>
 {% endblock %}

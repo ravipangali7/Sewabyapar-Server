@@ -7,7 +7,7 @@
         <table class="table table-hover"><thead><tr><th>Customer</th><th>Trip</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody>
             {% for booking in bookings %}<tr><td>{{ booking.customer.name }}</td><td>{{ booking.trip }}</td><td>{{ booking.date|date:"M d, Y" }}</td><td>{{ booking.time|time:"H:i" }}</td><td>₹{{ booking.price }}</td><td><span class="badge bg-{% if booking.trip_status == 'completed' %}success{% elif booking.trip_status == 'pending' %}warning{% elif booking.trip_status == 'cancelled' %}danger{% else %}info{% endif %}">{{ booking.get_trip_status_display }}</span></td><td>{{ booking.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:taxi:booking_detail' booking.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:taxi:booking_update' booking.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="8" class="text-center">No bookings found</td></tr>{% endfor %}
         </tbody></table>
-        {% if is_paginated %}<nav><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+        {% include 'admin/includes/pagination.html' %}
     </div></div></div></div>
 </div>
 {% endblock %}
