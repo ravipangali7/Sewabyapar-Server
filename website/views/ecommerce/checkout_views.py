@@ -300,6 +300,76 @@ def payment_result_view(request):
                         order.phonepe_transaction_id = transaction_id_from_api
                         logger.info(f"Updated transaction_id for order {order.id}: {transaction_id_from_api}")
                     
+                    # Save all PhonePe transaction details
+                    order_id_from_api = payment_status_data.get('orderId')
+                    if order_id_from_api and not order.phonepe_order_id:
+                        order.phonepe_order_id = order_id_from_api
+                        logger.info(f"Updated order_id for order {order.id}: {order_id_from_api}")
+                    
+                    # Save UTR and VPA from payment details
+                    utr_from_api = payment_details.get('utr') or payment_status_data.get('utr')
+                    if utr_from_api and not order.phonepe_utr:
+                        order.phonepe_utr = utr_from_api
+                        logger.info(f"Updated UTR for order {order.id}: {utr_from_api}")
+                    
+                    vpa_from_api = payment_details.get('vpa') or payment_status_data.get('vpa')
+                    if vpa_from_api and not order.phonepe_vpa:
+                        order.phonepe_vpa = vpa_from_api
+                        logger.info(f"Updated VPA for order {order.id}: {vpa_from_api}")
+                    
+                    # Save transaction date
+                    transaction_date_str = payment_details.get('transactionDate') or payment_status_data.get('transactionDate')
+                    if transaction_date_str and not order.phonepe_transaction_date:
+                        try:
+                            from datetime import datetime
+                            transaction_date = datetime.fromisoformat(transaction_date_str)
+                            order.phonepe_transaction_date = transaction_date
+                            logger.info(f"Updated transaction_date for order {order.id}: {transaction_date}")
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Could not parse transaction_date for order {order.id}: {e}")
+                    
+                    # Save processing mechanism
+                    processing_mechanism = payment_details.get('processingMechanism') or payment_status_data.get('processingMechanism')
+                    if processing_mechanism and not order.phonepe_processing_mechanism:
+                        order.phonepe_processing_mechanism = processing_mechanism
+                        logger.info(f"Updated processing_mechanism for order {order.id}: {processing_mechanism}")
+                    
+                    # Save product type
+                    product_type = payment_details.get('productType') or payment_status_data.get('productType')
+                    if product_type and not order.phonepe_product_type:
+                        order.phonepe_product_type = product_type
+                        logger.info(f"Updated product_type for order {order.id}: {product_type}")
+                    
+                    # Save instrument type
+                    instrument_type = payment_details.get('instrumentType') or payment_status_data.get('instrumentType')
+                    if instrument_type and not order.phonepe_instrument_type:
+                        order.phonepe_instrument_type = instrument_type
+                        logger.info(f"Updated instrument_type for order {order.id}: {instrument_type}")
+                    
+                    # Save payment mode
+                    payment_mode = payment_details.get('paymentMode') or payment_status_data.get('paymentMode')
+                    if payment_mode and not order.phonepe_payment_mode:
+                        order.phonepe_payment_mode = payment_mode
+                        logger.info(f"Updated payment_mode for order {order.id}: {payment_mode}")
+                    
+                    # Save bank ID
+                    bank_id = payment_details.get('bankId') or payment_status_data.get('bankId')
+                    if bank_id and not order.phonepe_bank_id:
+                        order.phonepe_bank_id = bank_id
+                        logger.info(f"Updated bank_id for order {order.id}: {bank_id}")
+                    
+                    # Save card network
+                    card_network = payment_details.get('cardNetwork') or payment_status_data.get('cardNetwork')
+                    if card_network and not order.phonepe_card_network:
+                        order.phonepe_card_network = card_network
+                        logger.info(f"Updated card_network for order {order.id}: {card_network}")
+                    
+                    # Save transaction note
+                    transaction_note = payment_details.get('transactionNote') or payment_status_data.get('transactionNote')
+                    if transaction_note and not order.phonepe_transaction_note:
+                        order.phonepe_transaction_note = transaction_note
+                        logger.info(f"Updated transaction_note for order {order.id}: {transaction_note}")
+                    
                     order.save()
                     logger.info(f"Order {order.id} saved with payment_status: {order.payment_status}")
                 else:

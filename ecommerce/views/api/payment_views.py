@@ -272,6 +272,39 @@ def payment_status(request):
             elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
                 order.payment_status = 'pending'
             
+            # Save all PhonePe transaction details
+            order_data = status_response.get('data', {})
+            if order_data.get('orderId') and not order.phonepe_order_id:
+                order.phonepe_order_id = order_data.get('orderId')
+            
+            # Save transaction details from payment_details
+            if payment_data.get('utr') and not order.phonepe_utr:
+                order.phonepe_utr = payment_data.get('utr')
+            if payment_data.get('vpa') and not order.phonepe_vpa:
+                order.phonepe_vpa = payment_data.get('vpa')
+            if payment_data.get('transactionDate'):
+                try:
+                    from datetime import datetime
+                    transaction_date = datetime.fromisoformat(payment_data.get('transactionDate'))
+                    if not order.phonepe_transaction_date:
+                        order.phonepe_transaction_date = transaction_date
+                except (ValueError, TypeError):
+                    pass
+            if payment_data.get('processingMechanism') and not order.phonepe_processing_mechanism:
+                order.phonepe_processing_mechanism = payment_data.get('processingMechanism')
+            if payment_data.get('productType') and not order.phonepe_product_type:
+                order.phonepe_product_type = payment_data.get('productType')
+            if payment_data.get('instrumentType') and not order.phonepe_instrument_type:
+                order.phonepe_instrument_type = payment_data.get('instrumentType')
+            if payment_data.get('paymentMode') and not order.phonepe_payment_mode:
+                order.phonepe_payment_mode = payment_data.get('paymentMode')
+            if payment_data.get('bankId') and not order.phonepe_bank_id:
+                order.phonepe_bank_id = payment_data.get('bankId')
+            if payment_data.get('cardNetwork') and not order.phonepe_card_network:
+                order.phonepe_card_network = payment_data.get('cardNetwork')
+            if payment_data.get('transactionNote') and not order.phonepe_transaction_note:
+                order.phonepe_transaction_note = payment_data.get('transactionNote')
+            
             order.save()
             
             # Return order data with payment status
@@ -356,6 +389,39 @@ def payment_callback(request):
             order.payment_status = 'failed'
         elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
             order.payment_status = 'pending'
+        
+        # Save all PhonePe transaction details
+        order_data = status_response.get('data', {})
+        if order_data.get('orderId') and not order.phonepe_order_id:
+            order.phonepe_order_id = order_data.get('orderId')
+        
+        # Save transaction details from payment_details
+        if payment_data.get('utr') and not order.phonepe_utr:
+            order.phonepe_utr = payment_data.get('utr')
+        if payment_data.get('vpa') and not order.phonepe_vpa:
+            order.phonepe_vpa = payment_data.get('vpa')
+        if payment_data.get('transactionDate'):
+            try:
+                from datetime import datetime
+                transaction_date = datetime.fromisoformat(payment_data.get('transactionDate'))
+                if not order.phonepe_transaction_date:
+                    order.phonepe_transaction_date = transaction_date
+            except (ValueError, TypeError):
+                pass
+        if payment_data.get('processingMechanism') and not order.phonepe_processing_mechanism:
+            order.phonepe_processing_mechanism = payment_data.get('processingMechanism')
+        if payment_data.get('productType') and not order.phonepe_product_type:
+            order.phonepe_product_type = payment_data.get('productType')
+        if payment_data.get('instrumentType') and not order.phonepe_instrument_type:
+            order.phonepe_instrument_type = payment_data.get('instrumentType')
+        if payment_data.get('paymentMode') and not order.phonepe_payment_mode:
+            order.phonepe_payment_mode = payment_data.get('paymentMode')
+        if payment_data.get('bankId') and not order.phonepe_bank_id:
+            order.phonepe_bank_id = payment_data.get('bankId')
+        if payment_data.get('cardNetwork') and not order.phonepe_card_network:
+            order.phonepe_card_network = payment_data.get('cardNetwork')
+        if payment_data.get('transactionNote') and not order.phonepe_transaction_note:
+            order.phonepe_transaction_note = payment_data.get('transactionNote')
         
         order.save()
         

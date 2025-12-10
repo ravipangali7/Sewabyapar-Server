@@ -116,6 +116,15 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
         transaction_id = None
         payment_method = None
         payment_status = state
+        utr = None
+        vpa = None
+        transaction_date = None
+        processing_mechanism = None
+        instrument_type = None
+        payment_mode = None
+        bank_id = None
+        card_network = None
+        transaction_note = None
         
         # payment_details is a list, get the latest payment attempt
         if payment_details_list and len(payment_details_list) > 0:
@@ -124,6 +133,42 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
             payment_method = getattr(latest_payment, 'payment_method', None)
             # Payment details might have its own status
             payment_status = getattr(latest_payment, 'status', state) or state
+            
+            # Extract transaction timestamp and convert to datetime
+            timestamp = getattr(latest_payment, 'timestamp', None)
+            if timestamp:
+                try:
+                    from datetime import datetime
+                    # PhonePe timestamps are in milliseconds (epoch)
+                    transaction_date = datetime.fromtimestamp(timestamp / 1000) if timestamp else None
+                except (ValueError, TypeError, OSError):
+                    transaction_date = None
+            
+            # Extract UTR, VPA, and processing mechanism from rail object (for UPI transactions)
+            rail = getattr(latest_payment, 'rail', None)
+            if rail:
+                utr = getattr(rail, 'utr', None)
+                vpa = getattr(rail, 'vpa', None)
+                # Processing mechanism is typically the rail type (e.g., "UPI")
+                processing_mechanism = getattr(rail, 'type', None)
+            
+            # Extract instrument details (bank account, card, etc.)
+            instrument = getattr(latest_payment, 'instrument', None)
+            if instrument:
+                instrument_type = getattr(instrument, 'type', None)
+                # Payment mode can be from instrument type (e.g., "ACCOUNT", "CARD")
+                payment_mode = getattr(instrument, 'type', None)
+                # Bank ID might be in instrument
+                bank_id = getattr(instrument, 'bank_id', None) or getattr(instrument, 'bankId', None)
+                # Card network for card transactions
+                card_network = getattr(instrument, 'card_network', None) or getattr(instrument, 'cardNetwork', None)
+            
+            # If processing mechanism not found in rail, try payment_method
+            if not processing_mechanism:
+                processing_mechanism = payment_method
+            
+            # Transaction note if available
+            transaction_note = getattr(latest_payment, 'note', None) or getattr(latest_payment, 'transaction_note', None)
         
         return {
             'success': True,
@@ -137,7 +182,17 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
                     'state': state,
                     'amount': amount,
                     'transactionId': transaction_id,
-                    'paymentMethod': payment_method
+                    'paymentMethod': payment_method,
+                    'utr': utr,
+                    'vpa': vpa,
+                    'transactionDate': transaction_date.isoformat() if transaction_date else None,
+                    'processingMechanism': processing_mechanism,
+                    'productType': 'PhonePe PG',  # Standard for PhonePe Payment Gateway
+                    'instrumentType': instrument_type,
+                    'paymentMode': payment_mode,
+                    'bankId': bank_id,
+                    'cardNetwork': card_network,
+                    'transactionNote': transaction_note
                 }
             }
         }
