@@ -14,9 +14,96 @@
                     <h5 class="card-title mb-0">User Information</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" id="user-form">
                         {% csrf_token %}
-                        {% include 'admin/includes/form_fields.html' with form=form %}
+                        
+                        <!-- Personal Information Section -->
+                        <div class="mb-4">
+                            <h5 class="mb-3"><i class="align-middle" data-feather="user"></i> Personal Information</h5>
+                            {% for field in form %}
+                                {% if field.name != 'is_merchant' and field.name != 'is_driver' and field.name != 'is_kyc_verified' and field.name != 'is_active' and field.name != 'is_staff' and field.name != 'is_superuser' %}
+                                    <div class="mb-3">
+                                        <label class="form-label" for="{{ field.id_for_label }}">
+                                            {{ field.label }}
+                                            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.help_text %}
+                                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                        {% if field.errors %}
+                                            <div class="text-danger">
+                                                {% for error in field.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Role Section -->
+                        <div class="mb-4">
+                            <h5 class="mb-3"><i class="align-middle" data-feather="tag"></i> User Role</h5>
+                            <div id="role-validation-message" class="alert alert-warning d-none" role="alert">
+                                <i class="align-middle" data-feather="alert-triangle" style="width: 16px; height: 16px;"></i>
+                                <strong>Warning:</strong> User cannot be both merchant and driver at the same time. Please uncheck one of them.
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        {{ form.is_merchant }}
+                                        <label class="form-check-label" for="{{ form.is_merchant.id_for_label }}">
+                                            <strong>Merchant</strong>
+                                            <br>
+                                            <small class="text-muted">User can manage stores and products</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        {{ form.is_driver }}
+                                        <label class="form-check-label" for="{{ form.is_driver.id_for_label }}">
+                                            <strong>Driver</strong>
+                                            <br>
+                                            <small class="text-muted">User can manage bookings and vehicles</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="align-middle" data-feather="info" style="width: 16px; height: 16px;"></i>
+                                <small>If neither is selected, the user will be a regular customer.</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Permissions Section -->
+                        <div class="mb-4">
+                            <h5 class="mb-3"><i class="align-middle" data-feather="shield"></i> Permissions & Status</h5>
+                            {% for field in form %}
+                                {% if field.name == 'is_kyc_verified' or field.name == 'is_active' or field.name == 'is_staff' or field.name == 'is_superuser' %}
+                                    <div class="form-check form-switch mb-3">
+                                        {{ field }}
+                                        <label class="form-check-label" for="{{ field.id_for_label }}">
+                                            {{ field.label }}
+                                            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
+                                        {% if field.help_text %}
+                                            <small class="form-text text-muted d-block">{{ field.help_text }}</small>
+                                        {% endif %}
+                                        {% if field.errors %}
+                                            <div class="text-danger">
+                                                {% for error in field.errors %}
+                                                    <small>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
                         <div class="mt-3">
                             <button type="submit" class="btn btn-primary">Save</button>
                             <a href="{% url 'myadmin:core:user_list' %}" class="btn btn-secondary">Cancel</a>
@@ -27,5 +114,61 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const merchantCheckbox = document.getElementById('id_is_merchant');
+    const driverCheckbox = document.getElementById('id_is_driver');
+    const validationMessage = document.getElementById('role-validation-message');
+    const form = document.getElementById('user-form');
+    
+    if (merchantCheckbox && driverCheckbox) {
+        function validateRoles() {
+            if (merchantCheckbox.checked && driverCheckbox.checked) {
+                validationMessage.classList.remove('d-none');
+                merchantCheckbox.classList.add('is-invalid');
+                driverCheckbox.classList.add('is-invalid');
+                return false;
+            } else {
+                validationMessage.classList.add('d-none');
+                merchantCheckbox.classList.remove('is-invalid');
+                driverCheckbox.classList.remove('is-invalid');
+                return true;
+            }
+        }
+        
+        merchantCheckbox.addEventListener('change', function() {
+            if (this.checked && driverCheckbox.checked) {
+                driverCheckbox.checked = false;
+            }
+            validateRoles();
+        });
+        
+        driverCheckbox.addEventListener('change', function() {
+            if (this.checked && merchantCheckbox.checked) {
+                merchantCheckbox.checked = false;
+            }
+            validateRoles();
+        });
+        
+        // Validate on form submit
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (!validateRoles()) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+        
+        // Initial validation
+        validateRoles();
+    }
+    
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
 {% endblock %}
 

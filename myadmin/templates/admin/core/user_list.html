@@ -24,11 +24,19 @@
                             <div class="col-md-6">
                                 <input type="text" class="form-control" name="search" placeholder="Search users..." value="{{ search }}">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <select class="form-select" name="kyc_status">
                                     <option value="all" {% if kyc_status == 'all' %}selected{% endif %}>All KYC Status</option>
                                     <option value="pending" {% if kyc_status == 'pending' %}selected{% endif %}>Pending KYC</option>
                                     <option value="verified" {% if kyc_status == 'verified' %}selected{% endif %}>Verified KYC</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" name="role">
+                                    <option value="all" {% if role == 'all' %}selected{% endif %}>All Roles</option>
+                                    <option value="customer" {% if role == 'customer' %}selected{% endif %}>Customer</option>
+                                    <option value="merchant" {% if role == 'merchant' %}selected{% endif %}>Merchant</option>
+                                    <option value="driver" {% if role == 'driver' %}selected{% endif %}>Driver</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -57,6 +65,7 @@
                                 <th>Name</th>
                                 <th>Phone</th>
                                 <th>Email</th>
+                                <th>Role</th>
                                 <th>KYC Status</th>
                                 <th>Status</th>
                                 <th>Created</th>
@@ -70,6 +79,21 @@
                                 <td>{{ user.name }}</td>
                                 <td>{{ user.phone }}</td>
                                 <td>{{ user.email|default:"-" }}</td>
+                                <td>
+                                    {% if user.is_merchant %}
+                                        <span class="badge bg-success">
+                                            <i class="align-middle" data-feather="store" style="width: 14px; height: 14px;"></i> Merchant
+                                        </span>
+                                    {% elif user.is_driver %}
+                                        <span class="badge bg-info">
+                                            <i class="align-middle" data-feather="truck" style="width: 14px; height: 14px;"></i> Driver
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="align-middle" data-feather="user" style="width: 14px; height: 14px;"></i> Customer
+                                        </span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if user.is_kyc_verified %}
                                         <span class="badge bg-success">
@@ -107,7 +131,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="8" class="text-center">No users found</td>
+                                <td colspan="9" class="text-center">No users found</td>
                             </tr>
                             {% endfor %}
                         </tbody>

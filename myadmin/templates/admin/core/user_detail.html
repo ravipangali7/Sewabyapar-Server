@@ -83,11 +83,40 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col">
-                            <h6 class="text-muted mb-2">User Type</h6>
+                            <h6 class="text-muted mb-2">User Role</h6>
+                            {% if user.is_merchant %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="store" style="width: 16px; height: 16px;"></i> Merchant
+                                </span>
+                            {% elif user.is_driver %}
+                                <span class="badge bg-info fs-6">
+                                    <i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Driver
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">
+                                    <i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Customer
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if user.is_merchant %}store{% elif user.is_driver %}truck{% else %}user{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Staff Status</h6>
                             {% if user.is_staff %}
                                 <span class="badge bg-info fs-6">Staff</span>
                             {% else %}
-                                <span class="badge bg-secondary fs-6">Customer</span>
+                                <span class="badge bg-secondary fs-6">Regular User</span>
                             {% endif %}
                         </div>
                         <div class="col-auto">
@@ -194,6 +223,24 @@
                                 <span class="badge bg-info">Staff Member</span>
                             {% else %}
                                 <span class="badge bg-secondary">Regular User</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> User Role:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if user.is_merchant %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="store" style="width: 14px; height: 14px;"></i> Merchant
+                                </span>
+                            {% elif user.is_driver %}
+                                <span class="badge bg-info">
+                                    <i class="align-middle" data-feather="truck" style="width: 14px; height: 14px;"></i> Driver
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="align-middle" data-feather="user" style="width: 14px; height: 14px;"></i> Customer
+                                </span>
                             {% endif %}
                         </div>
                     </div>

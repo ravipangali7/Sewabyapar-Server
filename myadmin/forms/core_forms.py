@@ -13,6 +13,7 @@ class UserForm(forms.ModelForm):
             'phone', 'name', 'email', 'country_code', 'country',
             'fcm_token', 'profile_picture',
             'national_id', 'national_id_document', 'pan_no', 'pan_document',
+            'is_merchant', 'is_driver',
             'is_kyc_verified', 'is_active', 'is_staff', 'is_superuser'
         ]
         widgets = {
@@ -27,11 +28,26 @@ class UserForm(forms.ModelForm):
             'national_id_document': forms.FileInput(attrs={'class': 'form-control'}),
             'pan_no': forms.TextInput(attrs={'class': 'form-control'}),
             'pan_document': forms.FileInput(attrs={'class': 'form-control'}),
+            'is_merchant': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_merchant'}),
+            'is_driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_driver'}),
             'is_kyc_verified': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        is_merchant = cleaned_data.get('is_merchant', False)
+        is_driver = cleaned_data.get('is_driver', False)
+        
+        if is_merchant and is_driver:
+            raise forms.ValidationError({
+                'is_merchant': 'User cannot be both merchant and driver at the same time.',
+                'is_driver': 'User cannot be both merchant and driver at the same time.'
+            })
+        
+        return cleaned_data
 
 
 class UserCreateForm(forms.ModelForm):
@@ -43,7 +59,7 @@ class UserCreateForm(forms.ModelForm):
         model = User
         fields = [
             'phone', 'name', 'email', 'country_code', 'country',
-            'password', 'is_active', 'is_staff'
+            'password', 'is_merchant', 'is_driver', 'is_active', 'is_staff'
         ]
         widgets = {
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
@@ -51,6 +67,8 @@ class UserCreateForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'country_code': forms.Select(attrs={'class': 'form-select'}),
             'country': forms.Select(attrs={'class': 'form-select'}),
+            'is_merchant': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_merchant'}),
+            'is_driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_driver'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -59,9 +77,17 @@ class UserCreateForm(forms.ModelForm):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
         password_confirm = cleaned_data.get('password_confirm')
+        is_merchant = cleaned_data.get('is_merchant', False)
+        is_driver = cleaned_data.get('is_driver', False)
         
         if password and password_confirm and password != password_confirm:
             raise forms.ValidationError("Passwords don't match")
+        
+        if is_merchant and is_driver:
+            raise forms.ValidationError({
+                'is_merchant': 'User cannot be both merchant and driver at the same time.',
+                'is_driver': 'User cannot be both merchant and driver at the same time.'
+            })
         
         return cleaned_data
     

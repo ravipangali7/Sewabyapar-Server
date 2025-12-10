@@ -51,12 +51,22 @@ class UserListView(StaffRequiredMixin, ListView):
         elif kyc_status == 'verified':
             queryset = queryset.filter(is_kyc_verified=True)
         
+        # Filter by role
+        role = self.request.GET.get('role', 'all')
+        if role == 'merchant':
+            queryset = queryset.filter(is_merchant=True)
+        elif role == 'driver':
+            queryset = queryset.filter(is_driver=True)
+        elif role == 'customer':
+            queryset = queryset.filter(is_merchant=False, is_driver=False)
+        
         return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
         context['kyc_status'] = self.request.GET.get('kyc_status', 'all')
+        context['role'] = self.request.GET.get('role', 'all')
         return context
     
     def get(self, request, *args, **kwargs):
