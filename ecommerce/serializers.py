@@ -14,6 +14,18 @@ class StoreSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'owner', 'logo', 'banner', 'address', 
                  'phone', 'email', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        
+        # Convert logo and banner to full URLs
+        if data.get('logo') and request:
+            data['logo'] = request.build_absolute_uri(instance.logo.url) if instance.logo else None
+        if data.get('banner') and request:
+            data['banner'] = request.build_absolute_uri(instance.banner.url) if instance.banner else None
+        
+        return data
 
 
 class CategorySerializer(serializers.ModelSerializer):

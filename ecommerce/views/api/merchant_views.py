@@ -5,7 +5,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from ...models import Product, Store, Order, OrderItem, Category
 from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer
 from core.models import User
@@ -145,6 +145,26 @@ def merchant_orders(request):
     if status_filter:
         orders = orders.filter(status=status_filter)
     
+    # Apply date range filter if provided
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d').date()
+            orders = orders.filter(created_at__gte=timezone.make_aware(
+                datetime.combine(start, datetime.min.time())
+            ))
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+            orders = orders.filter(created_at__lte=timezone.make_aware(
+                datetime.combine(end, datetime.max.time())
+            ))
+        except ValueError:
+            pass
+    
     paginator = PageNumberPagination()
     paginated_orders = paginator.paginate_queryset(orders, request)
     serializer = OrderSerializer(paginated_orders, many=True)
@@ -250,6 +270,57 @@ def merchant_stats(request):
         total=Sum('total')
     )['total'] or 0
     
+    # Get low stock products (stock < 10)
+    low_stock_products = Product.objects.filter(
+        store__in=stores, 
+        is_active=True, 
+        stock_quantity__lt=10
+    ).count()
+    
+    # Get best selling products (top 5 by order items)
+    best_sellers = Product.objects.filter(
+        store__in=stores,
+        is_active=True
+    ).annotate(
+        total_sold=Sum('orderitem__quantity')
+    ).order_by('-total_sold')[:5]
+    
+    best_sellers_data = [
+        {
+            'id': product.id,
+            'name': product.name,
+            'total_sold': product.total_sold or 0
+        }
+        for product in best_sellers
+    ]
+    
+    # Get revenue by date range if provided
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+    date_filtered_revenue = total_revenue
+    if start_date or end_date:
+        filtered_orders = orders
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                filtered_orders = filtered_orders.filter(created_at__gte=timezone.make_aware(
+                    datetime.combine(start, datetime.min.time())
+                ))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, '%Y-%m-%d').date()
+                filtered_orders = filtered_orders.filter(created_at__lte=timezone.make_aware(
+                    datetime.combine(end, datetime.max.time())
+                ))
+            except ValueError:
+                pass
+        filtered_order_ids = filtered_orders.values_list('id', flat=True)
+        date_filtered_revenue = order_items.filter(order_id__in=filtered_order_ids).aggregate(
+            total=Sum('total')
+        )['total'] or 0
+    
     return Response({
         'stores_count': stores.count(),
         'products_count': products_count,
@@ -258,6 +329,9 @@ def merchant_stats(request):
         'orders_by_status': status_counts,
         'recent_orders_30_days': recent_orders,
         'recent_revenue_30_days': float(recent_revenue),
+        'low_stock_products': low_stock_products,
+        'best_selling_products': best_sellers_data,
+        'date_filtered_revenue': float(date_filtered_revenue) if (start_date or end_date) else None,
     })
 
 
@@ -272,14 +346,50 @@ def merchant_stores(request):
     
     if request.method == 'GET':
         stores = Store.objects.filter(owner=request.user)
-        serializer = StoreSerializer(stores, many=True)
+        serializer = StoreSerializer(stores, many=True, context={'request': request})
         return Response(serializer.data)
     
     elif request.method == 'POST':
-        serializer = StoreSerializer(data=request.data)
+        # Check if merchant already has a store (one store per merchant)
+        existing_store = Store.objects.filter(owner=request.user).first()
+        if existing_store:
+            return Response({
+                'error': 'You already have a store. You can only have one store per account.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = StoreSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             # Auto-set owner to current merchant
             store = serializer.save(owner=request.user)
-            return Response(StoreSerializer(store).data, status=status.HTTP_201_CREATED)
+            return Response(StoreSerializer(store, context={'request': request}).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_store_detail(request, pk):
+    """Get, update or delete merchant's store"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    store = get_object_or_404(Store, pk=pk, owner=request.user)
+    
+    if request.method == 'GET':
+        serializer = StoreSerializer(store, context={'request': request})
+        return Response(serializer.data)
+    
+    elif request.method in ['PUT', 'PATCH']:
+        serializer = StoreSerializer(store, data=request.data, 
+                                    partial=request.method == 'PATCH', 
+                                    context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(StoreSerializer(store, context={'request': request}).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        store.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 

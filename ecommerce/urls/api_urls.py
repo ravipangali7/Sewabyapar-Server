@@ -56,5 +56,6 @@ urlpatterns = [
     path('merchant/orders/<int:pk>/update-status/', merchant_views.merchant_order_update_status, name='merchant-order-update-status'),
     path('merchant/stats/', merchant_views.merchant_stats, name='merchant-stats'),
     path('merchant/stores/', merchant_views.merchant_stores, name='merchant-stores'),
+    path('merchant/stores/<int:pk>/', merchant_views.merchant_store_detail, name='merchant-store-detail'),
 ]
 
