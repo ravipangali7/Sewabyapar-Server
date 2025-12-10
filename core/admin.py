@@ -6,14 +6,15 @@ from .models import User, Address, Notification
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """Custom User admin"""
-    list_display = ['phone', 'name', 'email', 'is_kyc_verified', 'is_active', 'is_staff', 'created_at']
-    list_filter = ['is_active', 'is_staff', 'is_superuser', 'is_kyc_verified', 'created_at']
+    list_display = ['phone', 'name', 'email', 'is_merchant', 'is_driver', 'is_kyc_verified', 'is_active', 'is_staff', 'created_at']
+    list_filter = ['is_active', 'is_staff', 'is_superuser', 'is_merchant', 'is_driver', 'is_kyc_verified', 'created_at']
     search_fields = ['phone', 'name', 'email', 'national_id', 'pan_no']
     ordering = ['-created_at']
     
     fieldsets = (
         (None, {'fields': ('phone', 'password')}),
         ('Personal info', {'fields': ('name', 'email', 'fcm_token', 'profile_picture')}),
+        ('Role', {'fields': ('is_merchant', 'is_driver')}),
         ('KYC Verification', {
             'fields': ('national_id', 'national_id_document', 'pan_no', 'pan_document', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at'),
             'classes': ('collapse',)
@@ -39,6 +40,12 @@ class UserAdmin(BaseUserAdmin):
                 obj.kyc_verified_at = timezone.now()
             elif not obj.is_kyc_verified:
                 obj.kyc_verified_at = None
+        
+        # Validate merchant/driver exclusivity
+        if obj.is_merchant and obj.is_driver:
+            from django.core.exceptions import ValidationError
+            raise ValidationError('User cannot be both merchant and driver at the same time')
+        
         super().save_model(request, obj, form, change)
 
 

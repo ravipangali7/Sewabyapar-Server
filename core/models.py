@@ -73,6 +73,10 @@ class User(AbstractUser):
     kyc_rejected_at = models.DateTimeField(blank=True, null=True, help_text='When KYC was rejected by admin')
     kyc_rejection_reason = models.TextField(blank=True, null=True, help_text='Reason for KYC rejection')
     
+    # Merchant/Driver Role Fields
+    is_merchant = models.BooleanField(default=False, help_text='Whether user is a merchant/seller')
+    is_driver = models.BooleanField(default=False, help_text='Whether user is a driver')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -87,14 +91,23 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['name']
     
     def clean(self):
-        """Validate that country and country_code match"""
+        """Validate that country and country_code match, and merchant/driver exclusivity"""
         super().clean()
         if self.country_code == '+977' and self.country != 'Nepal':
             raise ValidationError({'country': 'Country must be Nepal when country code is +977'})
         if self.country_code == '+91' and self.country != 'India':
             raise ValidationError({'country': 'Country must be India when country code is +91'})
+        
+        # Ensure merchant and driver can't both be True
+        if self.is_merchant and self.is_driver:
+            raise ValidationError({
+                'is_merchant': 'User cannot be both merchant and driver at the same time',
+                'is_driver': 'User cannot be both merchant and driver at the same time'
+            })
     
     def save(self, *args, **kwargs):
+        # Validate before saving
+        self.full_clean()
         # Set username to phone number
         self.username = self.phone
         # Auto-set country based on country_code if not already set

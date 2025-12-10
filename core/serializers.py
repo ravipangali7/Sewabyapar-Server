@@ -7,8 +7,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'phone', 'name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture', 
                   'national_id', 'pan_no', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at', 
-                  'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'is_kyc_verified', 'kyc_verified_at']
+                  'is_merchant', 'is_driver', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_kyc_verified', 'kyc_verified_at', 
+                           'is_merchant', 'is_driver']
         extra_kwargs = {
             'phone': {'required': True},
             'name': {'required': True},
@@ -125,6 +126,7 @@ class VerifyOTPSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     password = serializers.CharField(min_length=8)
     password_confirm = serializers.CharField(min_length=8)
+    user_type = serializers.ChoiceField(choices=[('customer', 'Customer'), ('merchant', 'Merchant'), ('driver', 'Driver')], default='customer')
     
     def validate_phone(self, value):
         if not value or len(value) < 10:
@@ -220,3 +222,14 @@ class DeleteAccountSerializer(serializers.Serializer):
     """Serializer for account deletion request"""
     # No additional fields needed since authentication token is sufficient
     pass
+
+
+class UserUpgradeSerializer(serializers.Serializer):
+    """Serializer for account upgrade"""
+    upgrade_to = serializers.ChoiceField(choices=[('merchant', 'Merchant'), ('driver', 'Driver')])
+    
+    def validate(self, attrs):
+        upgrade_to = attrs.get('upgrade_to')
+        if upgrade_to not in ['merchant', 'driver']:
+            raise serializers.ValidationError({'upgrade_to': 'Invalid upgrade option. Must be merchant or driver'})
+        return attrs

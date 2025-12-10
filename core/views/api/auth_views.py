@@ -11,7 +11,7 @@ from ...serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     SendOTPSerializer, VerifyOTPSerializer, ResendOTPSerializer,
     ForgotPasswordSendOTPSerializer, ForgotPasswordVerifyOTPSerializer, ResetPasswordSerializer,
-    DeleteAccountSerializer
+    DeleteAccountSerializer, UserUpgradeSerializer
 )
 from ...utils.sms_service import sms_service
 from django.conf import settings
@@ -86,15 +86,32 @@ def user_login(request):
             'error': 'This phone number is not registered with the selected country code'
         }, status=status.HTTP_401_UNAUTHORIZED)
 
+    # Validate merchant/driver exclusivity (shouldn't happen, but double-check)
+    if user.is_merchant and user.is_driver:
+        return Response({
+            'error': 'Account configuration error. Please contact support.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     # If country code matches, authenticate with password
     user = authenticate(phone=phone, password=password)
 
     if user:
         token, created = Token.objects.get_or_create(user=user)
+        user_data = UserSerializer(user).data
+        
+        # Determine user type
+        if user.is_merchant:
+            user_type = 'merchant'
+        elif user.is_driver:
+            user_type = 'driver'
+        else:
+            user_type = 'customer'
+        
         return Response({
-            'user': UserSerializer(user).data,
+            'user': user_data,
             'token': token.key,
-            'message': 'Login successful'
+            'message': 'Login successful',
+            'user_type': user_type
         })
     else:
         return Response({
@@ -204,6 +221,7 @@ def verify_otp_and_register(request):
     otp = serializer.validated_data['otp']
     name = serializer.validated_data['name']
     password = serializer.validated_data['password']
+    user_type = serializer.validated_data.get('user_type', 'customer')
     
     # Check if user already exists
     if User.objects.filter(phone=phone).exists():
@@ -225,12 +243,24 @@ def verify_otp_and_register(request):
     
     # Create user
     try:
+        # Set role flags based on user_type
+        is_merchant = (user_type == 'merchant')
+        is_driver = (user_type == 'driver')
+        
+        # Validate mutual exclusivity
+        if is_merchant and is_driver:
+            return Response({
+                'error': 'Cannot be both merchant and driver'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         user = User.objects.create_user(
             phone=phone,
             name=name,
             password=password,
             country_code=country_code,
-            country=country
+            country=country,
+            is_merchant=is_merchant,
+            is_driver=is_driver
         )
         
         # Create token
@@ -242,7 +272,8 @@ def verify_otp_and_register(request):
         return Response({
             'user': UserSerializer(user).data,
             'token': token.key,
-            'message': 'User registered successfully'
+            'message': 'User registered successfully',
+            'user_type': user_type
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
@@ -505,3 +536,46 @@ def delete_account(request):
             return Response({
                 'error': f'Account deletion failed: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upgrade_account(request):
+    """Upgrade customer account to merchant or driver"""
+    serializer = UserUpgradeSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = request.user
+    upgrade_to = serializer.validated_data['upgrade_to']
+    
+    # Check if user is currently a customer
+    if user.is_merchant or user.is_driver:
+        return Response({
+            'error': 'Account is already upgraded. Cannot change role.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update user flags
+    try:
+        if upgrade_to == 'merchant':
+            user.is_merchant = True
+            user.is_driver = False
+        elif upgrade_to == 'driver':
+            user.is_merchant = False
+            user.is_driver = True
+        
+        user.save()
+        
+        # Determine user type for response
+        user_type = 'merchant' if user.is_merchant else ('driver' if user.is_driver else 'customer')
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'message': f'Account upgraded to {upgrade_to} successfully',
+            'user_type': user_type
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': f'Account upgrade failed: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
