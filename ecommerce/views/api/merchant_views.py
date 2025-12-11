@@ -135,8 +135,12 @@ def merchant_orders(request):
     # Get all stores owned by the merchant
     stores = Store.objects.filter(owner=request.user, is_active=True)
     if not stores.exists():
+        # Return empty result if merchant has no stores
         paginator = PageNumberPagination()
-        return paginator.get_paginated_response([])
+        empty_queryset = Order.objects.none()  # Create empty queryset
+        paginated_orders = paginator.paginate_queryset(empty_queryset, request)
+        serializer = OrderSerializer(paginated_orders or [], many=True)
+        return paginator.get_paginated_response(serializer.data)
     
     # Get orders that contain items from merchant's stores
     order_items = OrderItem.objects.filter(store__in=stores)

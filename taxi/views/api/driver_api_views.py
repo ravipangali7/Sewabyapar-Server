@@ -43,8 +43,12 @@ def driver_my_bookings(request):
     # Get vehicles owned by driver
     vehicles = Vehicle.objects.filter(driver=driver, is_active=True)
     if not vehicles.exists():
+        # Return empty result if driver has no vehicles
         paginator = PageNumberPagination()
-        return paginator.get_paginated_response([])
+        empty_queryset = TaxiBooking.objects.none()  # Create empty queryset
+        paginated_bookings = paginator.paginate_queryset(empty_queryset, request)
+        serializer = TaxiBookingSerializer(paginated_bookings or [], many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
     
     # Get bookings assigned to driver's vehicles
     queryset = TaxiBooking.objects.filter(vehicle__in=vehicles)
