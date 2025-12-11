@@ -33,7 +33,10 @@ def merchant_products(request):
         if not stores.exists():
             # Return empty result if merchant has no stores
             paginator = PageNumberPagination()
-            return paginator.get_paginated_response([])
+            empty_queryset = Product.objects.none()  # Create empty queryset
+            paginated_products = paginator.paginate_queryset(empty_queryset, request)
+            serializer = ProductSerializer(paginated_products or [], many=True, context={'request': request})
+            return paginator.get_paginated_response(serializer.data)
         
         # Get products from merchant's stores
         queryset = Product.objects.filter(store__in=stores, is_active=True)
