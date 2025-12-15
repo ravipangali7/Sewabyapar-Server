@@ -2,6 +2,7 @@
 Product management views
 """
 import logging
+import json
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.views import View
@@ -67,6 +68,8 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
             context['formset'] = ProductImageFormSet(self.request.POST, self.request.FILES)
         else:
             context['formset'] = ProductImageFormSet()
+        # Add variant data for JavaScript (default for new products)
+        context['variants_data'] = json.dumps({"enabled": False, "variants": [], "combinations": {}})
         return context
     
     def form_valid(self, form):
@@ -75,7 +78,18 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
         
         if formset.is_valid():
             try:
-                self.object = form.save()
+                self.object = form.save(commit=False)
+                # Handle variant data from POST
+                variants_json = self.request.POST.get('variants_json', '{}')
+                try:
+                    import json
+                    variants_data = json.loads(variants_json) if variants_json else {}
+                    self.object.variants = variants_data
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.warning(f'Invalid variant JSON: {str(e)}')
+                    self.object.variants = {}
+                
+                self.object.save()
                 formset.instance = self.object
                 formset.save()
                 messages.success(self.request, 'Product created successfully.')
@@ -107,6 +121,11 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
             context['formset'] = ProductImageFormSet(self.request.POST, self.request.FILES, instance=self.object)
         else:
             context['formset'] = ProductImageFormSet(instance=self.object)
+        # Add variant data for JavaScript
+        if self.object and self.object.variants:
+            context['variants_data'] = json.dumps(self.object.variants)
+        else:
+            context['variants_data'] = json.dumps({"enabled": False, "variants": [], "combinations": {}})
         return context
     
     def form_valid(self, form):
@@ -115,7 +134,20 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
         
         if formset.is_valid():
             try:
-                self.object = form.save()
+                self.object = form.save(commit=False)
+                # Handle variant data from POST
+                variants_json = self.request.POST.get('variants_json', '{}')
+                try:
+                    import json
+                    variants_data = json.loads(variants_json) if variants_json else {}
+                    self.object.variants = variants_data
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.warning(f'Invalid variant JSON: {str(e)}')
+                    # Keep existing variants if invalid JSON provided
+                    if not self.object.variants:
+                        self.object.variants = {}
+                
+                self.object.save()
                 formset.instance = self.object
                 formset.save()
                 messages.success(self.request, 'Product updated successfully.')

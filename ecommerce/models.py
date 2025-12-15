@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from core.models import User
+import json
 
 
 class Store(models.Model):
@@ -56,11 +57,48 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False)
     weight = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)])
     dimensions = models.CharField(max_length=50, blank=True)  # e.g., "10x5x3 inches"
+    variants = models.JSONField(default=dict, blank=True, help_text='Product variant data with enabled, variants, and combinations')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"{self.name} - {self.store.name}"
+    
+    def get_variants_data(self):
+        """Get variant data with default structure"""
+        if not self.variants:
+            return {
+                "enabled": False,
+                "variants": [],
+                "combinations": {}
+            }
+        return self.variants
+    
+    def is_variants_enabled(self):
+        """Check if product variants are enabled"""
+        variants_data = self.get_variants_data()
+        return variants_data.get("enabled", False)
+    
+    def get_total_stock(self):
+        """Calculate total stock from variants if enabled, otherwise return stock_quantity"""
+        if self.is_variants_enabled():
+            variants_data = self.get_variants_data()
+            combinations = variants_data.get("combinations", {})
+            total = sum(
+                int(combo.get("stock", 0))
+                for combo in combinations.values()
+                if isinstance(combo, dict)
+            )
+            return total
+        return self.stock_quantity
+    
+    def save(self, *args, **kwargs):
+        """Override save to auto-calculate stock when variants are enabled"""
+        if self.is_variants_enabled():
+            # Auto-calculate stock from combinations
+            total_stock = self.get_total_stock()
+            self.stock_quantity = total_stock
+        super().save(*args, **kwargs)
     
     class Meta:
         ordering = ['-created_at']
