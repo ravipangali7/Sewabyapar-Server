@@ -117,6 +117,35 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
                  'stock_quantity', 'is_active', 'is_featured', 'variants']
+    
+    def validate(self, data):
+        """
+        Validate product data, handling variant-enabled products.
+        When variants are enabled, price and stock_quantity are optional
+        as they will be calculated from variant combinations in the model's save() method.
+        """
+        variants = data.get('variants', {})
+        variants_enabled = isinstance(variants, dict) and variants.get('enabled', False)
+        
+        # If variants are enabled and price/stock_quantity are missing, set defaults
+        # These will be recalculated in the model's save() method from variant combinations
+        if variants_enabled:
+            if 'price' not in data or data.get('price') is None:
+                data['price'] = 0  # Default, will be set from primary variant combination
+            if 'stock_quantity' not in data or data.get('stock_quantity') is None:
+                data['stock_quantity'] = 0  # Default, will be calculated from variant combinations
+        else:
+            # When variants are not enabled, price and stock_quantity are required
+            if 'price' not in data or data.get('price') is None:
+                raise serializers.ValidationError({
+                    'price': 'Price is required when variants are not enabled.'
+                })
+            if 'stock_quantity' not in data or data.get('stock_quantity') is None:
+                raise serializers.ValidationError({
+                    'stock_quantity': 'Stock quantity is required when variants are not enabled.'
+                })
+        
+        return data
 
 
 class CartSerializer(serializers.ModelSerializer):
