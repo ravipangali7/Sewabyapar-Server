@@ -79,7 +79,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
-                 'stock_quantity', 'is_active', 'is_featured', 'variants', 'images', 
+                 'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants', 'images', 
                  'average_rating', 'review_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
@@ -116,11 +116,13 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     # Make price and stock_quantity optional at field level to allow conditional validation
     price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     stock_quantity = serializers.IntegerField(required=False, allow_null=True)
+    # is_approved is read-only - only admins can set this
+    is_approved = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Product
         fields = ['name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
-                 'stock_quantity', 'is_active', 'is_featured', 'variants']
+                 'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants']
     
     def validate(self, data):
         """

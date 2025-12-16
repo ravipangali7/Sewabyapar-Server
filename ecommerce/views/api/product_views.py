@@ -13,7 +13,7 @@ from ...serializers import ProductSerializer, ProductCreateSerializer
 def product_list_create(request):
     """List all products or create a new product"""
     if request.method == 'GET':
-        queryset = Product.objects.filter(is_active=True)
+        queryset = Product.objects.filter(is_active=True, is_approved=True)
         category = request.query_params.get('category')
         store = request.query_params.get('store')
         search = request.query_params.get('search')
@@ -65,6 +65,11 @@ def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
     
     if request.method == 'GET':
+        # For public access, only show approved products
+        if not request.user.is_authenticated or not request.user.is_staff:
+            if not product.is_approved or not product.is_active:
+                from rest_framework import status
+                return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = ProductSerializer(product, context={'request': request})
         return Response(serializer.data)
     
@@ -89,7 +94,7 @@ def search_products(request):
     min_price = request.query_params.get('min_price')
     max_price = request.query_params.get('max_price')
     
-    queryset = Product.objects.filter(is_active=True)
+    queryset = Product.objects.filter(is_active=True, is_approved=True)
     
     if query:
         queryset = queryset.filter(

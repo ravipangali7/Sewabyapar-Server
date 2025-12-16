@@ -9,7 +9,7 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             'name', 'description', 'store', 'category', 'price', 'discount_type',
-            'discount', 'stock_quantity', 'is_active', 'is_featured'
+            'discount', 'stock_quantity', 'is_active', 'is_featured', 'is_approved'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -22,6 +22,7 @@ class ProductForm(forms.ModelForm):
             'stock_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_approved': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 

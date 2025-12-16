@@ -57,6 +57,7 @@ class Product(models.Model):
     stock_quantity = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False, help_text='Product must be approved by admin before it appears in app/web')
     variants = models.JSONField(default=dict, blank=True, help_text='Product variant data with enabled, variants, and combinations')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
