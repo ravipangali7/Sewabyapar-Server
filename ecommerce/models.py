@@ -52,13 +52,11 @@ class Product(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='products')
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    compare_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)])
-    sku = models.CharField(max_length=100, unique=True)
+    discount_type = models.CharField(max_length=10, choices=[('flat', 'Flat'), ('percentage', 'Percentage')], blank=True, null=True)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)])
     stock_quantity = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
-    weight = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)])
-    dimensions = models.CharField(max_length=50, blank=True)  # e.g., "10x5x3 inches"
     variants = models.JSONField(default=dict, blank=True, help_text='Product variant data with enabled, variants, and combinations')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -95,8 +93,24 @@ class Product(models.Model):
         return self.stock_quantity
     
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate stock when variants are enabled"""
+        """Override save to auto-calculate stock and set price from primary combination when variants are enabled"""
         if self.is_variants_enabled():
+            variants_data = self.get_variants_data()
+            combinations = variants_data.get("combinations", {})
+            
+            # Find primary combination and set price from it
+            primary_combination = None
+            for combo_key, combo_data in combinations.items():
+                if isinstance(combo_data, dict) and combo_data.get("is_primary", False):
+                    primary_combination = combo_data
+                    break
+            
+            if primary_combination and "price" in primary_combination:
+                try:
+                    self.price = primary_combination["price"]
+                except (ValueError, TypeError):
+                    pass  # Keep existing price if conversion fails
+            
             # Auto-calculate stock from combinations
             total_stock = self.get_total_stock()
             self.stock_quantity = total_stock

@@ -25,8 +25,12 @@
                         <div class="col">
                             <h6 class="text-muted mb-2">Price</h6>
                             <h4 class="mb-0">₹{{ product.price|floatformat:2 }}</h4>
-                            {% if product.compare_price %}
-                            <small class="text-muted text-decoration-line-through">₹{{ product.compare_price|floatformat:2 }}</small>
+                            {% if product.discount_type and product.discount %}
+                                {% if product.discount_type == 'percentage' %}
+                                    <small class="text-success ms-2">{{ product.discount }}% OFF</small>
+                                {% elif product.discount_type == 'flat' %}
+                                    <small class="text-success ms-2">₹{{ product.discount|floatformat:2 }} OFF</small>
+                                {% endif %}
                             {% endif %}
                         </div>
                         <div class="col-auto">
@@ -120,10 +124,6 @@
                         <div class="col-sm-8"><h5 class="mb-0">{{ product.name }}</h5></div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> SKU:</strong></div>
-                        <div class="col-sm-8"><span class="badge bg-info">{{ product.sku }}</span></div>
-                    </div>
-                    <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="shopping-bag" style="width: 16px; height: 16px;"></i> Store:</strong></div>
                         <div class="col-sm-8">
                             <a href="{% url 'myadmin:ecommerce:store_detail' product.store.pk %}" class="text-decoration-none">{{ product.store.name }}</a>
@@ -139,11 +139,29 @@
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Price:</strong></div>
                         <div class="col-sm-8">
                             <h5 class="mb-0">₹{{ product.price|floatformat:2 }}</h5>
-                            {% if product.compare_price %}
-                            <small class="text-muted text-decoration-line-through">₹{{ product.compare_price|floatformat:2 }}</small>
+                            {% if product.discount_type and product.discount %}
+                                {% if product.discount_type == 'percentage' %}
+                                    <span class="badge bg-success ms-2">{{ product.discount }}% OFF</span>
+                                {% elif product.discount_type == 'flat' %}
+                                    <span class="badge bg-success ms-2">₹{{ product.discount|floatformat:2 }} OFF</span>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
+                    {% if product.discount_type and product.discount %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="tag" style="width: 16px; height: 16px;"></i> Discount:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info">
+                                {% if product.discount_type == 'percentage' %}
+                                    {{ product.discount }}% OFF
+                                {% elif product.discount_type == 'flat' %}
+                                    ₹{{ product.discount|floatformat:2 }} OFF
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Stock:</strong></div>
                         <div class="col-sm-8">
@@ -152,18 +170,6 @@
                             </span>
                         </div>
                     </div>
-                    {% if product.weight %}
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="box" style="width: 16px; height: 16px;"></i> Weight:</strong></div>
-                        <div class="col-sm-8">{{ product.weight }} kg</div>
-                    </div>
-                    {% endif %}
-                    {% if product.dimensions %}
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="maximize" style="width: 16px; height: 16px;"></i> Dimensions:</strong></div>
-                        <div class="col-sm-8">{{ product.dimensions }}</div>
-                    </div>
-                    {% endif %}
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Description:</strong></div>
                         <div class="col-sm-8">

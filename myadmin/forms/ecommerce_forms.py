@@ -8,8 +8,8 @@ class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = [
-            'name', 'description', 'store', 'category', 'price', 'compare_price',
-            'sku', 'stock_quantity', 'is_active', 'is_featured', 'weight', 'dimensions'
+            'name', 'description', 'store', 'category', 'price', 'discount_type',
+            'discount', 'stock_quantity', 'is_active', 'is_featured'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -17,13 +17,11 @@ class ProductForm(forms.ModelForm):
             'store': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'compare_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'sku': forms.TextInput(attrs={'class': 'form-control'}),
+            'discount_type': forms.Select(attrs={'class': 'form-select'}),
+            'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'stock_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'dimensions': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
 

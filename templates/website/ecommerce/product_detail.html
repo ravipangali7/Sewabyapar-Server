@@ -32,11 +32,16 @@
             <div class="mb-6">
                 <div class="flex items-baseline gap-3 mb-2">
                     <span class="text-3xl sm:text-4xl font-bold text-red-600">₹{{ product.price }}</span>
-                    {% if product.compare_price %}
-                    <span class="text-xl sm:text-2xl text-gray-400 line-through">₹{{ product.compare_price }}</span>
-                    <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
-                        {{ product.compare_price|floatformat:0|add:"-"|add:product.price|floatformat:0 }}% OFF
-                    </span>
+                    {% if product.discount_type and product.discount %}
+                        {% if product.discount_type == 'percentage' %}
+                            <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                                {{ product.discount }}% OFF
+                            </span>
+                        {% elif product.discount_type == 'flat' %}
+                            <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                                ₹{{ product.discount|floatformat:0 }} OFF
+                            </span>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

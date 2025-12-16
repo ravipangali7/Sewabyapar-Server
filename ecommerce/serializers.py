@@ -78,9 +78,9 @@ class ProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'store', 'category', 'price', 'compare_price',
-                 'sku', 'stock_quantity', 'is_active', 'is_featured', 'weight', 'dimensions',
-                 'variants', 'images', 'average_rating', 'review_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
+                 'stock_quantity', 'is_active', 'is_featured', 'variants', 'images', 
+                 'average_rating', 'review_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def to_representation(self, instance):
@@ -115,8 +115,8 @@ class ProductSerializer(serializers.ModelSerializer):
 class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['name', 'description', 'store', 'category', 'price', 'compare_price',
-                 'sku', 'stock_quantity', 'is_active', 'is_featured', 'weight', 'dimensions', 'variants']
+        fields = ['name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
+                 'stock_quantity', 'is_active', 'is_featured', 'variants']
 
 
 class CartSerializer(serializers.ModelSerializer):

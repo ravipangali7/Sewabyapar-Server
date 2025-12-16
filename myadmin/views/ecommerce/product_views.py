@@ -32,7 +32,6 @@ class ProductListView(StaffRequiredMixin, ListView):
         if search:
             queryset = queryset.filter(
                 Q(name__icontains=search) |
-                Q(sku__icontains=search) |
                 Q(store__name__icontains=search)
             )
         return queryset
@@ -96,7 +95,7 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
                 return redirect(self.get_success_url())
             except IntegrityError as e:
                 logger.error(f'Error creating product: {str(e)}')
-                messages.error(self.request, 'Error creating product. This SKU may already be in use.')
+                messages.error(self.request, 'Error creating product. Please check the form data and try again.')
                 return self.form_invalid(form)
             except Exception as e:
                 logger.error(f'Unexpected error creating product: {str(e)}')
@@ -154,7 +153,7 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
                 return redirect(self.get_success_url())
             except IntegrityError as e:
                 logger.error(f'Error updating product: {str(e)}')
-                messages.error(self.request, 'Error updating product. This SKU may already be in use.')
+                messages.error(self.request, 'Error updating product. Please check the form data and try again.')
                 return self.form_invalid(form)
             except Exception as e:
                 logger.error(f'Unexpected error updating product: {str(e)}')

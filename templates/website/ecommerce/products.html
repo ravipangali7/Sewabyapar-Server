@@ -53,8 +53,16 @@
                             <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{{ product.name }}</h3>
                             <div class="flex items-baseline gap-2">
                                 <p class="text-red-600 font-bold text-xl">₹{{ product.price }}</p>
-                                {% if product.compare_price %}
-                                <p class="text-gray-400 line-through text-sm">₹{{ product.compare_price }}</p>
+                                {% if product.discount_type and product.discount %}
+                                    {% if product.discount_type == 'percentage' %}
+                                        <span class="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                            {{ product.discount }}% OFF
+                                        </span>
+                                    {% elif product.discount_type == 'flat' %}
+                                        <span class="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                            ₹{{ product.discount|floatformat:0 }} OFF
+                                        </span>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>
