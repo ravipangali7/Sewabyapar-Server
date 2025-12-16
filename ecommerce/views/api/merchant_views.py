@@ -6,9 +6,12 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
+import logging
 from ...models import Product, Store, Order, OrderItem, Category
 from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer
 from core.models import User
+
+logger = logging.getLogger(__name__)
 
 
 def check_merchant_permission(user):
@@ -77,15 +80,26 @@ def merchant_products(request):
                 'error': 'You must create a store before adding products'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Log request data for debugging
+        logger.debug(f"Product creation request data: {request.data}")
+        
         serializer = ProductCreateSerializer(data=request.data)
         if serializer.is_valid():
             # Ensure the store belongs to the merchant
-            store_id = serializer.validated_data.get('store').id
+            # DRF automatically converts store ID to Store instance in validated_data
+            store = serializer.validated_data.get('store')
+            store_id = store.id if hasattr(store, 'id') else store
             store = get_object_or_404(Store, id=store_id, owner=request.user)
+            
+            # Update validated_data with the verified store
+            serializer.validated_data['store'] = store
             
             product = serializer.save()
             return Response(ProductSerializer(product, context={'request': request}).data, 
                           status=status.HTTP_201_CREATED)
+        
+        # Log validation errors for debugging
+        logger.error(f"Product creation validation errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

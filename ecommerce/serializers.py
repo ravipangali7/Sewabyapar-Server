@@ -113,6 +113,10 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
+    # Make price and stock_quantity optional at field level to allow conditional validation
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    stock_quantity = serializers.IntegerField(required=False, allow_null=True)
+    
     class Meta:
         model = Product
         fields = ['name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
