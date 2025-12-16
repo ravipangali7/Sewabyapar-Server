@@ -6,8 +6,9 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
+import json
 import logging
-from ...models import Product, Store, Order, OrderItem, Category
+from ...models import Product, Store, Order, OrderItem, Category, ProductImage
 from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer
 from core.models import User
 
@@ -83,7 +84,35 @@ def merchant_products(request):
         # Log request data for debugging
         logger.debug(f"Product creation request data: {request.data}")
         
-        serializer = ProductCreateSerializer(data=request.data)
+        # Handle both JSON and multipart/form-data requests
+        # For multipart/form-data, extract product data from request.POST
+        product_data = {}
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # Extract product fields from POST data
+            product_data = {
+                'name': request.POST.get('name'),
+                'description': request.POST.get('description'),
+                'store': request.POST.get('store'),
+                'category': request.POST.get('category'),
+                'price': request.POST.get('price'),
+                'discount_type': request.POST.get('discount_type') or None,
+                'discount': request.POST.get('discount') or None,
+                'stock_quantity': request.POST.get('stock_quantity'),
+                'is_active': request.POST.get('is_active', 'true').lower() == 'true',
+                'is_featured': request.POST.get('is_featured', 'false').lower() == 'true',
+            }
+            # Handle variants JSON string
+            variants_json = request.POST.get('variants')
+            if variants_json:
+                try:
+                    product_data['variants'] = json.loads(variants_json)
+                except json.JSONDecodeError:
+                    pass
+        else:
+            # JSON request
+            product_data = request.data
+        
+        serializer = ProductCreateSerializer(data=product_data)
         if serializer.is_valid():
             # Ensure the store belongs to the merchant
             # DRF automatically converts store ID to Store instance in validated_data
@@ -95,6 +124,22 @@ def merchant_products(request):
             serializer.validated_data['store'] = store
             
             product = serializer.save()
+            
+            # Handle image uploads
+            images = request.FILES.getlist('images')
+            if images:
+                # Remove any existing primary flags first
+                ProductImage.objects.filter(product=product).update(is_primary=False)
+                
+                # Create ProductImage instances for each uploaded image
+                for index, image_file in enumerate(images):
+                    ProductImage.objects.create(
+                        product=product,
+                        image=image_file,
+                        is_primary=(index == 0),  # First image is primary by default
+                        alt_text=f"{product.name} - Image {index + 1}"
+                    )
+            
             return Response(ProductSerializer(product, context={'request': request}).data, 
                           status=status.HTTP_201_CREATED)
         
