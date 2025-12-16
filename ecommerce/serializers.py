@@ -12,7 +12,7 @@ class StoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Store
         fields = ['id', 'name', 'description', 'owner', 'logo', 'banner', 'address', 
-                 'phone', 'email', 'is_active', 'created_at', 'updated_at']
+                 'latitude', 'longitude', 'phone', 'email', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def to_representation(self, instance):
