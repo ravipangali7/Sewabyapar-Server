@@ -12,7 +12,8 @@ class UserForm(forms.ModelForm):
         fields = [
             'phone', 'name', 'email', 'country_code', 'country',
             'fcm_token', 'profile_picture',
-            'national_id', 'national_id_document', 'pan_no', 'pan_document',
+            'national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document',
+            'company_register_id', 'company_register_document',
             'is_merchant', 'is_driver',
             'is_kyc_verified', 'is_active', 'is_staff', 'is_superuser'
         ]
@@ -25,9 +26,12 @@ class UserForm(forms.ModelForm):
             'fcm_token': forms.TextInput(attrs={'class': 'form-control'}),
             'profile_picture': forms.FileInput(attrs={'class': 'form-control'}),
             'national_id': forms.TextInput(attrs={'class': 'form-control'}),
-            'national_id_document': forms.FileInput(attrs={'class': 'form-control'}),
+            'national_id_document_front': forms.FileInput(attrs={'class': 'form-control'}),
+            'national_id_document_back': forms.FileInput(attrs={'class': 'form-control'}),
             'pan_no': forms.TextInput(attrs={'class': 'form-control'}),
             'pan_document': forms.FileInput(attrs={'class': 'form-control'}),
+            'company_register_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'company_register_document': forms.FileInput(attrs={'class': 'form-control'}),
             'is_merchant': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_merchant'}),
             'is_driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_driver'}),
             'is_kyc_verified': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

@@ -3,13 +3,20 @@ from .models import User, Address, Notification, Otp
 
 
 class UserSerializer(serializers.ModelSerializer):
+    national_id_document_front = serializers.ImageField(read_only=True)
+    national_id_document_back = serializers.ImageField(read_only=True)
+    company_register_document = serializers.ImageField(read_only=True)
+    
     class Meta:
         model = User
         fields = ['id', 'phone', 'name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture', 
-                  'national_id', 'pan_no', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at', 
+                  'national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document',
+                  'company_register_id', 'company_register_document',
+                  'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at', 'kyc_rejected_at', 'kyc_rejection_reason',
                   'is_merchant', 'is_driver', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'is_kyc_verified', 'kyc_verified_at', 
-                           'is_merchant', 'is_driver']
+                           'kyc_rejected_at', 'kyc_rejection_reason', 'is_merchant', 'is_driver',
+                           'national_id_document_front', 'national_id_document_back', 'pan_document', 'company_register_document']
         extra_kwargs = {
             'phone': {'required': True},
             'name': {'required': True},
@@ -233,3 +240,50 @@ class UserUpgradeSerializer(serializers.Serializer):
         if upgrade_to not in ['merchant', 'driver']:
             raise serializers.ValidationError({'upgrade_to': 'Invalid upgrade option. Must be merchant or driver'})
         return attrs
+
+
+class KYCSubmitSerializer(serializers.Serializer):
+    """Serializer for KYC document submission"""
+    national_id = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    national_id_document_front = serializers.ImageField(required=False, allow_null=True)
+    national_id_document_back = serializers.ImageField(required=False, allow_null=True)
+    pan_no = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    pan_document = serializers.ImageField(required=False, allow_null=True)
+    company_register_id = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    company_register_document = serializers.ImageField(required=False, allow_null=True)
+    
+    def validate(self, attrs):
+        """Validate that at least some KYC information is provided"""
+        has_national_id = attrs.get('national_id') or attrs.get('national_id_document_front') or attrs.get('national_id_document_back')
+        has_pan = attrs.get('pan_no') or attrs.get('pan_document')
+        has_company = attrs.get('company_register_id') or attrs.get('company_register_document')
+        
+        if not (has_national_id or has_pan):
+            raise serializers.ValidationError('At least National ID or PAN information must be provided')
+        
+        # For merchants, company registration is optional but recommended
+        return attrs
+
+
+class KYCStatusSerializer(serializers.ModelSerializer):
+    """Serializer for KYC status retrieval"""
+    national_id_document_front = serializers.ImageField(read_only=True)
+    national_id_document_back = serializers.ImageField(read_only=True)
+    pan_document = serializers.ImageField(read_only=True)
+    company_register_document = serializers.ImageField(read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'national_id', 'national_id_document_front', 'national_id_document_back',
+            'pan_no', 'pan_document',
+            'company_register_id', 'company_register_document',
+            'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at',
+            'kyc_rejected_at', 'kyc_rejection_reason'
+        ]
+        read_only_fields = [
+            'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at',
+            'kyc_rejected_at', 'kyc_rejection_reason',
+            'national_id_document_front', 'national_id_document_back',
+            'pan_document', 'company_register_document'
+        ]

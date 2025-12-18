@@ -65,9 +65,13 @@ class User(AbstractUser):
     
     # KYC Verification Fields
     national_id = models.CharField(max_length=50, blank=True, null=True, help_text='National ID number')
-    national_id_document = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='National ID document image')
+    national_id_document_front = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='National ID document front image')
+    national_id_document_back = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='National ID document back image')
     pan_no = models.CharField(max_length=20, blank=True, null=True, help_text='PAN (Permanent Account Number)')
     pan_document = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='PAN document image')
+    # Merchant-specific KYC fields
+    company_register_id = models.CharField(max_length=50, blank=True, null=True, help_text='Company registration ID (for merchants only)')
+    company_register_document = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='Company registration document (for merchants only)')
     is_kyc_verified = models.BooleanField(default=False, help_text='Whether KYC has been verified by admin')
     kyc_submitted_at = models.DateTimeField(blank=True, null=True, help_text='When user submitted KYC information')
     kyc_verified_at = models.DateTimeField(blank=True, null=True, help_text='When KYC was verified by admin')

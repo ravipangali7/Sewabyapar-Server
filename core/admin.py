@@ -17,7 +17,7 @@ class UserAdmin(BaseUserAdmin):
         ('Role', {'fields': ('is_merchant', 'is_driver')}),
         ('Balance', {'fields': ('balance',)}),
         ('KYC Verification', {
-            'fields': ('national_id', 'national_id_document', 'pan_no', 'pan_document', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at'),
+            'fields': ('national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document', 'company_register_id', 'company_register_document', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at'),
             'classes': ('collapse',)
         }),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),

@@ -1,5 +1,5 @@
 from django.urls import path
-from ..views.api import auth_views, setting_views
+from ..views.api import auth_views, setting_views, kyc_views
 from ..views import address_views, notification_views
 
 urlpatterns = [
@@ -31,4 +31,8 @@ urlpatterns = [
     
     # SuperSetting URLs
     path('super-setting/', setting_views.super_setting, name='super-setting'),
+    
+    # KYC URLs
+    path('kyc/submit/', kyc_views.kyc_submit, name='kyc-submit'),
+    path('kyc/status/', kyc_views.kyc_status, name='kyc-status'),
 ]

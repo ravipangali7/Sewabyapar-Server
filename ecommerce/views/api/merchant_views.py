@@ -74,6 +74,12 @@ def merchant_products(request):
         return paginator.get_paginated_response(serializer.data)
     
     elif request.method == 'POST':
+        # Check if merchant is KYC verified
+        if not request.user.is_kyc_verified:
+            return Response({
+                'error': 'Please complete KYC verification before adding products'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         # Check if merchant has at least one store
         stores = Store.objects.filter(owner=request.user, is_active=True)
         if not stores.exists():
