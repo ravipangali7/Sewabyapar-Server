@@ -1,6 +1,6 @@
 """Core app URLs"""
 from django.urls import path
-from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views
+from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views
 
 app_name = 'core'
 
@@ -38,5 +38,9 @@ urlpatterns = [
     path('notifications/create/', notification_views.NotificationCreateView.as_view(), name='notification_create'),
     path('notifications/<int:pk>/update/', notification_views.NotificationUpdateView.as_view(), name='notification_update'),
     path('notifications/<int:pk>/delete/', notification_views.NotificationDeleteView.as_view(), name='notification_delete'),
+    
+    # SuperSetting URLs (singleton - update only)
+    path('supersetting/', supersetting_views.SuperSettingDetailView.as_view(), name='supersetting_detail'),
+    path('supersetting/update/', supersetting_views.SuperSettingUpdateView.as_view(), name='supersetting_update'),
 ]
 

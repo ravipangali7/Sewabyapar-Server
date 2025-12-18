@@ -2,7 +2,7 @@
 Forms for core models
 """
 from django import forms
-from core.models import User, Address, Notification
+from core.models import User, Address, Notification, SuperSetting
 
 
 class UserForm(forms.ModelForm):
@@ -134,4 +134,38 @@ class NotificationForm(forms.ModelForm):
             'type': forms.Select(attrs={'class': 'form-select'}),
             'is_read': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+class SuperSettingForm(forms.ModelForm):
+    """Form for SuperSetting"""
+    class Meta:
+        model = SuperSetting
+        fields = ['sales_commission', 'basic_shipping_charge', 'balance']
+        widgets = {
+            'sales_commission': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
+            'basic_shipping_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'balance': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+        }
+    
+    def clean_sales_commission(self):
+        """Validate sales_commission is between 0 and 100"""
+        sales_commission = self.cleaned_data.get('sales_commission')
+        if sales_commission is not None:
+            if sales_commission < 0 or sales_commission > 100:
+                raise forms.ValidationError('Sales commission must be between 0 and 100.')
+        return sales_commission
+    
+    def clean_basic_shipping_charge(self):
+        """Validate basic_shipping_charge is >= 0"""
+        basic_shipping_charge = self.cleaned_data.get('basic_shipping_charge')
+        if basic_shipping_charge is not None and basic_shipping_charge < 0:
+            raise forms.ValidationError('Basic shipping charge must be greater than or equal to 0.')
+        return basic_shipping_charge
+    
+    def clean_balance(self):
+        """Validate balance is >= 0"""
+        balance = self.cleaned_data.get('balance')
+        if balance is not None and balance < 0:
+            raise forms.ValidationError('Balance must be greater than or equal to 0.')
+        return balance
 

@@ -1,0 +1,162 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Super Setting</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:supersetting_update' %}">
+            <i class="align-middle" data-feather="edit"></i> Edit Settings
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Sales Commission</h6>
+                            <h4 class="mb-0">{{ supersetting.sales_commission|floatformat:2 }}%</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="percent"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Basic Shipping Charge</h6>
+                            <h4 class="mb-0">₹{{ supersetting.basic_shipping_charge|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-success">
+                                <i class="align-middle" data-feather="truck"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Platform Balance</h6>
+                            <h4 class="mb-0">₹{{ supersetting.balance|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-info">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Last Updated</h6>
+                            <div class="fs-6">{{ supersetting.updated_at|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ supersetting.updated_at|date:"g:i A" }}</small>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-secondary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="sliders"></i> Super Setting Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="percent" style="width: 16px; height: 16px;"></i> Sales Commission:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">{{ supersetting.sales_commission|floatformat:2 }}%</h5>
+                            <small class="text-muted">Percentage of order subtotal taken as commission</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Basic Shipping Charge:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ supersetting.basic_shipping_charge|floatformat:2 }}</h5>
+                            <small class="text-muted">Shipping charge per vendor/order</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Platform Balance:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ supersetting.balance|floatformat:2 }}</h5>
+                            <small class="text-muted">Total platform balance from all transactions</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ supersetting.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ supersetting.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="edit" style="width: 16px; height: 16px;"></i> Last Updated:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ supersetting.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ supersetting.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-0">
+                        <h6 class="alert-heading"><i class="align-middle" data-feather="info" style="width: 16px; height: 16px;"></i> About Super Setting</h6>
+                        <p class="mb-0 small">
+                            Super Setting controls platform-wide configuration including commission rates, shipping charges, and platform balance. These settings affect all orders and transactions across the system.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
