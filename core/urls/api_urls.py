@@ -1,5 +1,5 @@
 from django.urls import path
-from ..views.api import auth_views
+from ..views.api import auth_views, setting_views
 from ..views import address_views, notification_views
 
 urlpatterns = [
@@ -28,4 +28,7 @@ urlpatterns = [
     path('notifications/<int:pk>/', notification_views.notification_detail, name='notification-detail'),
     path('notifications/<int:pk>/mark-read/', notification_views.mark_notification_read, name='mark-notification-read'),
     path('notifications/mark-all-read/', notification_views.mark_all_notifications_read, name='mark-all-notifications-read'),
+    
+    # SuperSetting URLs
+    path('super-setting/', setting_views.super_setting, name='super-setting'),
 ]

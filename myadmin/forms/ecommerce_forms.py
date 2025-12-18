@@ -63,19 +63,30 @@ class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
         fields = [
-            'user', 'order_number', 'status', 'total_amount',
-            'shipping_address', 'billing_address', 'phone', 'email', 'notes'
+            'user', 'merchant', 'order_number', 'status', 'subtotal', 'shipping_cost', 'total_amount',
+            'shipping_address', 'billing_address', 'phone', 'email', 'notes',
+            'payment_method', 'payment_status', 'merchant_ready_date', 'pickup_date',
+            'delivered_date', 'reject_reason'
         ]
         widgets = {
             'user': forms.Select(attrs={'class': 'form-select'}),
+            'merchant': forms.Select(attrs={'class': 'form-select'}),
             'order_number': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
+            'subtotal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'shipping_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'shipping_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'billing_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'payment_status': forms.Select(attrs={'class': 'form-select'}),
+            'merchant_ready_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'pickup_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'delivered_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'reject_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
 

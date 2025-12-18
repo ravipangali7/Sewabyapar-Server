@@ -131,6 +131,14 @@
                             <a href="{% url 'myadmin:core:user_detail' order.user.pk %}" class="text-decoration-none">{{ order.user.name }}</a>
                         </div>
                     </div>
+                    {% if order.merchant %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="store" style="width: 16px; height: 16px;"></i> Merchant:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:store_detail' order.merchant.pk %}" class="text-decoration-none">{{ order.merchant.name }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
                         <div class="col-sm-8">{{ order.phone }}</div>
@@ -146,6 +154,14 @@
                                 {{ order.get_status_display }}
                             </span>
                         </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Subtotal:</strong></div>
+                        <div class="col-sm-8">₹{{ order.subtotal|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Shipping Cost:</strong></div>
+                        <div class="col-sm-8">₹{{ order.shipping_cost|floatformat:2 }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Total Amount:</strong></div>
@@ -177,6 +193,38 @@
                             <small class="text-muted">{{ order.created_at|date:"g:i A" }}</small>
                         </div>
                     </div>
+                    {% if order.merchant_ready_date %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Merchant Ready:</strong></div>
+                        <div class="col-sm-8">
+                            {{ order.merchant_ready_date|date:"F d, Y g:i A" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if order.pickup_date %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Pickup Date:</strong></div>
+                        <div class="col-sm-8">
+                            {{ order.pickup_date|date:"F d, Y g:i A" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if order.delivered_date %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Delivered Date:</strong></div>
+                        <div class="col-sm-8">
+                            {{ order.delivered_date|date:"F d, Y g:i A" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if order.reject_reason %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="x-circle" style="width: 16px; height: 16px;"></i> Reject Reason:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="alert alert-danger mb-0">{{ order.reject_reason|linebreaks }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
                     <hr>
                     <form method="post" action="{% url 'myadmin:ecommerce:order_update_status' order.pk %}" class="mt-3">
                         {% csrf_token %}
@@ -280,6 +328,14 @@
                                 {% endfor %}
                             </tbody>
                             <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td><strong>₹{{ order.subtotal|floatformat:2 }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Shipping:</strong></td>
+                                    <td><strong>₹{{ order.shipping_cost|floatformat:2 }}</strong></td>
+                                </tr>
                                 <tr class="table-primary">
                                     <td colspan="5" class="text-end"><strong>Grand Total:</strong></td>
                                     <td><strong>₹{{ order.total_amount|floatformat:2 }}</strong></td>

@@ -5,8 +5,9 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.conf import settings
 from ecommerce.models import Cart, Order, OrderItem, Coupon
-from core.models import Address
+from core.models import Address, SuperSetting
 from website.models import MySetting, CMSPages
+from collections import defaultdict
 from ecommerce.services.phonepe_service import (
     initiate_payment,
     generate_merchant_order_id,
@@ -20,12 +21,126 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def split_order_by_vendor(temp_order):
+    """Split a temporary order into separate orders by vendor after payment success"""
+    from ecommerce.models import Store, Product
+    
+    try:
+        # Check if this is a temporary order with CART_DATA
+        if not temp_order.notes or not temp_order.notes.startswith('CART_DATA:'):
+            logger.warning(f"Order {temp_order.id} does not have CART_DATA, skipping split")
+            return None
+        
+        # Parse cart data from notes
+        cart_data_str = temp_order.notes.replace('CART_DATA:', '')
+        cart_items_data = cart_data_str.split('|')
+        
+        # Group items by vendor
+        vendor_items = defaultdict(list)
+        for item_str in cart_items_data:
+            if not item_str:
+                continue
+            try:
+                store_id, product_id, quantity, price = item_str.split(':')
+                store_id = int(store_id)
+                product_id = int(product_id)
+                quantity = int(quantity)
+                price = float(price)
+                
+                try:
+                    store = Store.objects.get(id=store_id)
+                    product = Product.objects.get(id=product_id)
+                    vendor_items[store].append({
+                        'product': product,
+                        'quantity': quantity,
+                        'price': price,
+                    })
+                except (Store.DoesNotExist, Product.DoesNotExist) as e:
+                    logger.error(f"Store or Product not found: {str(e)}")
+                    continue
+            except ValueError as e:
+                logger.error(f"Error parsing cart item data: {item_str}, error: {str(e)}")
+                continue
+        
+        if not vendor_items:
+            logger.warning(f"No valid vendor items found in order {temp_order.id}")
+            return None
+        
+        # Get SuperSetting
+        try:
+            super_setting = SuperSetting.objects.first()
+            if not super_setting:
+                super_setting = SuperSetting.objects.create()
+            basic_shipping_charge = super_setting.basic_shipping_charge
+        except Exception as e:
+            logger.error(f"Error getting SuperSetting: {str(e)}")
+            basic_shipping_charge = 0
+        
+        # Create separate order for each vendor
+        created_orders = []
+        for store, items in vendor_items.items():
+            # Calculate subtotal for this vendor
+            vendor_subtotal = sum(item['price'] * item['quantity'] for item in items)
+            vendor_total = vendor_subtotal + basic_shipping_charge
+            
+            # Generate order number
+            order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            
+            # Create order for this vendor
+            order = Order.objects.create(
+                user=temp_order.user,
+                merchant=store,
+                order_number=order_number,
+                subtotal=vendor_subtotal,
+                shipping_cost=basic_shipping_charge,
+                total_amount=vendor_total,
+                shipping_address=temp_order.shipping_address,
+                billing_address=temp_order.billing_address,
+                phone=temp_order.phone,
+                email=temp_order.email,
+                payment_method=temp_order.payment_method,
+                payment_status='success',  # Payment already succeeded
+                status='pending',  # Waiting for merchant acceptance
+                phonepe_transaction_id=temp_order.phonepe_transaction_id,
+                phonepe_order_id=temp_order.phonepe_order_id,
+                phonepe_merchant_order_id=temp_order.phonepe_merchant_order_id,
+                phonepe_transaction_date=temp_order.phonepe_transaction_date,
+            )
+            
+            # Create order items for this vendor
+            for item in items:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item['product'],
+                    store=store,
+                    quantity=item['quantity'],
+                    price=item['price'],
+                    total=item['price'] * item['quantity'],
+                )
+            
+            created_orders.append(order)
+        
+        # Update SuperSetting balance
+        super_setting.balance += temp_order.total_amount
+        super_setting.save()
+        
+        # Delete temporary order
+        temp_order.delete()
+        
+        logger.info(f"Successfully split order into {len(created_orders)} vendor orders")
+        return created_orders
+    
+    except Exception as e:
+        logger.error(f"Error splitting order by vendor: {str(e)}", exc_info=True)
+        return None
+
+
 def process_checkout(request):
-    """Process checkout and create order"""
+    """Process checkout and create orders split by vendor"""
     if not request.user.is_authenticated:
         return JsonResponse({'success': False, 'message': 'Please login first'})
     
-    cart_items = Cart.objects.filter(user=request.user)
+    cart_items = Cart.objects.filter(user=request.user).select_related('product', 'product__store')
     
     if not cart_items.exists():
         return JsonResponse({'success': False, 'message': 'Cart is empty'})
@@ -40,69 +155,72 @@ def process_checkout(request):
     # Get payment method
     payment_method = request.POST.get('payment_method', 'cod')
     
-    # Generate order number
-    order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    # Get SuperSetting
+    try:
+        super_setting = SuperSetting.objects.first()
+        if not super_setting:
+            super_setting = SuperSetting.objects.create()
+        basic_shipping_charge = super_setting.basic_shipping_charge
+    except Exception as e:
+        logger.error(f"Error getting SuperSetting: {str(e)}")
+        basic_shipping_charge = 0
     
-    # Calculate total
-    subtotal = sum(item.product.price * item.quantity for item in cart_items)
+    # Group cart items by vendor (store)
+    vendor_items = defaultdict(list)
+    for item in cart_items:
+        vendor_items[item.product.store].append(item)
     
-    # Create order
-    order = Order.objects.create(
-        user=request.user,
-        order_number=order_number,
-        total_amount=subtotal,
-        shipping_address=f"{address.full_name}, {address.address}, {address.city}, {address.state} {address.zip_code}",
-        billing_address=f"{address.full_name}, {address.address}, {address.city}, {address.state} {address.zip_code}",
-        phone=address.phone,
-        email=request.user.email or '',
-        payment_method=payment_method,
-        status='pending',
-    )
+    # Calculate total amount (for payment)
+    total_subtotal = sum(item.product.price * item.quantity for item in cart_items)
+    vendor_count = len(vendor_items)
+    total_shipping = basic_shipping_charge * vendor_count
+    total_amount = total_subtotal + total_shipping
     
-    # Set payment status based on payment method
-    if payment_method == 'cod':
-        # For COD, payment is considered successful immediately
-        order.payment_status = 'success'
-        order.status = 'confirmed'
-        order.save()
-    else:
-        # For online payment, payment status is pending until payment is completed
-        order.payment_status = 'pending'
-        order.save()
+    # Prepare shipping address string
+    shipping_address_str = f"{address.full_name}, {address.address}, {address.city}, {address.state} {address.zip_code}"
+    billing_address_str = f"{address.full_name}, {address.address}, {address.city}, {address.state} {address.zip_code}"
     
-    # Create order items
-    for cart_item in cart_items:
-        OrderItem.objects.create(
-            order=order,
-            product=cart_item.product,
-            store=cart_item.product.store,
-            quantity=cart_item.quantity,
-            price=cart_item.product.price,
-            total=cart_item.product.price * cart_item.quantity,
-        )
-    
-    # Clear cart
-    cart_items.delete()
-    
-    # For online payment, initiate PhonePe payment
+    # For online payment, we'll create a temporary order to initiate payment
+    # Then split into vendor orders after payment success
     if payment_method == 'online':
         try:
             # Generate merchant order ID
             merchant_order_id = generate_merchant_order_id()
-            order.phonepe_merchant_order_id = merchant_order_id
-            order.save()
+            
+            # Create a temporary order to track the payment
+            # This will be split into vendor orders after payment success
+            temp_order = Order.objects.create(
+                user=request.user,
+                order_number=''.join(random.choices(string.ascii_uppercase + string.digits, k=10)),
+                subtotal=total_subtotal,
+                shipping_cost=total_shipping,
+                total_amount=total_amount,
+                shipping_address=shipping_address_str,
+                billing_address=billing_address_str,
+                phone=address.phone,
+                email=request.user.email or '',
+                payment_method=payment_method,
+                payment_status='pending',
+                status='pending',
+                phonepe_merchant_order_id=merchant_order_id,
+            )
+            
+            # Store cart items temporarily (we'll create order items after payment success)
+            # For now, just store the cart item IDs in notes or create a temporary mapping
+            # We'll handle this in the payment callback
             
             # Build redirect URL
             redirect_url = f"{settings.PHONEPE_BASE_URL}/payment/result/?merchant_order_id={merchant_order_id}"
             
-            # Initiate payment using SDK (no auth_token needed - SDK handles auth internally)
+            # Initiate payment using SDK
             payment_response = initiate_payment(
-                amount=float(order.total_amount),
+                amount=float(total_amount),
                 merchant_order_id=merchant_order_id,
                 redirect_url=redirect_url
             )
             
             if 'error' in payment_response:
+                temp_order.delete()
                 return JsonResponse({
                     'success': False,
                     'message': f'Payment initiation failed: {payment_response["error"]}'
@@ -112,33 +230,109 @@ def process_checkout(request):
             redirect_url_from_response = payment_response.get('data', {}).get('redirectUrl') or payment_response.get('redirectUrl')
             
             if not redirect_url_from_response:
+                temp_order.delete()
                 return JsonResponse({
                     'success': False,
                     'message': 'No redirect URL received from PhonePe'
                 })
             
+            # Store cart item data in order notes temporarily (we'll parse it in callback)
+            # Format: "CART_ITEMS:store_id:product_id:quantity:price|store_id:product_id:quantity:price|..."
+            cart_data = []
+            for store, items in vendor_items.items():
+                for item in items:
+                    cart_data.append(f"{store.id}:{item.product.id}:{item.quantity}:{item.product.price}")
+            temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
+            temp_order.save()
+            
             return JsonResponse({
                 'success': True,
                 'message': 'Payment initiated successfully',
-                'order_id': order.id,
-                'order_number': order.order_number,
+                'order_id': temp_order.id,
+                'order_number': temp_order.order_number,
                 'redirectUrl': redirect_url_from_response,
                 'merchantOrderId': merchant_order_id
             })
         
         except Exception as e:
+            logger.error(f"Error initiating payment: {str(e)}", exc_info=True)
             return JsonResponse({
                 'success': False,
                 'message': f'Error initiating payment: {str(e)}'
             })
     
-    # For COD, return success response
-    return JsonResponse({
-        'success': True,
-        'message': 'Order placed successfully',
-        'order_id': order.id,
-        'order_number': order.order_number,
-    })
+    # For COD, create orders immediately
+    else:
+        try:
+            # Get or create SuperSetting
+            try:
+                super_setting = SuperSetting.objects.first()
+                if not super_setting:
+                    super_setting = SuperSetting.objects.create()
+            except:
+                super_setting = SuperSetting.objects.create()
+            
+            created_orders = []
+            
+            # Create separate order for each vendor
+            for store, items in vendor_items.items():
+                # Calculate subtotal for this vendor
+                vendor_subtotal = sum(item.product.price * item.quantity for item in items)
+                vendor_total = vendor_subtotal + basic_shipping_charge
+                
+                # Generate order number
+                order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+                
+                # Create order for this vendor
+                order = Order.objects.create(
+                    user=request.user,
+                    merchant=store,
+                    order_number=order_number,
+                    subtotal=vendor_subtotal,
+                    shipping_cost=basic_shipping_charge,
+                    total_amount=vendor_total,
+                    shipping_address=shipping_address_str,
+                    billing_address=billing_address_str,
+                    phone=address.phone,
+                    email=request.user.email or '',
+                    payment_method=payment_method,
+                    payment_status='success',  # COD is considered paid
+                    status='pending',  # Waiting for merchant acceptance
+                )
+                
+                # Create order items for this vendor
+                for item in items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        store=store,
+                        quantity=item.quantity,
+                        price=item.product.price,
+                        total=item.product.price * item.quantity,
+                    )
+                
+                created_orders.append(order)
+            
+            # Update SuperSetting balance
+            super_setting.balance += total_amount
+            super_setting.save()
+            
+            # Clear cart
+            cart_items.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Order placed successfully',
+                'order_ids': [order.id for order in created_orders],
+                'order_numbers': [order.order_number for order in created_orders],
+            })
+        
+        except Exception as e:
+            logger.error(f"Error creating COD orders: {str(e)}", exc_info=True)
+            return JsonResponse({
+                'success': False,
+                'message': f'Error creating order: {str(e)}'
+            })
 
 
 @login_required
@@ -160,6 +354,20 @@ def checkout_view(request):
     addresses = Address.objects.filter(user=request.user)
     default_address = addresses.filter(is_default=True).first()
     
+    # Get SuperSetting for shipping calculation
+    try:
+        super_setting = SuperSetting.objects.first()
+        if not super_setting:
+            super_setting = SuperSetting.objects.create()
+        basic_shipping_charge = super_setting.basic_shipping_charge
+    except:
+        basic_shipping_charge = 0
+    
+    # Group cart items by vendor (store)
+    vendor_items = defaultdict(list)
+    for item in cart_items:
+        vendor_items[item.product.store].append(item)
+    
     # Calculate totals for each item and overall
     cart_items_with_totals = []
     for item in cart_items:
@@ -170,8 +378,23 @@ def checkout_view(request):
         })
     
     subtotal = sum(item_total['item_total'] for item_total in cart_items_with_totals)
-    shipping = 0  # Add shipping calculation here
+    
+    # Calculate shipping: basic_shipping_charge * number of vendors
+    vendor_count = len(vendor_items)
+    shipping = basic_shipping_charge * vendor_count
     total = subtotal + shipping
+    
+    # Prepare vendor breakdown for display
+    vendor_breakdown = []
+    for store, items in vendor_items.items():
+        vendor_subtotal = sum(item.product.price * item.quantity for item in items)
+        vendor_breakdown.append({
+            'store': store,
+            'items': items,
+            'subtotal': vendor_subtotal,
+            'shipping': basic_shipping_charge,
+            'total': vendor_subtotal + basic_shipping_charge,
+        })
     
     # Coupon handling
     coupon_code = request.GET.get('coupon', '')
@@ -202,6 +425,9 @@ def checkout_view(request):
         'discount': discount,
         'total': total,
         'coupon': coupon,
+        'vendor_breakdown': vendor_breakdown,
+        'vendor_count': vendor_count,
+        'basic_shipping_charge': basic_shipping_charge,
     }
     
     return render(request, 'website/ecommerce/checkout.html', context)
@@ -283,6 +509,17 @@ def payment_result_view(request):
                         order.payment_status = 'success'
                         order.status = 'confirmed'
                         logger.info(f"Order {order.id} marked as payment success (status: {payment_status_value})")
+                        
+                        # If this is a temporary order with CART_DATA, split it by vendor
+                        if order.notes and order.notes.startswith('CART_DATA:'):
+                            logger.info(f"Splitting temporary order {order.id} by vendor")
+                            created_orders = split_order_by_vendor(order)
+                            if created_orders:
+                                # Update order to the first created order for display
+                                order = created_orders[0]
+                                logger.info(f"Order split into {len(created_orders)} vendor orders")
+                            else:
+                                logger.error(f"Failed to split order {order.id} by vendor")
                     elif payment_status_value in ['FAILED', 'PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILURE', 'ERROR']:
                         order.payment_status = 'failed'
                         logger.info(f"Order {order.id} marked as payment failed (status: {payment_status_value})")

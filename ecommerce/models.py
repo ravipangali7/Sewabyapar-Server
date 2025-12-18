@@ -155,6 +155,8 @@ class Order(models.Model):
     """Order model"""
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
         ('confirmed', 'Confirmed'),
         ('processing', 'Processing'),
         ('shipped', 'Shipped'),
@@ -176,8 +178,11 @@ class Order(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    merchant = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='orders', null=True, blank=True, help_text='Store/vendor for this order')
     order_number = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Subtotal for this vendor\'s products')
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Shipping cost for this order')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     shipping_address = models.TextField()
     billing_address = models.TextField()
@@ -186,6 +191,10 @@ class Order(models.Model):
     notes = models.TextField(blank=True)
     payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='cod')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    merchant_ready_date = models.DateTimeField(null=True, blank=True, help_text='When merchant accepts and marks ready')
+    pickup_date = models.DateTimeField(null=True, blank=True, help_text='When order is picked up')
+    delivered_date = models.DateTimeField(null=True, blank=True, help_text='When order is delivered')
+    reject_reason = models.TextField(blank=True, null=True, help_text='Reason if merchant rejects')
     # PhonePe Transaction Details
     phonepe_transaction_id = models.CharField(max_length=100, blank=True, null=True, help_text='PhonePe Transaction ID (OM...)')
     phonepe_order_id = models.CharField(max_length=100, blank=True, null=True, help_text='PhonePe Order ID (OMO...)')

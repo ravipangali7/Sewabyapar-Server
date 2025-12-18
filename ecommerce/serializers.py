@@ -177,15 +177,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
+    merchant = StoreSerializer(read_only=True)
     
     class Meta:
         model = Order
-        fields = ['id', 'order_number', 'user', 'status', 'total_amount', 'shipping_address',
-                 'billing_address', 'phone', 'email', 'notes', 'items', 'payment_method',
-                 'payment_status', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
+        fields = ['id', 'order_number', 'user', 'merchant', 'status', 'subtotal', 'shipping_cost',
+                 'total_amount', 'shipping_address', 'billing_address', 'phone', 'email', 'notes',
+                 'items', 'payment_method', 'payment_status', 'merchant_ready_date', 'pickup_date',
+                 'delivered_date', 'reject_reason', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
                  'created_at', 'updated_at']
-        read_only_fields = ['id', 'order_number', 'payment_status', 'phonepe_transaction_id',
-                           'phonepe_merchant_order_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'order_number', 'payment_status', 'merchant_ready_date', 'pickup_date',
+                           'delivered_date', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
+                           'created_at', 'updated_at']
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):

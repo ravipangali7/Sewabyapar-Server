@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class UserManager(BaseUserManager):
@@ -76,6 +77,11 @@ class User(AbstractUser):
     # Merchant/Driver Role Fields
     is_merchant = models.BooleanField(default=False, help_text='Whether user is a merchant/seller')
     is_driver = models.BooleanField(default=False, help_text='Whether user is a driver')
+    
+    # Balance field
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0, 
+                                  validators=[MinValueValidator(0)],
+                                  help_text='User balance')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -192,3 +198,31 @@ class Notification(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+
+class SuperSetting(models.Model):
+    """Super Setting model for platform-wide configuration"""
+    sales_commission = models.DecimalField(max_digits=5, decimal_places=2, default=0,
+                                          validators=[MinValueValidator(0), MaxValueValidator(100)],
+                                          help_text='Sales commission percentage')
+    basic_shipping_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                               validators=[MinValueValidator(0)],
+                                               help_text='Basic shipping charge per vendor')
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                 validators=[MinValueValidator(0)],
+                                 help_text='Platform balance')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Super Setting"
+        verbose_name_plural = "Super Settings"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists
+        if not self.pk and SuperSetting.objects.exists():
+            raise ValueError("Only one SuperSetting instance is allowed")
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return "Super Setting"

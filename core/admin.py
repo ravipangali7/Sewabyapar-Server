@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Address, Notification
+from .models import User, Address, Notification, SuperSetting
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """Custom User admin"""
-    list_display = ['phone', 'name', 'email', 'is_merchant', 'is_driver', 'is_kyc_verified', 'is_active', 'is_staff', 'created_at']
+    list_display = ['phone', 'name', 'email', 'is_merchant', 'is_driver', 'is_kyc_verified', 'balance', 'is_active', 'is_staff', 'created_at']
     list_filter = ['is_active', 'is_staff', 'is_superuser', 'is_merchant', 'is_driver', 'is_kyc_verified', 'created_at']
     search_fields = ['phone', 'name', 'email', 'national_id', 'pan_no']
     ordering = ['-created_at']
@@ -15,6 +15,7 @@ class UserAdmin(BaseUserAdmin):
         (None, {'fields': ('phone', 'password')}),
         ('Personal info', {'fields': ('name', 'email', 'fcm_token', 'profile_picture')}),
         ('Role', {'fields': ('is_merchant', 'is_driver')}),
+        ('Balance', {'fields': ('balance',)}),
         ('KYC Verification', {
             'fields': ('national_id', 'national_id_document', 'pan_no', 'pan_document', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at'),
             'classes': ('collapse',)
@@ -67,3 +68,21 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ['user__name', 'user__phone', 'title', 'message']
     ordering = ['-created_at']
     readonly_fields = ['created_at']
+
+
+@admin.register(SuperSetting)
+class SuperSettingAdmin(admin.ModelAdmin):
+    """SuperSetting admin"""
+    list_display = ['sales_commission', 'basic_shipping_charge', 'balance', 'created_at', 'updated_at']
+    fields = ['sales_commission', 'basic_shipping_charge', 'balance', 'created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    def has_add_permission(self, request):
+        # Only allow one SuperSetting instance
+        if SuperSetting.objects.exists():
+            return False
+        return super().has_add_permission(request)
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of SuperSetting
+        return False

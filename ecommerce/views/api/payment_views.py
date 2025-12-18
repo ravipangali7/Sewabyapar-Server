@@ -385,6 +385,14 @@ def payment_callback(request):
             order.status = 'confirmed'
             if payment_data.get('transactionId'):
                 order.phonepe_transaction_id = payment_data.get('transactionId')
+            
+            # If this is a temporary order with CART_DATA, split it by vendor
+            if order.notes and order.notes.startswith('CART_DATA:'):
+                from website.views.ecommerce.checkout_views import split_order_by_vendor
+                created_orders = split_order_by_vendor(order)
+                if created_orders:
+                    # Return the first created order
+                    order = created_orders[0]
         elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
             order.payment_status = 'failed'
         elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:

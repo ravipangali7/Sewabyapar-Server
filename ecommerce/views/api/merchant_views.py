@@ -198,18 +198,21 @@ def merchant_orders(request):
         paginator = PageNumberPagination()
         empty_queryset = Order.objects.none()  # Create empty queryset
         paginated_orders = paginator.paginate_queryset(empty_queryset, request)
-        serializer = OrderSerializer(paginated_orders or [], many=True)
+        serializer = OrderSerializer(paginated_orders or [], many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
     
-    # Get orders that contain items from merchant's stores
-    order_items = OrderItem.objects.filter(store__in=stores)
-    order_ids = order_items.values_list('order_id', flat=True).distinct()
-    orders = Order.objects.filter(id__in=order_ids)
+    # Get orders for merchant's stores (using new merchant field)
+    orders = Order.objects.filter(merchant__in=stores).select_related('user', 'merchant').order_by('-created_at')
     
     # Apply status filter if provided
     status_filter = request.query_params.get('status')
     if status_filter:
         orders = orders.filter(status=status_filter)
+    
+    # Apply payment_status filter if provided
+    payment_status_filter = request.query_params.get('payment_status')
+    if payment_status_filter:
+        orders = orders.filter(payment_status=payment_status_filter)
     
     # Apply date range filter if provided
     start_date = request.query_params.get('start_date')
@@ -233,7 +236,7 @@ def merchant_orders(request):
     
     paginator = PageNumberPagination()
     paginated_orders = paginator.paginate_queryset(orders, request)
-    serializer = OrderSerializer(paginated_orders, many=True)
+    serializer = OrderSerializer(paginated_orders, many=True, context={'request': request})
     return paginator.get_paginated_response(serializer.data)
 
 
@@ -249,16 +252,10 @@ def merchant_order_detail(request, pk):
     # Get stores owned by merchant
     stores = Store.objects.filter(owner=request.user, is_active=True)
     
-    # Get order and ensure it has items from merchant's stores
-    order = get_object_or_404(Order, pk=pk)
-    order_items = OrderItem.objects.filter(order=order, store__in=stores)
+    # Get order that belongs to one of merchant's stores (using new merchant field)
+    order = get_object_or_404(Order, pk=pk, merchant__in=stores)
     
-    if not order_items.exists():
-        return Response({
-            'error': 'Order not found or does not belong to your stores'
-        }, status=status.HTTP_404_NOT_FOUND)
-    
-    serializer = OrderSerializer(order)
+    serializer = OrderSerializer(order, context={'request': request})
     return Response(serializer.data)
 
 
@@ -274,14 +271,8 @@ def merchant_order_update_status(request, pk):
     # Get stores owned by merchant
     stores = Store.objects.filter(owner=request.user, is_active=True)
     
-    # Get order and ensure it has items from merchant's stores
-    order = get_object_or_404(Order, pk=pk)
-    order_items = OrderItem.objects.filter(order=order, store__in=stores)
-    
-    if not order_items.exists():
-        return Response({
-            'error': 'Order not found or does not belong to your stores'
-        }, status=status.HTTP_404_NOT_FOUND)
+    # Get order that belongs to one of merchant's stores (using new merchant field)
+    order = get_object_or_404(Order, pk=pk, merchant__in=stores)
     
     new_status = request.data.get('status')
     if not new_status:
@@ -296,10 +287,93 @@ def merchant_order_update_status(request, pk):
             'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Update status and related dates
     order.status = new_status
+    
+    # Update dates based on status
+    if new_status == 'accepted' and not order.merchant_ready_date:
+        order.merchant_ready_date = timezone.now()
+    elif new_status == 'shipped' and not order.pickup_date:
+        order.pickup_date = timezone.now()
+    elif new_status == 'delivered' and not order.delivered_date:
+        order.delivered_date = timezone.now()
+    
     order.save()
     
-    return Response(OrderSerializer(order).data)
+    return Response(OrderSerializer(order, context={'request': request}).data)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_accept_order(request, pk):
+    """Accept order, set merchant_ready_date, status='accepted'"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get stores owned by merchant
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    
+    # Get order that belongs to one of merchant's stores
+    order = get_object_or_404(Order, pk=pk, merchant__in=stores)
+    
+    # Check if order can be accepted
+    if order.status not in ['pending', 'confirmed']:
+        return Response({
+            'error': f'Order with status "{order.status}" cannot be accepted. Only pending or confirmed orders can be accepted.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Accept the order
+    order.status = 'accepted'
+    order.merchant_ready_date = timezone.now()
+    order.reject_reason = None  # Clear any previous reject reason
+    order.save()
+    
+    logger.info(f"Order {order.id} accepted by merchant {request.user.id}")
+    
+    serializer = OrderSerializer(order, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_reject_order(request, pk):
+    """Reject order, set reject_reason, status='rejected'"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get stores owned by merchant
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    
+    # Get order that belongs to one of merchant's stores
+    order = get_object_or_404(Order, pk=pk, merchant__in=stores)
+    
+    # Check if order can be rejected
+    if order.status in ['delivered', 'cancelled', 'refunded']:
+        return Response({
+            'error': f'Order with status "{order.status}" cannot be rejected.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get reject reason from request
+    reject_reason = request.data.get('reject_reason', '')
+    if not reject_reason:
+        return Response({
+            'error': 'reject_reason is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Reject the order
+    order.status = 'rejected'
+    order.reject_reason = reject_reason
+    order.merchant_ready_date = None  # Clear any previous ready date
+    order.save()
+    
+    logger.info(f"Order {order.id} rejected by merchant {request.user.id}, reason: {reject_reason}")
+    
+    serializer = OrderSerializer(order, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

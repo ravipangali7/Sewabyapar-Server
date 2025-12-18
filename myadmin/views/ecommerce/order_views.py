@@ -26,26 +26,38 @@ class OrderListView(StaffRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = Order.objects.select_related('user').order_by('-created_at')
+        queryset = Order.objects.select_related('user', 'merchant').order_by('-created_at')
         search = self.request.GET.get('search')
         status = self.request.GET.get('status')
+        merchant = self.request.GET.get('merchant')
+        payment_status = self.request.GET.get('payment_status')
         
         if search:
             queryset = queryset.filter(
                 Q(order_number__icontains=search) |
                 Q(user__name__icontains=search) |
-                Q(user__phone__icontains=search)
+                Q(user__phone__icontains=search) |
+                Q(merchant__name__icontains=search)
             )
         if status:
             queryset = queryset.filter(status=status)
+        if merchant:
+            queryset = queryset.filter(merchant_id=merchant)
+        if payment_status:
+            queryset = queryset.filter(payment_status=payment_status)
         
         return queryset
     
     def get_context_data(self, **kwargs):
+        from ecommerce.models import Store
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
         context['status'] = self.request.GET.get('status', '')
+        context['merchant'] = self.request.GET.get('merchant', '')
+        context['payment_status'] = self.request.GET.get('payment_status', '')
         context['status_choices'] = Order.STATUS_CHOICES
+        context['payment_status_choices'] = Order.PAYMENT_STATUS_CHOICES
+        context['merchants'] = Store.objects.all().order_by('name')
         return context
     
     def get(self, request, *args, **kwargs):
