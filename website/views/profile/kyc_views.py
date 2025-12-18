@@ -68,7 +68,7 @@ def kyc_submit_view(request):
                     if national_id:
                         user.national_id = national_id
                     if national_id_document:
-                        user.national_id_document = national_id_document
+                        user.national_id_document_front = national_id_document
                     if pan_no:
                         user.pan_no = pan_no
                     if pan_document:

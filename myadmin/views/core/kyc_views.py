@@ -22,7 +22,7 @@ class KYCListView(StaffRequiredMixin, ListView):
     
     def get_queryset(self):
         queryset = User.objects.exclude(
-            Q(national_id__isnull=True) & Q(national_id_document__isnull=True) &
+            Q(national_id__isnull=True) & Q(national_id_document_front__isnull=True) & Q(national_id_document_back__isnull=True) &
             Q(pan_no__isnull=True) & Q(pan_document__isnull=True)
         ).exclude(
             Q(national_id='') & Q(pan_no='')
@@ -59,7 +59,7 @@ class KYCListView(StaffRequiredMixin, ListView):
         context['pending_count'] = User.objects.filter(
             is_kyc_verified=False
         ).exclude(
-            Q(national_id__isnull=True) & Q(national_id_document__isnull=True) &
+            Q(national_id__isnull=True) & Q(national_id_document_front__isnull=True) & Q(national_id_document_back__isnull=True) &
             Q(pan_no__isnull=True) & Q(pan_document__isnull=True)
         ).exclude(
             Q(national_id='') & Q(pan_no='')
