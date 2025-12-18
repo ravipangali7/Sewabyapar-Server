@@ -2,6 +2,7 @@
 from django import forms
 from django.forms.models import inlineformset_factory
 from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem
+from core.models import Address
 
 
 class ProductForm(forms.ModelForm):
@@ -76,8 +77,8 @@ class OrderForm(forms.ModelForm):
             'subtotal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'shipping_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'shipping_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'billing_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'shipping_address': forms.Select(attrs={'class': 'form-select'}),
+            'billing_address': forms.Select(attrs={'class': 'form-select'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -88,6 +89,25 @@ class OrderForm(forms.ModelForm):
             'delivered_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'reject_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+        help_texts = {
+            'shipping_address': 'Select the shipping address for this order',
+            'billing_address': 'Select the billing address for this order',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter addresses based on the order's user
+        if self.instance and self.instance.pk and self.instance.user:
+            user = self.instance.user
+            addresses = Address.objects.filter(user=user).order_by('-is_default', '-created_at')
+            self.fields['shipping_address'].queryset = addresses
+            self.fields['billing_address'].queryset = addresses
+        else:
+            # For new orders, show all addresses (will be filtered when user is selected via JS or on save)
+            self.fields['shipping_address'].queryset = Address.objects.none()
+            self.fields['billing_address'].queryset = Address.objects.none()
+            self.fields['shipping_address'].required = False
+            self.fields['billing_address'].required = False
 
 
 class ReviewForm(forms.ModelForm):

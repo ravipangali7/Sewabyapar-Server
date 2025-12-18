@@ -3,7 +3,7 @@ from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
     Review, Wishlist, Coupon
 )
-from core.serializers import UserSerializer
+from core.serializers import UserSerializer, AddressSerializer
 
 
 class StoreSerializer(serializers.ModelSerializer):
@@ -178,6 +178,8 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
     merchant = StoreSerializer(read_only=True)
+    shipping_address = AddressSerializer(read_only=True)
+    billing_address = AddressSerializer(read_only=True)
     
     class Meta:
         model = Order
@@ -196,13 +198,50 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         child=serializers.DictField(),
         write_only=True
     )
+    shipping_address = serializers.IntegerField(required=True, help_text='Address ID for shipping address')
+    billing_address = serializers.IntegerField(required=True, help_text='Address ID for billing address')
     
     class Meta:
         model = Order
         fields = ['shipping_address', 'billing_address', 'phone', 'email', 'notes', 'items', 'payment_method']
     
+    def validate_shipping_address(self, value):
+        """Validate that shipping address exists and belongs to the user"""
+        from core.models import Address
+        request = self.context.get('request')
+        if request and request.user:
+            try:
+                address = Address.objects.get(id=value, user=request.user)
+                return value
+            except Address.DoesNotExist:
+                raise serializers.ValidationError("Shipping address not found or does not belong to you.")
+        return value
+    
+    def validate_billing_address(self, value):
+        """Validate that billing address exists and belongs to the user"""
+        from core.models import Address
+        request = self.context.get('request')
+        if request and request.user:
+            try:
+                address = Address.objects.get(id=value, user=request.user)
+                return value
+            except Address.DoesNotExist:
+                raise serializers.ValidationError("Billing address not found or does not belong to you.")
+        return value
+    
     def create(self, validated_data):
         items_data = validated_data.pop('items')
+        shipping_address_id = validated_data.pop('shipping_address')
+        billing_address_id = validated_data.pop('billing_address')
+        
+        # Get address objects
+        from core.models import Address
+        shipping_address = Address.objects.get(id=shipping_address_id)
+        billing_address = Address.objects.get(id=billing_address_id)
+        
+        # Set address objects in validated_data
+        validated_data['shipping_address'] = shipping_address
+        validated_data['billing_address'] = billing_address
         
         # Calculate total amount from items
         total_amount = sum(item.get('total', 0) for item in items_data)
