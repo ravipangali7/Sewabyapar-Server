@@ -27,7 +27,7 @@ class ProductListView(StaffRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = Product.objects.select_related('store', 'category').order_by('-created_at')
+        queryset = Product.objects.select_related('store', 'category', 'store__owner').order_by('-created_at')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -220,5 +220,37 @@ class ProductBulkDeactivateView(StaffRequiredMixin, View):
             bulk_deactivate(request, Product, selected_ids)
         else:
             messages.warning(request, 'Please select at least one product to deactivate.')
+        return redirect('myadmin:ecommerce:product_list')
+
+
+class ProductApproveView(StaffRequiredMixin, View):
+    """Approve a product"""
+    def post(self, request, pk):
+        try:
+            product = Product.objects.get(pk=pk)
+            product.is_approved = True
+            product.save()
+            messages.success(request, f'Product "{product.name}" has been approved.')
+        except Product.DoesNotExist:
+            messages.error(request, 'Product not found.')
+        except Exception as e:
+            logger.error(f'Error approving product: {str(e)}')
+            messages.error(request, 'An error occurred while approving the product.')
+        return redirect('myadmin:ecommerce:product_list')
+
+
+class ProductRejectView(StaffRequiredMixin, View):
+    """Reject a product"""
+    def post(self, request, pk):
+        try:
+            product = Product.objects.get(pk=pk)
+            product.is_approved = False
+            product.save()
+            messages.success(request, f'Product "{product.name}" has been rejected.')
+        except Product.DoesNotExist:
+            messages.error(request, 'Product not found.')
+        except Exception as e:
+            logger.error(f'Error rejecting product: {str(e)}')
+            messages.error(request, 'An error occurred while rejecting the product.')
         return redirect('myadmin:ecommerce:product_list')
 
