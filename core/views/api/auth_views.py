@@ -93,7 +93,7 @@ def user_login(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # If country code matches, authenticate with password
-    user = authenticate(phone=phone, password=password)
+    user = authenticate(request, username=phone, password=password)
 
     if user:
         token, created = Token.objects.get_or_create(user=user)
