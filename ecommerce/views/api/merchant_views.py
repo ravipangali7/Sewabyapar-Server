@@ -330,9 +330,25 @@ def merchant_accept_order(request, pk):
             'error': f'Order with status "{order.status}" cannot be accepted. Only pending or confirmed orders can be accepted.'
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Get merchant_ready_date from request if provided
+    merchant_ready_date_str = request.data.get('merchant_ready_date')
+    if merchant_ready_date_str:
+        try:
+            # Parse ISO format datetime string
+            merchant_ready_date = datetime.fromisoformat(merchant_ready_date_str.replace('Z', '+00:00'))
+            # Make timezone aware if not already
+            if timezone.is_naive(merchant_ready_date):
+                merchant_ready_date = timezone.make_aware(merchant_ready_date)
+            order.merchant_ready_date = merchant_ready_date
+        except (ValueError, TypeError) as e:
+            return Response({
+                'error': f'Invalid merchant_ready_date format: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        order.merchant_ready_date = timezone.now()
+    
     # Accept the order
     order.status = 'accepted'
-    order.merchant_ready_date = timezone.now()
     order.reject_reason = None  # Clear any previous reject reason
     order.save()
     
