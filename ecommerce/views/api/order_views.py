@@ -3,8 +3,18 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from django.conf import settings
+from collections import defaultdict
+from decimal import Decimal
+import random
+import string
+import logging
 from ...models import Order
 from ...serializers import OrderSerializer, OrderCreateSerializer
+from ...services.phonepe_service import initiate_payment, generate_merchant_order_id
+from core.models import SuperSetting
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET', 'POST'])
@@ -19,34 +29,177 @@ def order_list_create(request):
         return paginator.get_paginated_response(serializer.data)
     
     elif request.method == 'POST':
-        serializer = OrderCreateSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            # Create orders (split by vendor) - serializer handles splitting
-            first_order = serializer.save(user=request.user)
-            
-            if not first_order:
-                return Response(
-                    {'error': 'No valid items found to create order'},
-                    status=status.HTTP_400_BAD_REQUEST
+        payment_method = request.data.get('payment_method', 'cod')
+        
+        # For online payment, create temporary order and initiate payment
+        if payment_method == 'online':
+            try:
+                # Validate serializer first to get validated data
+                serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+                if not serializer.is_valid():
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+                validated_data = serializer.validated_data
+                items_data = validated_data.get('items', [])
+                
+                if not items_data:
+                    return Response(
+                        {'error': 'No items found to create order'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Get addresses
+                from core.models import Address
+                shipping_address = Address.objects.get(id=validated_data['shipping_address'])
+                billing_address = Address.objects.get(id=validated_data['billing_address'])
+                
+                # Get SuperSetting for shipping charge
+                try:
+                    super_setting = SuperSetting.objects.first()
+                    if not super_setting:
+                        super_setting = SuperSetting.objects.create()
+                    basic_shipping_charge = super_setting.basic_shipping_charge
+                except Exception:
+                    basic_shipping_charge = Decimal('0')
+                
+                # Group items by vendor to calculate totals
+                from ...models import Store
+                vendor_items = defaultdict(list)
+                for item_data in items_data:
+                    store_id = item_data.get('store')
+                    if store_id:
+                        try:
+                            store = Store.objects.get(id=store_id)
+                            vendor_items[store].append(item_data)
+                        except Store.DoesNotExist:
+                            continue
+                
+                # Calculate total amounts
+                total_subtotal = Decimal(str(sum(item.get('total', 0) for item in items_data)))
+                vendor_count = len(vendor_items)
+                total_shipping = basic_shipping_charge * vendor_count
+                total_amount = total_subtotal + total_shipping
+                
+                # Generate merchant order ID
+                merchant_order_id = generate_merchant_order_id()
+                
+                # Generate order number
+                order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+                while Order.objects.filter(order_number=order_number).exists():
+                    order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+                
+                # Create temporary order (will be split by vendor after payment success)
+                temp_order = Order.objects.create(
+                    user=request.user,
+                    order_number=order_number,
+                    subtotal=total_subtotal,
+                    shipping_cost=total_shipping,
+                    total_amount=total_amount,
+                    shipping_address=shipping_address,
+                    billing_address=billing_address,
+                    phone=validated_data.get('phone', ''),
+                    email=validated_data.get('email', ''),
+                    notes=validated_data.get('notes', '') or '',
+                    payment_method=payment_method,
+                    payment_status='pending',
+                    status='pending',
+                    phonepe_merchant_order_id=merchant_order_id,
                 )
+                
+                # Store cart item data in order notes for vendor splitting after payment
+                # Format: "CART_DATA:store_id:product_id:quantity:price|store_id:product_id:quantity:price|..."
+                cart_data = []
+                for store, items in vendor_items.items():
+                    for item in items:
+                        cart_data.append(f"{store.id}:{item['product']}:{item['quantity']}:{item.get('price', 0)}")
+                temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
+                temp_order.save()
+                
+                # Build redirect URL for callback
+                redirect_url = f"{settings.PHONEPE_BASE_URL}/api/payments/callback/?merchant_order_id={merchant_order_id}"
+                
+                # Initiate payment using PhonePe SDK
+                payment_response = initiate_payment(
+                    amount=float(total_amount),
+                    merchant_order_id=merchant_order_id,
+                    redirect_url=redirect_url
+                )
+                
+                if 'error' in payment_response:
+                    temp_order.delete()
+                    return Response(
+                        {
+                            'success': False,
+                            'error': f"Payment initiation failed: {payment_response['error']}",
+                            'error_code': payment_response.get('error_code'),
+                            'error_message': payment_response.get('error_message')
+                        },
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                # Extract redirect URL from response
+                redirect_url_from_response = payment_response.get('redirectUrl') or payment_response.get('data', {}).get('redirectUrl')
+                
+                if not redirect_url_from_response:
+                    temp_order.delete()
+                    return Response(
+                        {
+                            'success': False,
+                            'error': 'No redirect URL received from PhonePe'
+                        },
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                # Return payment initiation response
+                return Response({
+                    'success': True,
+                    'message': 'Payment initiated successfully',
+                    'order_id': temp_order.id,
+                    'order_number': temp_order.order_number,
+                    'redirectUrl': redirect_url_from_response,
+                    'merchantOrderId': merchant_order_id
+                }, status=status.HTTP_200_OK)
             
-            # Get all created orders from serializer
-            created_orders = getattr(serializer, 'created_orders', [first_order])
-            
-            # Set payment status and status for all created orders
-            for order in created_orders:
-                order.payment_status = 'pending'
-                order.status = 'pending'
-                order.save()
-            
-            # Return all created orders
-            orders_serializer = OrderSerializer(created_orders, many=True)
-            return Response({
-                'success': True,
-                'orders': orders_serializer.data,
-                'order_count': len(created_orders)
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                logger.error(f"Error initiating payment: {str(e)}", exc_info=True)
+                return Response(
+                    {
+                        'success': False,
+                        'error': f'Error initiating payment: {str(e)}'
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # For COD, use existing flow (create orders directly)
+        else:
+            serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                # Create orders (split by vendor) - serializer handles splitting
+                first_order = serializer.save(user=request.user)
+                
+                if not first_order:
+                    return Response(
+                        {'error': 'No valid items found to create order'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Get all created orders from serializer
+                created_orders = getattr(serializer, 'created_orders', [first_order])
+                
+                # Set payment status and status for all created orders
+                for order in created_orders:
+                    order.payment_status = 'pending'
+                    order.status = 'pending'
+                    order.save()
+                
+                # Return all created orders
+                orders_serializer = OrderSerializer(created_orders, many=True)
+                return Response({
+                    'success': True,
+                    'orders': orders_serializer.data,
+                    'order_count': len(created_orders)
+                }, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
