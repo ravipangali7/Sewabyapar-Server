@@ -238,6 +238,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         from core.models import Address, SuperSetting
         from .models import OrderItem, Store, Order
         from collections import defaultdict
+        from decimal import Decimal
         import random
         import string
         
@@ -251,7 +252,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 super_setting = SuperSetting.objects.create()
             basic_shipping_charge = super_setting.basic_shipping_charge
         except Exception:
-            basic_shipping_charge = 0
+            basic_shipping_charge = Decimal('0')
         
         # Group items by vendor (store)
         vendor_items = defaultdict(list)
@@ -267,8 +268,8 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         # Create separate order for each vendor
         created_orders = []
         for store, vendor_items_list in vendor_items.items():
-            # Calculate subtotal for this vendor
-            vendor_subtotal = sum(item.get('total', 0) for item in vendor_items_list)
+            # Calculate subtotal for this vendor (convert to Decimal)
+            vendor_subtotal = Decimal(str(sum(item.get('total', 0) for item in vendor_items_list)))
             vendor_total = vendor_subtotal + basic_shipping_charge
             
             # Generate unique order number
@@ -297,8 +298,8 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     product_id=item_data['product'],
                     store=store,
                     quantity=item_data['quantity'],
-                    price=item_data['price'],
-                    total=item_data['total'],
+                    price=Decimal(str(item_data.get('price', 0))),
+                    total=Decimal(str(item_data.get('total', 0))),
                     product_variant=item_data.get('product_variant', '') or None
                 )
             
