@@ -170,7 +170,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'store', 'quantity', 'price', 'total']
+        fields = ['id', 'product', 'store', 'quantity', 'price', 'total', 'product_variant']
         read_only_fields = ['id', 'total']
 
 
@@ -235,34 +235,81 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         billing_address_id = validated_data.pop('billing_address')
         
         # Get address objects
-        from core.models import Address
+        from core.models import Address, SuperSetting
+        from .models import OrderItem, Store, Order
+        from collections import defaultdict
+        import random
+        import string
+        
         shipping_address = Address.objects.get(id=shipping_address_id)
         billing_address = Address.objects.get(id=billing_address_id)
         
-        # Set address objects in validated_data
-        validated_data['shipping_address'] = shipping_address
-        validated_data['billing_address'] = billing_address
+        # Get SuperSetting for shipping charge
+        try:
+            super_setting = SuperSetting.objects.first()
+            if not super_setting:
+                super_setting = SuperSetting.objects.create()
+            basic_shipping_charge = super_setting.basic_shipping_charge
+        except Exception:
+            basic_shipping_charge = 0
         
-        # Calculate total amount from items
-        total_amount = sum(item.get('total', 0) for item in items_data)
-        validated_data['total_amount'] = total_amount
-        
-        # Create the order
-        order = super().create(validated_data)
-        
-        # Create order items
-        from .models import OrderItem
+        # Group items by vendor (store)
+        vendor_items = defaultdict(list)
         for item_data in items_data:
-            OrderItem.objects.create(
-                order=order,
-                product_id=item_data['product'],
-                store_id=item_data['store'],
-                quantity=item_data['quantity'],
-                price=item_data['price'],
-                total=item_data['total']
-            )
+            store_id = item_data.get('store')
+            if store_id:
+                try:
+                    store = Store.objects.get(id=store_id)
+                    vendor_items[store].append(item_data)
+                except Store.DoesNotExist:
+                    continue
         
-        return order
+        # Create separate order for each vendor
+        created_orders = []
+        for store, vendor_items_list in vendor_items.items():
+            # Calculate subtotal for this vendor
+            vendor_subtotal = sum(item.get('total', 0) for item in vendor_items_list)
+            vendor_total = vendor_subtotal + basic_shipping_charge
+            
+            # Generate unique order number
+            order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            while Order.objects.filter(order_number=order_number).exists():
+                order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            
+            # Create order for this vendor
+            order_data = validated_data.copy()
+            order_data.update({
+                'merchant': store,
+                'order_number': order_number,
+                'subtotal': vendor_subtotal,
+                'shipping_cost': basic_shipping_charge,
+                'total_amount': vendor_total,
+                'shipping_address': shipping_address,
+                'billing_address': billing_address,
+            })
+            
+            order = Order.objects.create(**order_data)
+            
+            # Create order items for this vendor
+            for item_data in vendor_items_list:
+                OrderItem.objects.create(
+                    order=order,
+                    product_id=item_data['product'],
+                    store=store,
+                    quantity=item_data['quantity'],
+                    price=item_data['price'],
+                    total=item_data['total'],
+                    product_variant=item_data.get('product_variant', '') or None
+                )
+            
+            created_orders.append(order)
+        
+        # Store created orders in serializer instance for view to access
+        self.created_orders = created_orders
+        
+        # Return the first order (for backward compatibility)
+        # The view will handle returning all orders
+        return created_orders[0] if created_orders else None
 
 
 class ReviewSerializer(serializers.ModelSerializer):

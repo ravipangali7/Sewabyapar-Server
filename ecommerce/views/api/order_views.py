@@ -19,32 +19,33 @@ def order_list_create(request):
         return paginator.get_paginated_response(serializer.data)
     
     elif request.method == 'POST':
-        serializer = OrderCreateSerializer(data=request.data)
+        serializer = OrderCreateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            # Generate order number
-            import uuid
-            order_number = str(uuid.uuid4())[:8].upper()
+            # Create orders (split by vendor) - serializer handles splitting
+            first_order = serializer.save(user=request.user)
             
-            # Get payment method from request data
-            payment_method = serializer.validated_data.get('payment_method', 'cod')
+            if not first_order:
+                return Response(
+                    {'error': 'No valid items found to create order'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
-            # Create order
-            order = serializer.save(user=request.user, order_number=order_number)
+            # Get all created orders from serializer
+            created_orders = getattr(serializer, 'created_orders', [first_order])
             
-            # Set payment status based on payment method
-            if payment_method == 'cod':
-                # For COD, payment is considered successful immediately
-                order.payment_status = 'success'
-                order.status = 'confirmed'
-            else:
-                # For online payment, payment status is pending until payment is completed
+            # Set payment status and status for all created orders
+            for order in created_orders:
                 order.payment_status = 'pending'
+                order.status = 'pending'
+                order.save()
             
-            order.save()
-            
-            # Return the order with proper serializer that includes all fields
-            order_serializer = OrderSerializer(order)
-            return Response(order_serializer.data, status=status.HTTP_201_CREATED)
+            # Return all created orders
+            orders_serializer = OrderSerializer(created_orders, many=True)
+            return Response({
+                'success': True,
+                'orders': orders_serializer.data,
+                'order_count': len(created_orders)
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -77,9 +78,9 @@ def cancel_order(request, pk):
     order = get_object_or_404(Order, pk=pk, user=request.user)
     
     # Check if order can be cancelled
-    if order.status not in ['pending', 'confirmed']:
+    if order.status not in ['pending', 'accepted']:
         return Response(
-            {'error': f'Order with status "{order.status}" cannot be cancelled. Only pending or confirmed orders can be cancelled.'},
+            {'error': f'Order with status "{order.status}" cannot be cancelled. Only pending or accepted orders can be cancelled.'},
             status=status.HTTP_400_BAD_REQUEST
         )
     

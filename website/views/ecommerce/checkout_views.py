@@ -296,7 +296,7 @@ def process_checkout(request):
                     phone=address.phone,
                     email=request.user.email or '',
                     payment_method=payment_method,
-                    payment_status='success',  # COD is considered paid
+                    payment_status='pending',  # COD payment is pending until delivery
                     status='pending',  # Waiting for merchant acceptance
                 )
                 

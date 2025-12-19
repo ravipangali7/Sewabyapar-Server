@@ -157,8 +157,6 @@ class Order(models.Model):
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
-        ('confirmed', 'Confirmed'),
-        ('processing', 'Processing'),
         ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
@@ -227,6 +225,7 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)  # Price at time of order
     total = models.DecimalField(max_digits=10, decimal_places=2)
+    product_variant = models.CharField(max_length=255, blank=True, null=True, help_text='Selected product variant (e.g., "Size:Small,Color:Red")')
     
     def __str__(self):
         return f"{self.order.order_number} - {self.product.name}"

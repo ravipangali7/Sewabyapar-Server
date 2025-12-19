@@ -59,39 +59,39 @@ class DashboardView(StaffRequiredMixin, TemplateView):
         
         # Revenue statistics
         total_revenue = EcommerceOrder.objects.filter(
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         today_revenue = EcommerceOrder.objects.filter(
             created_at__date=today,
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         yesterday_revenue = EcommerceOrder.objects.filter(
             created_at__date=yesterday,
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         week_revenue = EcommerceOrder.objects.filter(
             created_at__date__gte=week_ago,
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         last_week_revenue = EcommerceOrder.objects.filter(
             created_at__date__gte=last_week_start,
             created_at__date__lt=week_ago,
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         month_revenue = EcommerceOrder.objects.filter(
             created_at__date__gte=month_ago,
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         last_month_revenue = EcommerceOrder.objects.filter(
             created_at__date__gte=last_month_start,
             created_at__date__lt=month_ago,
-            status__in=['delivered', 'shipped', 'processing']
+            status__in=['delivered', 'shipped', 'accepted']
         ).aggregate(total=Sum('total_amount'))['total'] or 0
         
         # Taxi statistics

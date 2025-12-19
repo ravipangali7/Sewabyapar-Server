@@ -65,8 +65,9 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ['order', 'product', 'store', 'quantity', 'price', 'total']
+    list_display = ['order', 'product', 'store', 'quantity', 'price', 'total', 'product_variant']
     list_filter = ['store', 'order__status']
+    search_fields = ['product__name', 'product_variant']
 
 
 @admin.register(Review)
