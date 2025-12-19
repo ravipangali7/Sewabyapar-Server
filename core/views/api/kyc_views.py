@@ -16,13 +16,6 @@ logger = logging.getLogger(__name__)
 @permission_classes([permissions.IsAuthenticated])
 def kyc_submit(request):
     """Submit KYC documents"""
-    # Explicit authentication check
-    if not request.user or not request.user.is_authenticated:
-        logger.warning(f'Unauthenticated KYC submit attempt from {request.META.get("REMOTE_ADDR", "unknown")}')
-        return Response({
-            'error': 'Authentication required. Please provide a valid token.'
-        }, status=status.HTTP_401_UNAUTHORIZED)
-    
     user = request.user
     
     # Check if already verified
@@ -75,13 +68,6 @@ def kyc_submit(request):
 @permission_classes([permissions.IsAuthenticated])
 def kyc_status(request):
     """Get current KYC status"""
-    # Explicit authentication check
-    if not request.user or not request.user.is_authenticated:
-        logger.warning(f'Unauthenticated KYC status request from {request.META.get("REMOTE_ADDR", "unknown")}')
-        return Response({
-            'error': 'Authentication required. Please provide a valid token.'
-        }, status=status.HTTP_401_UNAUTHORIZED)
-    
     user = request.user
     serializer = KYCStatusSerializer(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
