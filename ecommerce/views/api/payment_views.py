@@ -423,27 +423,52 @@ def create_order_token_for_mobile(request, order_id):
         base_url = getattr(settings, 'PHONEPE_BASE_URL', 'https://www.sewabyapar.com')
         redirect_url = f"{base_url}/api/payments/callback/?merchant_order_id={merchant_order_id}"
         
-        # Create order for mobile SDK
-        order_response = create_order_for_mobile_sdk(
-            amount=order_amount,
-            merchant_order_id=merchant_order_id,
-            redirect_url=redirect_url
-        )
+        # Create order for mobile SDK with additional error handling
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Creating PhonePe order token for order_id={order_id}, merchant_order_id={merchant_order_id}, amount={order_amount}")
+        
+        try:
+            order_response = create_order_for_mobile_sdk(
+                amount=order_amount,
+                merchant_order_id=merchant_order_id,
+                redirect_url=redirect_url
+            )
+        except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(f"Exception raised by create_order_for_mobile_sdk: {str(e)}")
+            logger.error(error_traceback)
+            
+            return Response(
+                {
+                    'error': f'Failed to create PhonePe order: {str(e)}',
+                    'error_code': 'ORDER_CREATION_EXCEPTION',
+                    'error_message': 'An exception occurred while creating the PhonePe order',
+                    'traceback': error_traceback
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         if 'error' in order_response:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"PhonePe order creation error: {order_response.get('error')}")
-            logger.error(f"Error details: {order_response.get('traceback', 'No traceback')}")
+            logger.error(f"Error code: {order_response.get('error_code')}")
+            logger.error(f"Error message: {order_response.get('error_message')}")
+            traceback_info = order_response.get('traceback', 'No traceback')
+            if traceback_info:
+                logger.error(f"Error traceback: {traceback_info}")
             
             return Response(
                 {
                     'error': order_response['error'],
                     'error_code': order_response.get('error_code'),
-                    'error_message': order_response.get('error_message')
+                    'error_message': order_response.get('error_message'),
+                    'traceback': traceback_info
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+        logger.info(f"PhonePe order created successfully: orderId={order_response.get('orderId')}")
         
         # Update order payment status to pending
         order.payment_status = 'pending'
