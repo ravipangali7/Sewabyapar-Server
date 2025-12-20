@@ -392,6 +392,10 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
     Returns:
         dict: Response containing orderId, token, merchantId, merchantOrderId or error
     """
+    import sys
+    print(f"=== create_order_for_mobile_sdk called: amount={amount}, merchant_order_id={merchant_order_id} ===")
+    sys.stdout.flush()
+    
     try:
         import logging
         logger = logging.getLogger(__name__)
@@ -401,6 +405,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
         if not merchant_id or (isinstance(merchant_id, str) and merchant_id.strip() == ''):
             print("ERROR: PhonePe merchant ID is not configured")
+            sys.stdout.flush()
             return {
                 'error': 'PhonePe merchant ID is not configured. Please set PHONEPE_MERCHANT_ID in Django settings.',
                 'error_code': 'MERCHANT_ID_MISSING',
@@ -414,6 +419,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         
         if not client_id or (isinstance(client_id, str) and client_id.strip() == ''):
             print("ERROR: PhonePe CLIENT_ID is not configured")
+            sys.stdout.flush()
             return {
                 'error': 'PhonePe CLIENT_ID is not configured. Please set PHONEPE_CLIENT_ID in Django settings.',
                 'error_code': 'CLIENT_ID_MISSING',
@@ -422,6 +428,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         
         if not client_secret or (isinstance(client_secret, str) and client_secret.strip() == ''):
             print("ERROR: PhonePe CLIENT_SECRET is not configured")
+            sys.stdout.flush()
             return {
                 'error': 'PhonePe CLIENT_SECRET is not configured. Please set PHONEPE_CLIENT_SECRET in Django settings.',
                 'error_code': 'CLIENT_SECRET_MISSING',
@@ -430,6 +437,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         
         if not client_version or (isinstance(client_version, str) and client_version.strip() == ''):
             print("ERROR: PhonePe CLIENT_VERSION is not configured")
+            sys.stdout.flush()
             return {
                 'error': 'PhonePe CLIENT_VERSION is not configured. Please set PHONEPE_CLIENT_VERSION in Django settings.',
                 'error_code': 'CLIENT_VERSION_MISSING',
@@ -448,6 +456,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             error_traceback = traceback.format_exc()
             print(f"ERROR: PhonePe settings validation failed: {str(ve)}")
             print(error_traceback)
+            sys.stdout.flush()
             return {
                 'error': f'PhonePe configuration error: {str(ve)}',
                 'error_code': 'CONFIGURATION_ERROR',
@@ -460,6 +469,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             error_traceback = traceback.format_exc()
             print(f"ERROR: PhonePe SDK exception during client initialization: {str(pe)}")
             print(error_traceback)
+            sys.stdout.flush()
             return {
                 'error': f'PhonePe SDK error: {str(pe)}',
                 'error_code': getattr(pe, 'code', 'SDK_ERROR'),
@@ -471,6 +481,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             error_traceback = traceback.format_exc()
             print(f"ERROR: Failed to initialize PhonePe client: {str(client_error)}")
             print(error_traceback)
+            sys.stdout.flush()
             return {
                 'error': f'Failed to initialize PhonePe SDK client: {str(client_error)}',
                 'error_code': 'CLIENT_INIT_ERROR',
@@ -484,6 +495,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             logger.info(f"Converted amount: {amount} rupees = {amount_in_paise} paise")
         except (ValueError, TypeError) as e:
             print(f"ERROR: Invalid amount value: {amount}, error: {str(e)}")
+            sys.stdout.flush()
             return {
                 'error': f'Invalid amount: {amount}. Amount must be a valid number.',
                 'error_code': 'INVALID_AMOUNT',
@@ -509,6 +521,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             error_traceback = traceback.format_exc()
             print(f"ERROR: Failed to build payment request: {str(e)}")
             print(error_traceback)
+            sys.stdout.flush()
             return {
                 'error': f'Failed to build payment request: {str(e)}',
                 'error_code': 'PAYMENT_REQUEST_ERROR',
@@ -526,6 +539,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             error_traceback = traceback.format_exc()
             print(f"ERROR: PhonePe client.pay() failed: {str(e)}")
             print(error_traceback)
+            sys.stdout.flush()
             # Re-raise PhonePeException to be caught by outer handler
             if isinstance(e, PhonePeException):
                 raise
@@ -622,9 +636,11 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
     
     except PhonePeException as e:
         import traceback
+        import sys
         error_traceback = traceback.format_exc()
         print(f"ERROR: PhonePe SDK error in create_order_for_mobile_sdk: {str(e)}")
         print(error_traceback)
+        sys.stdout.flush()
         
         return {
             'error': f'PhonePe SDK error: {str(e)}',
@@ -634,9 +650,12 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         }
     except Exception as e:
         import traceback
+        import sys
         error_traceback = traceback.format_exc()
         print(f"ERROR: Unexpected error in create_order_for_mobile_sdk: {str(e)}")
+        print(f"ERROR: Exception type: {type(e).__name__}")
         print(error_traceback)
+        sys.stdout.flush()
         
         return {
             'error': f'Unexpected error: {str(e)}',

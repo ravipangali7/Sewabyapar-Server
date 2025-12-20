@@ -348,10 +348,35 @@ def create_order_token_for_mobile(request, order_id):
     """
     import logging
     import traceback
+    import sys
+    from django.http import Http404
+    
     logger = logging.getLogger(__name__)
     
+    # Print at the start to confirm function is being called
+    print(f"=== create_order_token_for_mobile called: order_id={order_id}, user={request.user.id if request.user else 'None'} ===")
+    sys.stdout.flush()
+    
     try:
-        order = get_object_or_404(Order, pk=order_id, user=request.user)
+        # Use explicit try/except instead of get_object_or_404 to catch Http404
+        try:
+            order = Order.objects.get(pk=order_id, user=request.user)
+            print(f"Order found: order_id={order_id}, order_number={order.order_number}, total_amount={order.total_amount}")
+            sys.stdout.flush()
+        except Order.DoesNotExist:
+            print(f"ERROR: Order not found: order_id={order_id}, user_id={request.user.id}")
+            sys.stdout.flush()
+            return Response(
+                {'error': 'Order not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Http404:
+            print(f"ERROR: Http404 - Order not found: order_id={order_id}")
+            sys.stdout.flush()
+            return Response(
+                {'error': 'Order not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Check if order is already paid
         if order.payment_status == 'success':
@@ -371,6 +396,8 @@ def create_order_token_for_mobile(request, order_id):
         merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
         # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
         if not merchant_id or (isinstance(merchant_id, str) and merchant_id.strip() == ''):
+            print("ERROR: PhonePe merchant ID is not configured")
+            sys.stdout.flush()
             return Response(
                 {
                     'error': 'PhonePe merchant ID is not configured. Please configure PHONEPE_MERCHANT_ID in Django settings.',
@@ -392,6 +419,8 @@ def create_order_token_for_mobile(request, order_id):
         
         # Validate order total amount
         if order.total_amount is None:
+            print(f"ERROR: Order total amount is None for order_id={order_id}")
+            sys.stdout.flush()
             return Response(
                 {
                     'error': 'Order total amount is missing',
@@ -404,6 +433,8 @@ def create_order_token_for_mobile(request, order_id):
         try:
             order_amount = float(order.total_amount)
             if order_amount <= 0:
+                print(f"ERROR: Order total amount is <= 0: {order_amount}")
+                sys.stdout.flush()
                 return Response(
                     {
                         'error': 'Order total amount must be greater than zero',
@@ -412,7 +443,9 @@ def create_order_token_for_mobile(request, order_id):
                     },
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            print(f"ERROR: Invalid order total amount: {order.total_amount}, error: {str(e)}")
+            sys.stdout.flush()
             return Response(
                 {
                     'error': 'Invalid order total amount',
@@ -430,19 +463,26 @@ def create_order_token_for_mobile(request, order_id):
         # Create order for mobile SDK with additional error handling
         import logging
         logger = logging.getLogger(__name__)
+        print(f"Creating PhonePe order token for order_id={order_id}, merchant_order_id={merchant_order_id}, amount={order_amount}, redirect_url={redirect_url}")
+        sys.stdout.flush()
         logger.info(f"Creating PhonePe order token for order_id={order_id}, merchant_order_id={merchant_order_id}, amount={order_amount}")
         
         try:
+            print(f"Calling create_order_for_mobile_sdk with amount={order_amount}, merchant_order_id={merchant_order_id}")
+            sys.stdout.flush()
             order_response = create_order_for_mobile_sdk(
                 amount=order_amount,
                 merchant_order_id=merchant_order_id,
                 redirect_url=redirect_url
             )
+            print(f"create_order_for_mobile_sdk returned: {order_response}")
+            sys.stdout.flush()
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
             print(f"ERROR: Exception raised by create_order_for_mobile_sdk: {str(e)}")
             print(error_traceback)
+            sys.stdout.flush()
             
             return Response(
                 {
@@ -461,6 +501,7 @@ def create_order_token_for_mobile(request, order_id):
             traceback_info = order_response.get('traceback', 'No traceback')
             if traceback_info:
                 print(f"ERROR: Error traceback: {traceback_info}")
+            sys.stdout.flush()
             
             return Response(
                 {
@@ -472,6 +513,8 @@ def create_order_token_for_mobile(request, order_id):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
+        print(f"PhonePe order created successfully: orderId={order_response.get('orderId')}, token={order_response.get('token')[:20] if order_response.get('token') else 'None'}...")
+        sys.stdout.flush()
         logger.info(f"PhonePe order created successfully: orderId={order_response.get('orderId')}")
         
         # Update order payment status to pending
@@ -479,7 +522,7 @@ def create_order_token_for_mobile(request, order_id):
         order.save()
         
         # Return order token data for mobile SDK
-        return Response({
+        response_data = {
             'success': True,
             'orderId': order_response.get('orderId'),
             'token': order_response.get('token'),
@@ -487,10 +530,23 @@ def create_order_token_for_mobile(request, order_id):
             'merchantOrderId': merchant_order_id,
             'order_id': order.id,  # Internal order ID
             'orderNumber': order.order_number
-        }, status=status.HTTP_200_OK)
+        }
+        print(f"Returning success response: {response_data}")
+        sys.stdout.flush()
+        return Response(response_data, status=status.HTTP_200_OK)
     
     except Order.DoesNotExist:
-        print(f"ERROR: Order not found: order_id={order_id}")
+        print(f"ERROR: Order.DoesNotExist exception: order_id={order_id}")
+        sys.stdout.flush()
+        return Response(
+            {'error': 'Order not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Http404 as e:
+        error_traceback = traceback.format_exc()
+        print(f"ERROR: Http404 exception in create_order_token_for_mobile: {str(e)}")
+        print(error_traceback)
+        sys.stdout.flush()
         return Response(
             {'error': 'Order not found'},
             status=status.HTTP_404_NOT_FOUND
@@ -499,6 +555,7 @@ def create_order_token_for_mobile(request, order_id):
         error_traceback = traceback.format_exc()
         print(f"ERROR: ValueError in create_order_token_for_mobile: {str(ve)}")
         print(error_traceback)
+        sys.stdout.flush()
         
         return Response(
             {
@@ -513,6 +570,7 @@ def create_order_token_for_mobile(request, order_id):
         error_traceback = traceback.format_exc()
         print(f"ERROR: PhonePe SDK error in create_order_token_for_mobile: {str(e)}")
         print(error_traceback)
+        sys.stdout.flush()
         
         return Response(
             {
@@ -526,7 +584,9 @@ def create_order_token_for_mobile(request, order_id):
     except Exception as e:
         error_traceback = traceback.format_exc()
         print(f"ERROR: Unexpected error in create_order_token_for_mobile: {str(e)}")
+        print(f"ERROR: Exception type: {type(e).__name__}")
         print(error_traceback)
+        sys.stdout.flush()
         
         return Response(
             {
