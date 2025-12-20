@@ -363,13 +363,15 @@ def create_order_token_for_mobile(request, order_id):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Generate merchant order ID if not exists
-        if not order.phonepe_merchant_order_id:
-            merchant_order_id = generate_merchant_order_id()
-            order.phonepe_merchant_order_id = merchant_order_id
-            order.save()
-        else:
-            merchant_order_id = order.phonepe_merchant_order_id
+        # Always generate a new merchant order ID for each payment attempt
+        # PhonePe requires unique merchant_order_id for each transaction
+        # If payment fails and user retries, we need a new ID
+        merchant_order_id = generate_merchant_order_id()
+        
+        # Store the merchant_order_id in the order for tracking
+        # Note: We always use a fresh ID for each payment attempt to avoid INVALID_TRANSACTION_ID error
+        order.phonepe_merchant_order_id = merchant_order_id
+        order.save()
         
         # Build redirect URL (required by API but not used for mobile SDK)
         redirect_url = f"{settings.PHONEPE_BASE_URL}/api/payments/callback/?merchant_order_id={merchant_order_id}"
