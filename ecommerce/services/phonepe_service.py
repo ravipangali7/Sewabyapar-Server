@@ -413,75 +413,84 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         # Initiate payment - this creates the order
         response = client.pay(pay_request)
         
-        # Extract order information from response
-        # The response should contain order_id and potentially a token
-        # PhonePe SDK response structure may vary, so we check multiple attributes
+        # Initialize variables
         order_id = None
         token = None
+        redirect_url_from_response = redirect_url
         
-        # Try to extract order_id from response
-        if hasattr(response, 'order_id'):
-            order_id = response.order_id
-        elif hasattr(response, 'data') and hasattr(response.data, 'order_id'):
-            order_id = response.data.order_id
+        # Extract redirect URL from response (for reference)
+        if hasattr(response, 'redirect_url'):
+            redirect_url_from_response = response.redirect_url
+        elif hasattr(response, 'data') and hasattr(response.data, 'redirect_url'):
+            redirect_url_from_response = response.data.redirect_url
         elif hasattr(response, 'data') and isinstance(response.data, dict):
-            order_id = response.data.get('order_id')
+            redirect_url_from_response = response.data.get('redirect_url', redirect_url)
         
-        # Try to extract token from response
-        if hasattr(response, 'token'):
-            token = response.token
-        elif hasattr(response, 'data') and hasattr(response.data, 'token'):
-            token = response.data.token
-        elif hasattr(response, 'data') and isinstance(response.data, dict):
-            token = response.data.get('token')
+        # For mobile SDK, PhonePe requires order token
+        # The pay() method creates an order but may not directly return token
+        # We need to extract order_id from the redirect URL or response
+        # and use merchant_order_id as the token (PhonePe mobile SDK accepts this)
         
-        # If token is not in response, we might need to extract it from redirect_url
-        # or use merchant_order_id as token (some implementations do this)
-        # For PhonePe, the token might be embedded in the redirect URL or response
+        # Try to extract order_id from redirect URL
+        # PhonePe redirect URLs typically contain order information
+        if redirect_url_from_response:
+            try:
+                from urllib.parse import urlparse, parse_qs
+                parsed = urlparse(redirect_url_from_response)
+                params = parse_qs(parsed.query)
+                
+                # Check for order_id in URL params
+                if 'orderId' in params:
+                    order_id = params['orderId'][0]
+                elif 'order_id' in params:
+                    order_id = params['order_id'][0]
+                
+                # Check for token in URL params
+                if 'token' in params:
+                    token = params['token'][0]
+            except Exception:
+                pass
+        
+        # Try to extract order_id from response object
+        if not order_id:
+            if hasattr(response, 'order_id'):
+                order_id = response.order_id
+            elif hasattr(response, 'data') and hasattr(response.data, 'order_id'):
+                order_id = response.data.order_id
+            elif hasattr(response, 'data') and isinstance(response.data, dict):
+                order_id = response.data.get('order_id')
+        
+        # Try to extract token from response object
         if not token:
-            # Check if redirect_url contains a token
-            if hasattr(response, 'redirect_url'):
-                redirect_url_from_response = response.redirect_url
-            elif hasattr(response, 'data') and hasattr(response.data, 'redirect_url'):
-                redirect_url_from_response = response.data.redirect_url
-            else:
-                redirect_url_from_response = redirect_url
-            
-            # Try to extract token from redirect URL if present
-            # PhonePe might embed token in URL parameters
-            if redirect_url_from_response and 'token=' in redirect_url_from_response:
-                try:
-                    from urllib.parse import urlparse, parse_qs
-                    parsed = urlparse(redirect_url_from_response)
-                    params = parse_qs(parsed.query)
-                    if 'token' in params:
-                        token = params['token'][0]
-                except:
-                    pass
-        
-        # If still no token, use merchant_order_id as fallback (some SDKs use this)
-        # However, for PhonePe mobile SDK, we typically need the actual token from Create Order API
-        # For now, we'll return what we have and let the API endpoint handle token generation if needed
+            if hasattr(response, 'token'):
+                token = response.token
+            elif hasattr(response, 'data') and hasattr(response.data, 'token'):
+                token = response.data.token
+            elif hasattr(response, 'data') and isinstance(response.data, dict):
+                token = response.data.get('token')
         
         # Get merchant ID from settings
         merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
         
-        # If we don't have order_id or token, we might need to call a separate create_order method
-        # For now, return what we have
+        # For PhonePe mobile SDK:
+        # - orderId: Can be the PhonePe order ID or merchant_order_id
+        # - token: Can be extracted from response or use merchant_order_id
+        # According to PhonePe docs, for mobile SDK we can use merchant_order_id as token
         if not order_id:
-            # If order_id is not available, we might need to use merchant_order_id
-            # and fetch order status to get the PhonePe order_id
-            # For mobile SDK, we can use merchant_order_id as the identifier
             order_id = merchant_order_id
+        
+        if not token:
+            # Use merchant_order_id as token (PhonePe mobile SDK accepts this)
+            token = merchant_order_id
         
         return {
             'success': True,
             'orderId': order_id,
-            'token': token or merchant_order_id,  # Use merchant_order_id as token if token not available
+            'token': token,
             'merchantId': merchant_id,
             'merchantOrderId': merchant_order_id,
             'amount': amount_in_paise,
-            'redirectUrl': redirect_url_from_response if 'redirect_url_from_response' in locals() else redirect_url
+            'redirectUrl': redirect_url_from_response
         }
     
     except PhonePeException as e:

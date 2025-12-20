@@ -382,6 +382,11 @@ def create_order_token_for_mobile(request, order_id):
         )
         
         if 'error' in order_response:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"PhonePe order creation error: {order_response.get('error')}")
+            logger.error(f"Error details: {order_response.get('traceback', 'No traceback')}")
+            
             return Response(
                 {
                     'error': order_response['error'],
@@ -412,6 +417,12 @@ def create_order_token_for_mobile(request, order_id):
             status=status.HTTP_404_NOT_FOUND
         )
     except PhonePeException as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"PhonePe SDK error in create_order_token_for_mobile: {str(e)}")
+        logger.error(traceback.format_exc())
+        
         return Response(
             {
                 'error': f'PhonePe SDK error: {str(e)}',
@@ -420,6 +431,12 @@ def create_order_token_for_mobile(request, order_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error in create_order_token_for_mobile: {str(e)}")
+        logger.error(traceback.format_exc())
+        
         return Response(
             {'error': f'Unexpected error: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
