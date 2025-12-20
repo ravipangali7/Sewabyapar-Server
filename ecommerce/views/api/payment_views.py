@@ -346,6 +346,10 @@ def create_order_token_for_mobile(request, order_id):
     POST /api/payments/create-order-token/{order_id}/
     Returns: {orderId, token, merchantId, merchantOrderId}
     """
+    import logging
+    import traceback
+    logger = logging.getLogger(__name__)
+    
     try:
         order = get_object_or_404(Order, pk=order_id, user=request.user)
         
@@ -437,8 +441,8 @@ def create_order_token_for_mobile(request, order_id):
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
-            logger.error(f"Exception raised by create_order_for_mobile_sdk: {str(e)}")
-            logger.error(error_traceback)
+            print(f"ERROR: Exception raised by create_order_for_mobile_sdk: {str(e)}")
+            print(error_traceback)
             
             return Response(
                 {
@@ -451,12 +455,12 @@ def create_order_token_for_mobile(request, order_id):
             )
         
         if 'error' in order_response:
-            logger.error(f"PhonePe order creation error: {order_response.get('error')}")
-            logger.error(f"Error code: {order_response.get('error_code')}")
-            logger.error(f"Error message: {order_response.get('error_message')}")
+            print(f"ERROR: PhonePe order creation error: {order_response.get('error')}")
+            print(f"ERROR: Error code: {order_response.get('error_code')}")
+            print(f"ERROR: Error message: {order_response.get('error_message')}")
             traceback_info = order_response.get('traceback', 'No traceback')
             if traceback_info:
-                logger.error(f"Error traceback: {traceback_info}")
+                print(f"ERROR: Error traceback: {traceback_info}")
             
             return Response(
                 {
@@ -486,33 +490,51 @@ def create_order_token_for_mobile(request, order_id):
         }, status=status.HTTP_200_OK)
     
     except Order.DoesNotExist:
+        print(f"ERROR: Order not found: order_id={order_id}")
         return Response(
             {'error': 'Order not found'},
             status=status.HTTP_404_NOT_FOUND
         )
+    except ValueError as ve:
+        error_traceback = traceback.format_exc()
+        print(f"ERROR: ValueError in create_order_token_for_mobile: {str(ve)}")
+        print(error_traceback)
+        
+        return Response(
+            {
+                'error': f'Configuration error: {str(ve)}',
+                'error_code': 'CONFIGURATION_ERROR',
+                'error_message': 'PhonePe settings are not properly configured',
+                'traceback': error_traceback
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     except PhonePeException as e:
-        import logging
-        import traceback
-        logger = logging.getLogger(__name__)
-        logger.error(f"PhonePe SDK error in create_order_token_for_mobile: {str(e)}")
-        logger.error(traceback.format_exc())
+        error_traceback = traceback.format_exc()
+        print(f"ERROR: PhonePe SDK error in create_order_token_for_mobile: {str(e)}")
+        print(error_traceback)
         
         return Response(
             {
                 'error': f'PhonePe SDK error: {str(e)}',
-                'error_code': getattr(e, 'code', None)
+                'error_code': getattr(e, 'code', None),
+                'error_message': getattr(e, 'message', str(e)),
+                'traceback': error_traceback
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     except Exception as e:
-        import logging
-        import traceback
-        logger = logging.getLogger(__name__)
-        logger.error(f"Unexpected error in create_order_token_for_mobile: {str(e)}")
-        logger.error(traceback.format_exc())
+        error_traceback = traceback.format_exc()
+        print(f"ERROR: Unexpected error in create_order_token_for_mobile: {str(e)}")
+        print(error_traceback)
         
         return Response(
-            {'error': f'Unexpected error: {str(e)}'},
+            {
+                'error': f'Unexpected error: {str(e)}',
+                'error_code': 'UNEXPECTED_ERROR',
+                'error_message': 'An unexpected error occurred while processing the request',
+                'traceback': error_traceback
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

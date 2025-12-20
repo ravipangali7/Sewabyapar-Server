@@ -400,7 +400,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
         # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
         if not merchant_id or (isinstance(merchant_id, str) and merchant_id.strip() == ''):
-            logger.error("PhonePe merchant ID is not configured")
+            print("ERROR: PhonePe merchant ID is not configured")
             return {
                 'error': 'PhonePe merchant ID is not configured. Please set PHONEPE_MERCHANT_ID in Django settings.',
                 'error_code': 'MERCHANT_ID_MISSING',
@@ -413,7 +413,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         client_version = getattr(settings, 'PHONEPE_CLIENT_VERSION', None)
         
         if not client_id or (isinstance(client_id, str) and client_id.strip() == ''):
-            logger.error("PhonePe CLIENT_ID is not configured")
+            print("ERROR: PhonePe CLIENT_ID is not configured")
             return {
                 'error': 'PhonePe CLIENT_ID is not configured. Please set PHONEPE_CLIENT_ID in Django settings.',
                 'error_code': 'CLIENT_ID_MISSING',
@@ -421,7 +421,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             }
         
         if not client_secret or (isinstance(client_secret, str) and client_secret.strip() == ''):
-            logger.error("PhonePe CLIENT_SECRET is not configured")
+            print("ERROR: PhonePe CLIENT_SECRET is not configured")
             return {
                 'error': 'PhonePe CLIENT_SECRET is not configured. Please set PHONEPE_CLIENT_SECRET in Django settings.',
                 'error_code': 'CLIENT_SECRET_MISSING',
@@ -429,7 +429,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             }
         
         if not client_version or (isinstance(client_version, str) and client_version.strip() == ''):
-            logger.error("PhonePe CLIENT_VERSION is not configured")
+            print("ERROR: PhonePe CLIENT_VERSION is not configured")
             return {
                 'error': 'PhonePe CLIENT_VERSION is not configured. Please set PHONEPE_CLIENT_VERSION in Django settings.',
                 'error_code': 'CLIENT_VERSION_MISSING',
@@ -442,11 +442,35 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         try:
             client = get_phonepe_client()
             logger.info("PhonePe client initialized successfully")
+        except ValueError as ve:
+            # ValueError from get_phonepe_client means missing settings
+            import traceback
+            error_traceback = traceback.format_exc()
+            print(f"ERROR: PhonePe settings validation failed: {str(ve)}")
+            print(error_traceback)
+            return {
+                'error': f'PhonePe configuration error: {str(ve)}',
+                'error_code': 'CONFIGURATION_ERROR',
+                'error_message': 'PhonePe SDK settings are not properly configured',
+                'traceback': error_traceback
+            }
+        except PhonePeException as pe:
+            # PhonePe SDK specific exceptions
+            import traceback
+            error_traceback = traceback.format_exc()
+            print(f"ERROR: PhonePe SDK exception during client initialization: {str(pe)}")
+            print(error_traceback)
+            return {
+                'error': f'PhonePe SDK error: {str(pe)}',
+                'error_code': getattr(pe, 'code', 'SDK_ERROR'),
+                'error_message': getattr(pe, 'message', str(pe)),
+                'traceback': error_traceback
+            }
         except Exception as client_error:
             import traceback
             error_traceback = traceback.format_exc()
-            logger.error(f"Failed to initialize PhonePe client: {str(client_error)}")
-            logger.error(error_traceback)
+            print(f"ERROR: Failed to initialize PhonePe client: {str(client_error)}")
+            print(error_traceback)
             return {
                 'error': f'Failed to initialize PhonePe SDK client: {str(client_error)}',
                 'error_code': 'CLIENT_INIT_ERROR',
@@ -459,7 +483,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             amount_in_paise = int(float(amount) * 100)
             logger.info(f"Converted amount: {amount} rupees = {amount_in_paise} paise")
         except (ValueError, TypeError) as e:
-            logger.error(f"Invalid amount value: {amount}, error: {str(e)}")
+            print(f"ERROR: Invalid amount value: {amount}, error: {str(e)}")
             return {
                 'error': f'Invalid amount: {amount}. Amount must be a valid number.',
                 'error_code': 'INVALID_AMOUNT',
@@ -483,8 +507,8 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
-            logger.error(f"Failed to build payment request: {str(e)}")
-            logger.error(error_traceback)
+            print(f"ERROR: Failed to build payment request: {str(e)}")
+            print(error_traceback)
             return {
                 'error': f'Failed to build payment request: {str(e)}',
                 'error_code': 'PAYMENT_REQUEST_ERROR',
@@ -500,8 +524,8 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
-            logger.error(f"PhonePe client.pay() failed: {str(e)}")
-            logger.error(error_traceback)
+            print(f"ERROR: PhonePe client.pay() failed: {str(e)}")
+            print(error_traceback)
             # Re-raise PhonePeException to be caught by outer handler
             if isinstance(e, PhonePeException):
                 raise
@@ -598,11 +622,9 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
     
     except PhonePeException as e:
         import traceback
-        import logging
-        logger = logging.getLogger(__name__)
         error_traceback = traceback.format_exc()
-        logger.error(f"PhonePe SDK error in create_order_for_mobile_sdk: {str(e)}")
-        logger.error(error_traceback)
+        print(f"ERROR: PhonePe SDK error in create_order_for_mobile_sdk: {str(e)}")
+        print(error_traceback)
         
         return {
             'error': f'PhonePe SDK error: {str(e)}',
@@ -612,11 +634,9 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         }
     except Exception as e:
         import traceback
-        import logging
-        logger = logging.getLogger(__name__)
         error_traceback = traceback.format_exc()
-        logger.error(f"Unexpected error in create_order_for_mobile_sdk: {str(e)}")
-        logger.error(error_traceback)
+        print(f"ERROR: Unexpected error in create_order_for_mobile_sdk: {str(e)}")
+        print(error_traceback)
         
         return {
             'error': f'Unexpected error: {str(e)}',
