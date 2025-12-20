@@ -218,6 +218,9 @@ OTP_EXPIRY_MINUTES = 10
 PHONEPE_CLIENT_ID = 'SU2511191730406050273204'
 PHONEPE_CLIENT_SECRET = '1d8957fd-15fa-4fef-a816-aa945943dcf8'
 PHONEPE_CLIENT_VERSION = 1
+# PhonePe Merchant ID - Get this from your PhonePe Merchant Dashboard
+# This is different from CLIENT_ID. You can find it in the PhonePe dashboard under Merchant Settings
+PHONEPE_MERCHANT_ID = 'M23QM8ITU4IQ7'  # TODO: Replace with your actual PhonePe Merchant ID from dashboard
 
 # PhonePe API URLs
 PHONEPE_ENV = 'PRODUCTION'  # Change to 'PRODUCTION' when going live
