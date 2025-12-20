@@ -1,5 +1,5 @@
 from django.urls import path
-from ..views.api import auth_views, setting_views, kyc_views
+from ..views.api import auth_views, setting_views, kyc_views, cms_views
 from ..views import address_views, notification_views
 
 urlpatterns = [
@@ -35,4 +35,7 @@ urlpatterns = [
     # KYC URLs
     path('kyc/submit/', kyc_views.kyc_submit, name='kyc-submit'),
     path('kyc/status/', kyc_views.kyc_status, name='kyc-status'),
+    
+    # CMS Pages URLs
+    path('cms-pages/<slug:slug>/', cms_views.cms_page_by_slug, name='cms-page-by-slug'),
 ]
