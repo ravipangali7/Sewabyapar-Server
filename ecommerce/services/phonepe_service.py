@@ -469,9 +469,7 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             elif hasattr(response, 'data') and isinstance(response.data, dict):
                 token = response.data.get('token')
         
-        # Get merchant ID from settings
-        merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
-        
+        # Merchant ID was already validated at the start of the function
         # For PhonePe mobile SDK:
         # - orderId: Can be the PhonePe order ID or merchant_order_id
         # - token: Can be extracted from response or use merchant_order_id

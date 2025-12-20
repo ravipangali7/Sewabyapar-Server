@@ -363,6 +363,18 @@ def create_order_token_for_mobile(request, order_id):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Validate PhonePe merchant ID is configured
+        merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
+        if not merchant_id or merchant_id.strip() == '':
+            return Response(
+                {
+                    'error': 'PhonePe merchant ID is not configured. Please configure PHONEPE_MERCHANT_ID in Django settings.',
+                    'error_code': 'MERCHANT_ID_MISSING',
+                    'error_message': 'PhonePe merchant ID is required for payment processing'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
         # Always generate a new merchant order ID for each payment attempt
         # PhonePe requires unique merchant_order_id for each transaction
         # If payment fails and user retries, we need a new ID
