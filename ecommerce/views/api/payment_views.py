@@ -365,7 +365,8 @@ def create_order_token_for_mobile(request, order_id):
         
         # Validate PhonePe merchant ID is configured
         merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
-        if not merchant_id or merchant_id.strip() == '':
+        # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
+        if not merchant_id or (isinstance(merchant_id, str) and merchant_id.strip() == ''):
             return Response(
                 {
                     'error': 'PhonePe merchant ID is not configured. Please configure PHONEPE_MERCHANT_ID in Django settings.',

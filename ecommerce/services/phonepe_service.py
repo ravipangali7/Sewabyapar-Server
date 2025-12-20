@@ -393,6 +393,16 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         dict: Response containing orderId, token, merchantId, merchantOrderId or error
     """
     try:
+        # Validate merchant ID is configured
+        merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
+        # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
+        if not merchant_id or (isinstance(merchant_id, str) and merchant_id.strip() == ''):
+            return {
+                'error': 'PhonePe merchant ID is not configured. Please set PHONEPE_MERCHANT_ID in Django settings.',
+                'error_code': 'MERCHANT_ID_MISSING',
+                'error_message': 'PhonePe merchant ID is required for mobile SDK integration'
+            }
+        
         # Get SDK client
         client = get_phonepe_client()
         
