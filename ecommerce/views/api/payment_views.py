@@ -386,12 +386,46 @@ def create_order_token_for_mobile(request, order_id):
         order.phonepe_merchant_order_id = merchant_order_id
         order.save()
         
+        # Validate order total amount
+        if order.total_amount is None:
+            return Response(
+                {
+                    'error': 'Order total amount is missing',
+                    'error_code': 'INVALID_ORDER_AMOUNT',
+                    'error_message': 'Order must have a valid total amount'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            order_amount = float(order.total_amount)
+            if order_amount <= 0:
+                return Response(
+                    {
+                        'error': 'Order total amount must be greater than zero',
+                        'error_code': 'INVALID_ORDER_AMOUNT',
+                        'error_message': 'Order amount must be a positive value'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {
+                    'error': 'Invalid order total amount',
+                    'error_code': 'INVALID_ORDER_AMOUNT',
+                    'error_message': 'Order total amount must be a valid number'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # Build redirect URL (required by API but not used for mobile SDK)
-        redirect_url = f"{settings.PHONEPE_BASE_URL}/api/payments/callback/?merchant_order_id={merchant_order_id}"
+        # Safely get PHONEPE_BASE_URL with a default fallback
+        base_url = getattr(settings, 'PHONEPE_BASE_URL', 'https://www.sewabyapar.com')
+        redirect_url = f"{base_url}/api/payments/callback/?merchant_order_id={merchant_order_id}"
         
         # Create order for mobile SDK
         order_response = create_order_for_mobile_sdk(
-            amount=float(order.total_amount),
+            amount=order_amount,
             merchant_order_id=merchant_order_id,
             redirect_url=redirect_url
         )
