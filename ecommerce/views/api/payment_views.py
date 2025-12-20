@@ -13,7 +13,8 @@ from ...services.phonepe_service import (
     initiate_payment,
     check_payment_status_by_order_id,
     check_payment_status_by_transaction_id,
-    generate_merchant_order_id
+    generate_merchant_order_id,
+    create_order_for_mobile_sdk
 )
 
 
@@ -329,6 +330,95 @@ def payment_status(request):
             'paymentDetails': status_response.get('data', {})
         }, status=status.HTTP_200_OK)
     
+    except Exception as e:
+        return Response(
+            {'error': f'Unexpected error: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def create_order_token_for_mobile(request, order_id):
+    """
+    Create PhonePe order and return order token for mobile SDK
+    
+    POST /api/payments/create-order-token/{order_id}/
+    Returns: {orderId, token, merchantId, merchantOrderId}
+    """
+    try:
+        order = get_object_or_404(Order, pk=order_id, user=request.user)
+        
+        # Check if order is already paid
+        if order.payment_status == 'success':
+            return Response(
+                {'error': 'Order is already paid'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if payment method is online
+        if order.payment_method != 'online':
+            return Response(
+                {'error': 'Payment method is not online'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate merchant order ID if not exists
+        if not order.phonepe_merchant_order_id:
+            merchant_order_id = generate_merchant_order_id()
+            order.phonepe_merchant_order_id = merchant_order_id
+            order.save()
+        else:
+            merchant_order_id = order.phonepe_merchant_order_id
+        
+        # Build redirect URL (required by API but not used for mobile SDK)
+        redirect_url = f"{settings.PHONEPE_BASE_URL}/api/payments/callback/?merchant_order_id={merchant_order_id}"
+        
+        # Create order for mobile SDK
+        order_response = create_order_for_mobile_sdk(
+            amount=float(order.total_amount),
+            merchant_order_id=merchant_order_id,
+            redirect_url=redirect_url
+        )
+        
+        if 'error' in order_response:
+            return Response(
+                {
+                    'error': order_response['error'],
+                    'error_code': order_response.get('error_code'),
+                    'error_message': order_response.get('error_message')
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Update order payment status to pending
+        order.payment_status = 'pending'
+        order.save()
+        
+        # Return order token data for mobile SDK
+        return Response({
+            'success': True,
+            'orderId': order_response.get('orderId'),
+            'token': order_response.get('token'),
+            'merchantId': order_response.get('merchantId'),
+            'merchantOrderId': merchant_order_id,
+            'order_id': order.id,  # Internal order ID
+            'orderNumber': order.order_number
+        }, status=status.HTTP_200_OK)
+    
+    except Order.DoesNotExist:
+        return Response(
+            {'error': 'Order not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except PhonePeException as e:
+        return Response(
+            {
+                'error': f'PhonePe SDK error: {str(e)}',
+                'error_code': getattr(e, 'code', None)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     except Exception as e:
         return Response(
             {'error': f'Unexpected error: {str(e)}'},

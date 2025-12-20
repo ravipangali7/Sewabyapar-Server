@@ -45,6 +45,7 @@ urlpatterns = [
     
     # Payment URLs
     path('payments/initiate/<int:order_id>/', payment_views.initiate_payment_view, name='initiate-payment'),
+    path('payments/create-order-token/<int:order_id>/', payment_views.create_order_token_for_mobile, name='create-order-token-mobile'),
     path('payments/status/', payment_views.payment_status, name='payment-status'),
     path('payments/callback/', payment_views.payment_callback, name='payment-callback'),
     
