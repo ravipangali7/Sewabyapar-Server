@@ -60,5 +60,9 @@ urlpatterns = [
     path('merchant/stats/', merchant_views.merchant_stats, name='merchant-stats'),
     path('merchant/stores/', merchant_views.merchant_stores, name='merchant-stores'),
     path('merchant/stores/<int:pk>/', merchant_views.merchant_store_detail, name='merchant-store-detail'),
+    # Shipdaak shipment URLs
+    path('merchant/shipments/track/<str:awb_number>/', merchant_views.merchant_shipments_track, name='merchant-shipments-track'),
+    path('merchant/shipments/cancel/', merchant_views.merchant_shipments_cancel, name='merchant-shipments-cancel'),
+    path('merchant/couriers/', merchant_views.merchant_couriers, name='merchant-couriers'),
 ]
 

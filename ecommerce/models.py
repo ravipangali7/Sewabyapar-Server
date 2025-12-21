@@ -20,6 +20,10 @@ class Store(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Shipdaak warehouse fields
+    shipdaak_pickup_warehouse_id = models.IntegerField(null=True, blank=True, help_text='Shipdaak pickup warehouse ID')
+    shipdaak_rto_warehouse_id = models.IntegerField(null=True, blank=True, help_text='Shipdaak RTO warehouse ID')
+    shipdaak_warehouse_created_at = models.DateTimeField(null=True, blank=True, help_text='When warehouse was created in Shipdaak')
     
     def __str__(self):
         return self.name
@@ -207,6 +211,15 @@ class Order(models.Model):
     phonepe_utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference from PhonePe')
     phonepe_vpa = models.CharField(max_length=100, blank=True, null=True, help_text='Virtual Payment Address from PhonePe')
     phonepe_transaction_note = models.TextField(blank=True, null=True, help_text='Transaction Note from PhonePe')
+    # Shipdaak shipment fields
+    shipdaak_awb_number = models.CharField(max_length=50, blank=True, null=True, help_text='Shipdaak AWB/Tracking number')
+    shipdaak_shipment_id = models.IntegerField(null=True, blank=True, help_text='Shipdaak shipment ID')
+    shipdaak_order_id = models.IntegerField(null=True, blank=True, help_text='Shipdaak order ID')
+    shipdaak_label_url = models.URLField(blank=True, null=True, help_text='Shipdaak shipping label URL')
+    shipdaak_manifest_url = models.URLField(blank=True, null=True, help_text='Shipdaak manifest URL')
+    shipdaak_status = models.CharField(max_length=50, blank=True, null=True, help_text='Current Shipdaak shipment status')
+    shipdaak_courier_id = models.IntegerField(null=True, blank=True, help_text='Shipdaak courier ID used for shipment')
+    shipdaak_courier_name = models.CharField(max_length=100, blank=True, null=True, help_text='Shipdaak courier name')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -300,3 +313,21 @@ class Coupon(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+
+
+class CourierConfiguration(models.Model):
+    """Courier configuration for stores - admin sets default courier per merchant"""
+    store = models.OneToOneField(Store, on_delete=models.CASCADE, related_name='courier_config', help_text='Store for this courier configuration')
+    default_courier_id = models.IntegerField(help_text='Default Shipdaak courier ID for this store')
+    default_courier_name = models.CharField(max_length=100, help_text='Default courier name')
+    is_active = models.BooleanField(default=True, help_text='Whether this courier configuration is active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.store.name} - {self.default_courier_name} (ID: {self.default_courier_id})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Courier Configuration'
+        verbose_name_plural = 'Courier Configurations'

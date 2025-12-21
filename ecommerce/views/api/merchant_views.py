@@ -354,6 +354,33 @@ def merchant_accept_order(request, pk):
     
     logger.info(f"Order {order.id} accepted by merchant {request.user.id}")
     
+    # Auto-create shipment in Shipdaak
+    if order.merchant and order.merchant.shipdaak_pickup_warehouse_id:
+        try:
+            from ecommerce.services.shipdaak_service import ShipdaakService
+            shipdaak = ShipdaakService()
+            shipment_data = shipdaak.create_shipment(order)
+            if shipment_data:
+                order.shipdaak_awb_number = shipment_data.get('awb_number')
+                order.shipdaak_shipment_id = shipment_data.get('shipment_id')
+                order.shipdaak_order_id = shipment_data.get('order_id')
+                order.shipdaak_label_url = shipment_data.get('label')
+                order.shipdaak_manifest_url = shipment_data.get('manifest')
+                order.shipdaak_status = shipment_data.get('status')
+                order.shipdaak_courier_id = shipment_data.get('courier_id')
+                order.shipdaak_courier_name = shipment_data.get('courier_name')
+                order.save(update_fields=[
+                    'shipdaak_awb_number', 'shipdaak_shipment_id', 'shipdaak_order_id',
+                    'shipdaak_label_url', 'shipdaak_manifest_url', 'shipdaak_status',
+                    'shipdaak_courier_id', 'shipdaak_courier_name'
+                ])
+                logger.info(f"Successfully created Shipdaak shipment for order {order.id}, AWB: {order.shipdaak_awb_number}")
+            else:
+                logger.warning(f"Failed to create Shipdaak shipment for order {order.id}, but order was accepted")
+        except Exception as e:
+            logger.error(f"Error creating Shipdaak shipment for order {order.id}: {str(e)}", exc_info=True)
+            # Order is still accepted, but without Shipdaak shipment
+    
     serializer = OrderSerializer(order, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -523,6 +550,26 @@ def merchant_stores(request):
         if serializer.is_valid():
             # Auto-set owner to current merchant
             store = serializer.save(owner=request.user)
+            
+            # Auto-create warehouse in Shipdaak
+            try:
+                from ecommerce.services.shipdaak_service import ShipdaakService
+                shipdaak = ShipdaakService()
+                warehouse_data = shipdaak.create_warehouse(store)
+                if warehouse_data:
+                    store.shipdaak_pickup_warehouse_id = warehouse_data.get('pickup_warehouse_id')
+                    store.shipdaak_rto_warehouse_id = warehouse_data.get('rto_warehouse_id')
+                    store.shipdaak_warehouse_created_at = timezone.now()
+                    store.save(update_fields=['shipdaak_pickup_warehouse_id', 
+                                            'shipdaak_rto_warehouse_id', 
+                                            'shipdaak_warehouse_created_at'])
+                    logger.info(f"Successfully created Shipdaak warehouse for store {store.id}")
+                else:
+                    logger.warning(f"Failed to create Shipdaak warehouse for store {store.id}, but store was created")
+            except Exception as e:
+                logger.error(f"Error creating Shipdaak warehouse for store {store.id}: {str(e)}", exc_info=True)
+                # Store is still created, but without Shipdaak integration
+            
             return Response(StoreSerializer(store, context={'request': request}).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -554,4 +601,140 @@ def merchant_store_detail(request, pk):
     elif request.method == 'DELETE':
         store.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_shipments_track(request, awb_number):
+    """Track shipment by AWB number"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Verify that the AWB belongs to one of merchant's orders
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    order = Order.objects.filter(
+        merchant__in=stores,
+        shipdaak_awb_number=awb_number
+    ).first()
+    
+    if not order:
+        return Response({
+            'error': 'AWB number not found or does not belong to your orders'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    try:
+        from ecommerce.services.shipdaak_service import ShipdaakService
+        shipdaak = ShipdaakService()
+        tracking_data = shipdaak.track_shipment(awb_number)
+        
+        if tracking_data:
+            return Response({
+                'success': True,
+                'data': tracking_data
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Failed to track shipment'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        logger.error(f"Error tracking shipment {awb_number}: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': 'An error occurred while tracking shipment'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_shipments_cancel(request):
+    """Cancel shipment by AWB number"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    awb_number = request.data.get('awb_number')
+    if not awb_number:
+        return Response({
+            'error': 'awb_number is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Verify that the AWB belongs to one of merchant's orders
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    order = Order.objects.filter(
+        merchant__in=stores,
+        shipdaak_awb_number=awb_number
+    ).first()
+    
+    if not order:
+        return Response({
+            'error': 'AWB number not found or does not belong to your orders'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if order can be cancelled
+    if order.status in ['delivered', 'cancelled', 'refunded']:
+        return Response({
+            'error': f'Order with status "{order.status}" cannot be cancelled'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        from ecommerce.services.shipdaak_service import ShipdaakService
+        shipdaak = ShipdaakService()
+        success = shipdaak.cancel_shipment(awb_number)
+        
+        if success:
+            # Update order status
+            order.status = 'cancelled'
+            order.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Shipment cancelled successfully'
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Failed to cancel shipment'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        logger.error(f"Error cancelling shipment {awb_number}: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': 'An error occurred while cancelling shipment'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_couriers(request):
+    """Get list of available couriers from Shipdaak"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        from ecommerce.services.shipdaak_service import ShipdaakService
+        shipdaak = ShipdaakService()
+        couriers = shipdaak.get_couriers()
+        
+        if couriers:
+            return Response({
+                'success': True,
+                'data': couriers
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Failed to fetch couriers'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        logger.error(f"Error fetching couriers: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': 'An error occurred while fetching couriers'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

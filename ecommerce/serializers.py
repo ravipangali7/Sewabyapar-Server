@@ -12,8 +12,11 @@ class StoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Store
         fields = ['id', 'name', 'description', 'owner', 'logo', 'banner', 'address', 
-                 'latitude', 'longitude', 'phone', 'email', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+                 'latitude', 'longitude', 'phone', 'email', 'is_active', 
+                 'shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 
+                 'shipdaak_warehouse_created_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 
+                          'shipdaak_warehouse_created_at', 'created_at', 'updated_at']
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -187,10 +190,14 @@ class OrderSerializer(serializers.ModelSerializer):
                  'total_amount', 'shipping_address', 'billing_address', 'phone', 'email', 'notes',
                  'items', 'payment_method', 'payment_status', 'merchant_ready_date', 'pickup_date',
                  'delivered_date', 'reject_reason', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
+                 'shipdaak_awb_number', 'shipdaak_shipment_id', 'shipdaak_order_id', 'shipdaak_label_url',
+                 'shipdaak_manifest_url', 'shipdaak_status', 'shipdaak_courier_id', 'shipdaak_courier_name',
                  'created_at', 'updated_at']
         read_only_fields = ['id', 'order_number', 'payment_status', 'merchant_ready_date', 'pickup_date',
                            'delivered_date', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
-                           'created_at', 'updated_at']
+                           'shipdaak_awb_number', 'shipdaak_shipment_id', 'shipdaak_order_id', 
+                           'shipdaak_label_url', 'shipdaak_manifest_url', 'shipdaak_status',
+                           'shipdaak_courier_id', 'shipdaak_courier_name', 'created_at', 'updated_at']
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):

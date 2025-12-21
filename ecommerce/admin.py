@@ -1,16 +1,26 @@
 from django.contrib import admin
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon
+    Review, Wishlist, Coupon, CourierConfiguration
 )
+
+
+class CourierConfigurationInline(admin.StackedInline):
+    model = CourierConfiguration
+    extra = 0
+    can_delete = False
+    verbose_name = "Courier Configuration"
+    verbose_name_plural = "Courier Configuration"
 
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'created_at']
+    list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'shipdaak_pickup_warehouse_id', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'owner__username', 'email']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at', 'shipdaak_pickup_warehouse_id', 
+                      'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at']
+    inlines = [CourierConfigurationInline]
 
 
 @admin.register(Category)
@@ -90,3 +100,11 @@ class CouponAdmin(admin.ModelAdmin):
     list_filter = ['discount_type', 'is_active', 'valid_from', 'valid_until']
     search_fields = ['code', 'description']
     readonly_fields = ['used_count', 'created_at']
+
+
+@admin.register(CourierConfiguration)
+class CourierConfigurationAdmin(admin.ModelAdmin):
+    list_display = ['store', 'default_courier_name', 'default_courier_id', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['store__name', 'default_courier_name']
+    readonly_fields = ['created_at', 'updated_at']

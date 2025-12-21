@@ -236,6 +236,13 @@ def get_base_url():
 
 PHONEPE_BASE_URL = get_base_url()
 
+# Shipdaak Logistics API Configuration
+SHIPDAAK_API_BASE_URL = os.environ.get('SHIPDAAK_API_BASE_URL', '')  # Set this in environment or .env file
+SHIPDAAK_API_EMAIL = os.environ.get('SHIPDAAK_API_EMAIL', '')  # Set this in environment or .env file
+SHIPDAAK_API_PASSWORD = os.environ.get('SHIPDAAK_API_PASSWORD', '')  # Set this in environment or .env file
+SHIPDAAK_TOKEN_CACHE_KEY = 'shipdaak_access_token'
+SHIPDAAK_TOKEN_EXPIRY_CACHE_KEY = 'shipdaak_token_expiry'
+
 # CKEditor 5 Configuration
 customColorPalette = [
     {
