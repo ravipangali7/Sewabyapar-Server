@@ -5,6 +5,8 @@ Handles all Shipdaak API interactions for warehouse and shipment management
 import requests
 import logging
 import re
+import base64
+import json
 from typing import Dict, Any, Optional, List
 from django.conf import settings
 from django.core.cache import cache
@@ -29,19 +31,55 @@ class ShipdaakService:
         if not self.email or not self.password:
             logger.warning("SHIPDAAK_API_EMAIL or SHIPDAAK_API_PASSWORD not configured in settings")
     
-    def _get_access_token(self) -> Optional[str]:
+    def _decode_jwt_expiry(self, token: str) -> Optional[datetime]:
+        """
+        Decode JWT token to get expiry time
+        
+        Args:
+            token: JWT token string
+            
+        Returns:
+            Datetime of token expiry or None if decoding fails
+        """
+        try:
+            # JWT format: header.payload.signature
+            parts = token.split('.')
+            if len(parts) != 3:
+                return None
+            
+            # Decode payload (base64url)
+            payload = parts[1]
+            # Add padding if needed
+            padding = len(payload) % 4
+            if padding:
+                payload += '=' * (4 - padding)
+            
+            decoded = base64.urlsafe_b64decode(payload)
+            data = json.loads(decoded)
+            
+            # Get expiry (exp is Unix timestamp)
+            exp = data.get('exp')
+            if exp:
+                return datetime.fromtimestamp(exp, tz=timezone.utc)
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to decode JWT expiry: {str(e)}")
+            return None
+    
+    def _get_access_token(self, force_refresh: bool = False) -> Optional[str]:
         """
         Get access token from cache or generate new one
         Returns None if authentication fails
         """
-        # Check cache first
-        token = cache.get(self.token_cache_key)
-        expiry = cache.get(self.token_expiry_cache_key)
-        
-        if token and expiry:
-            # Check if token is still valid (with 5 minute buffer)
-            if timezone.now() < expiry - timedelta(minutes=5):
-                return token
+        # Check cache first (unless forcing refresh)
+        if not force_refresh:
+            token = cache.get(self.token_cache_key)
+            expiry = cache.get(self.token_expiry_cache_key)
+            
+            if token and expiry:
+                # Check if token is still valid (with 5 minute buffer)
+                if timezone.now() < expiry - timedelta(minutes=5):
+                    return token
         
         # Generate new token
         try:
@@ -55,19 +93,51 @@ class ShipdaakService:
             response.raise_for_status()
             
             data = response.json()
+            
+            # Check for error response first
+            if 'error' in data:
+                logger.error(f"Shipdaak authentication failed: {data.get('error')}")
+                # Clear any cached token
+                cache.delete(self.token_cache_key)
+                cache.delete(self.token_expiry_cache_key)
+                return None
+            
             access_token = data.get('access_token')
             
             if access_token:
-                # Cache token for 12 hours (tokens typically expire in 13 days based on Postman collection)
-                # But we'll refresh every 12 hours to be safe
-                cache.set(self.token_cache_key, access_token, 60 * 60 * 12)
-                cache.set(self.token_expiry_cache_key, timezone.now() + timedelta(hours=12), 60 * 60 * 12)
-                logger.info("Successfully obtained Shipdaak access token")
+                # Decode JWT to get actual expiry
+                expiry_datetime = self._decode_jwt_expiry(access_token)
+                
+                if expiry_datetime:
+                    # Cache until expiry (with 5 min buffer)
+                    cache_until = expiry_datetime - timedelta(minutes=5)
+                    cache_seconds = int((cache_until - timezone.now()).total_seconds())
+                    
+                    if cache_seconds > 0:
+                        cache.set(self.token_cache_key, access_token, cache_seconds)
+                        cache.set(self.token_expiry_cache_key, expiry_datetime, cache_seconds)
+                        logger.info(f"Successfully obtained Shipdaak access token, expires at {expiry_datetime}")
+                    else:
+                        logger.warning("Token already expired, not caching")
+                else:
+                    # Fallback: cache for 12 hours if can't decode expiry
+                    logger.warning("Could not decode JWT expiry, using 12 hour cache")
+                    cache.set(self.token_cache_key, access_token, 60 * 60 * 12)
+                    cache.set(self.token_expiry_cache_key, timezone.now() + timedelta(hours=12), 60 * 60 * 12)
+                
                 return access_token
             else:
                 logger.error(f"Shipdaak token response missing access_token: {data}")
+                # Clear cache on error
+                cache.delete(self.token_cache_key)
+                cache.delete(self.token_expiry_cache_key)
                 return None
                 
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Shipdaak token HTTP error: {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
+            cache.delete(self.token_cache_key)
+            cache.delete(self.token_expiry_cache_key)
+            return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to get Shipdaak access token: {str(e)}")
             return None
@@ -75,7 +145,8 @@ class ShipdaakService:
             logger.error(f"Unexpected error getting Shipdaak access token: {str(e)}")
             return None
     
-    def _make_request(self, method: str, endpoint: str, data: Optional[Dict] = None, params: Optional[Dict] = None) -> Optional[Dict]:
+    def _make_request(self, method: str, endpoint: str, data: Optional[Dict] = None, 
+                      params: Optional[Dict] = None, retry_on_401: bool = True) -> Optional[Dict]:
         """
         Make authenticated request to Shipdaak API
         
@@ -84,6 +155,7 @@ class ShipdaakService:
             endpoint: API endpoint (without base URL)
             data: Request body data (for POST/PUT)
             params: Query parameters (for GET)
+            retry_on_401: Whether to retry on 401 errors (prevents infinite loops)
         
         Returns:
             Response JSON data or None if request fails
@@ -113,11 +185,23 @@ class ShipdaakService:
                 logger.error(f"Unsupported HTTP method: {method}")
                 return None
             
+            # Handle 401 Unauthorized - token might be expired
+            if response.status_code == 401 and retry_on_401:
+                logger.warning(f"Received 401 Unauthorized, clearing token cache and retrying once")
+                # Clear cached token
+                cache.delete(self.token_cache_key)
+                cache.delete(self.token_expiry_cache_key)
+                # Retry once with fresh token
+                return self._make_request(method, endpoint, data, params, retry_on_401=False)
+            
             response.raise_for_status()
             return response.json()
             
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Shipdaak API HTTP error ({method} {endpoint}): {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
+            if e.response.status_code == 401:
+                logger.error(f"Shipdaak API authentication failed ({method} {endpoint}): 401 Unauthorized")
+            else:
+                logger.error(f"Shipdaak API HTTP error ({method} {endpoint}): {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
             return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Shipdaak API request error ({method} {endpoint}): {str(e)}")
