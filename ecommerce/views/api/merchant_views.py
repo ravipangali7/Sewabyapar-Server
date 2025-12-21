@@ -732,7 +732,7 @@ def merchant_shipments_track(request, awb_number):
                 'success': False,
                 'error': 'Failed to track shipment'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except Exception as e:
+    except Exception as e:
         print(f"[ERROR] Error tracking shipment {awb_number}: {str(e)}")
         traceback.print_exc()
         return Response({
@@ -793,7 +793,7 @@ def merchant_shipments_cancel(request):
                 'success': False,
                 'error': 'Failed to cancel shipment'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except Exception as e:
+    except Exception as e:
         print(f"[ERROR] Error cancelling shipment {awb_number}: {str(e)}")
         traceback.print_exc()
         return Response({
@@ -826,7 +826,7 @@ def merchant_couriers(request):
                 'success': False,
                 'error': 'Failed to fetch couriers'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except Exception as e:
+    except Exception as e:
         print(f"[ERROR] Error fetching couriers: {str(e)}")
         traceback.print_exc()
         return Response({
