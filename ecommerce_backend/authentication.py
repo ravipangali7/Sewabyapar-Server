@@ -10,24 +10,27 @@ class CsrfExemptTokenAuthentication(TokenAuthentication):
     Custom TokenAuthentication that explicitly exempts CSRF checks.
     This is necessary for mobile app API requests using token authentication.
     
-    For safe HTTP methods (GET, HEAD, OPTIONS), invalid tokens are treated as
-    no authentication (returns None) to allow IsAuthenticatedOrReadOnly to work.
-    For unsafe methods (POST, PUT, PATCH, DELETE), invalid tokens raise
-    AuthenticationFailed to enforce authentication.
+    When an Authorization header with a token is provided, it must be valid.
+    Only returns None when no Authorization header is present, allowing public endpoints.
     """
     
     def authenticate(self, request):
         """
         Authenticate the request using parent class and exempt from CSRF when token is valid.
-        For safe methods, invalid tokens are ignored to allow public read access.
+        If Authorization header is present, token must be valid (raises exception if invalid).
+        Only returns None when no Authorization header is provided.
         """
-        # Check if this is a safe method (read-only)
-        is_safe_method = request.method in ('GET', 'HEAD', 'OPTIONS')
+        # Check if Authorization header is present
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         
+        if not auth_header.startswith('Token '):
+            # No token provided - return None (allows unauthenticated access for public endpoints)
+            return None
+        
+        # Token is provided in Authorization header - must validate it strictly
         try:
             # Call parent authentication to validate token
-            # This will return None if no token, raise AuthenticationFailed if invalid, 
-            # or return (user, token) if valid
+            # This will raise AuthenticationFailed if invalid, or return (user, token) if valid
             auth_result = super().authenticate(request)
             
             # If authentication succeeded, exempt from CSRF
@@ -39,11 +42,8 @@ class CsrfExemptTokenAuthentication(TokenAuthentication):
             return auth_result
             
         except AuthenticationFailed:
-            # For safe methods, treat invalid token as no authentication
-            # This allows IsAuthenticatedOrReadOnly to permit the request
-            if is_safe_method:
-                return None
-            # For unsafe methods, re-raise to enforce authentication
+            # Invalid token - always raise exception regardless of HTTP method
+            # This ensures IsAuthenticated permission checks work correctly
             raise
     
     def enforce_csrf(self, request):
