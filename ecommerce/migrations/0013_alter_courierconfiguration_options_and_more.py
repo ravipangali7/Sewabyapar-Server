@@ -4,6 +4,25 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def copy_courier_data(apps, schema_editor):
+    """Copy data from default_courier_id/name to courier_id/name"""
+    CourierConfiguration = apps.get_model('ecommerce', 'CourierConfiguration')
+    for config in CourierConfiguration.objects.all():
+        config.courier_id = config.default_courier_id
+        config.courier_name = config.default_courier_name
+        config.is_default = True  # Mark existing as default
+        config.save()
+
+
+def reverse_copy_courier_data(apps, schema_editor):
+    """Reverse: copy back from courier_id/name to default_courier_id/name"""
+    CourierConfiguration = apps.get_model('ecommerce', 'CourierConfiguration')
+    for config in CourierConfiguration.objects.all():
+        config.default_courier_id = config.courier_id
+        config.default_courier_name = config.courier_name
+        config.save()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,25 +30,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterModelOptions(
-            name='courierconfiguration',
-            options={'ordering': ['priority', 'courier_name'], 'verbose_name': 'Courier Configuration', 'verbose_name_plural': 'Courier Configurations'},
-        ),
-        migrations.AlterUniqueTogether(
-            name='courierconfiguration',
-            unique_together={('store', 'courier_id')},
-        ),
+        # Step 1: Add new fields (nullable first, then we'll populate)
         migrations.AddField(
             model_name='courierconfiguration',
             name='courier_id',
-            field=models.IntegerField(default=1, help_text='Shipdaak courier ID'),
-            preserve_default=False,
+            field=models.IntegerField(null=True, help_text='Shipdaak courier ID'),
         ),
         migrations.AddField(
             model_name='courierconfiguration',
             name='courier_name',
-            field=models.CharField(default='Delhivery Surface 2 Kg', help_text='Courier name', max_length=100),
-            preserve_default=False,
+            field=models.CharField(max_length=100, null=True, help_text='Courier name'),
         ),
         migrations.AddField(
             model_name='courierconfiguration',
@@ -41,11 +51,26 @@ class Migration(migrations.Migration):
             name='priority',
             field=models.IntegerField(default=0, help_text='Priority order (lower = higher priority)'),
         ),
+        # Step 2: Copy data from old fields to new fields
+        migrations.RunPython(copy_courier_data, reverse_copy_courier_data),
+        # Step 3: Make new fields non-nullable
+        migrations.AlterField(
+            model_name='courierconfiguration',
+            name='courier_id',
+            field=models.IntegerField(help_text='Shipdaak courier ID'),
+        ),
+        migrations.AlterField(
+            model_name='courierconfiguration',
+            name='courier_name',
+            field=models.CharField(max_length=100, help_text='Courier name'),
+        ),
+        # Step 4: Change relationship from OneToOne to ForeignKey
         migrations.AlterField(
             model_name='courierconfiguration',
             name='store',
             field=models.ForeignKey(help_text='Store for this courier configuration', on_delete=django.db.models.deletion.CASCADE, related_name='courier_configs', to='ecommerce.store'),
         ),
+        # Step 5: Remove old fields
         migrations.RemoveField(
             model_name='courierconfiguration',
             name='default_courier_id',
@@ -53,5 +78,15 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='courierconfiguration',
             name='default_courier_name',
+        ),
+        # Step 6: Update model options
+        migrations.AlterModelOptions(
+            name='courierconfiguration',
+            options={'ordering': ['priority', 'courier_name'], 'verbose_name': 'Courier Configuration', 'verbose_name_plural': 'Courier Configurations'},
+        ),
+        # Step 7: Set unique_together (AFTER all fields exist and data is migrated)
+        migrations.AlterUniqueTogether(
+            name='courierconfiguration',
+            unique_together={('store', 'courier_id')},
         ),
     ]
