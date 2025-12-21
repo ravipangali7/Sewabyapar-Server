@@ -291,11 +291,13 @@ class ShipdaakService:
     
     def create_shipment(self, order, courier_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
-        Create shipment in Shipdaak from order data
+        Create shipment in Shipdaak from order data with automatic courier fallback
         
         Args:
             order: Order model instance
             courier_id: Optional courier ID to use. If not provided, uses store's default courier.
+                       If the selected courier fails due to "Pincode not serviceable", 
+                       automatically tries other configured couriers.
         
         Returns:
             Dict with shipment data (awb_number, shipment_id, label_url, etc.) or None if fails
@@ -314,46 +316,50 @@ class ShipdaakService:
                 sys.stdout.flush()
                 return None
             
-            # Get courier - use provided courier_id or fallback to default
-            courier_name = None
-            if courier_id:
-                # Validate courier exists in store's courier configs
-                courier_config = CourierConfiguration.objects.filter(
-                    store=store,
-                    courier_id=courier_id,
-                    is_active=True
-                ).first()
-                if courier_config:
-                    courier_id = courier_config.courier_id
-                    courier_name = courier_config.courier_name
-                else:
-                    print(f"[WARNING] Courier ID {courier_id} not found or inactive for store {store.id}, using default")
-                    sys.stdout.flush()
-                    courier_id = None
+            # Get all active couriers for this store, ordered by priority
+            all_courier_configs = CourierConfiguration.objects.filter(
+                store=store,
+                is_active=True
+            ).order_by('priority', 'courier_name')
             
-            if not courier_id:
-                # Get default courier from store
-                courier_config = CourierConfiguration.objects.filter(
-                    store=store,
-                    is_default=True,
-                    is_active=True
-                ).first()
-                if courier_config:
-                    courier_id = courier_config.courier_id
-                    courier_name = courier_config.courier_name
-                else:
-                    # Try to get any active courier as fallback
-                    courier_config = CourierConfiguration.objects.filter(
-                        store=store,
-                        is_active=True
-                    ).order_by('priority', 'courier_name').first()
-                    if courier_config:
-                        courier_id = courier_config.courier_id
-                        courier_name = courier_config.courier_name
-            
-            if not courier_id:
+            if not all_courier_configs.exists():
                 print(f"[WARNING] No courier configured for store {store.id}, shipment creation may fail")
                 sys.stdout.flush()
+                # Continue anyway - might work without courier or fail gracefully
+            
+            # Build list of couriers to try
+            couriers_to_try = []
+            
+            if courier_id:
+                # Find the requested courier and add it first
+                requested_courier = all_courier_configs.filter(courier_id=courier_id).first()
+                if requested_courier:
+                    couriers_to_try.append(requested_courier)
+                    # Add other couriers after the requested one
+                    for config in all_courier_configs:
+                        if config.courier_id != courier_id:
+                            couriers_to_try.append(config)
+                else:
+                    print(f"[WARNING] Courier ID {courier_id} not found or inactive for store {store.id}, trying all available couriers")
+                    sys.stdout.flush()
+                    couriers_to_try = list(all_courier_configs)
+            else:
+                # No specific courier requested - try default first, then others
+                default_courier = all_courier_configs.filter(is_default=True).first()
+                if default_courier:
+                    couriers_to_try.append(default_courier)
+                    # Add other couriers after default
+                    for config in all_courier_configs:
+                        if config.courier_id != default_courier.courier_id:
+                            couriers_to_try.append(config)
+                else:
+                    # No default, just use all couriers in priority order
+                    couriers_to_try = list(all_courier_configs)
+            
+            if not couriers_to_try:
+                print(f"[ERROR] No active couriers found for store {store.id}. Cannot create shipment without a courier.")
+                sys.stdout.flush()
+                return None
             
             # Calculate weight from order items (default 500g if not available)
             # In real implementation, you might store weight per product
@@ -390,10 +396,6 @@ class ShipdaakService:
                 sys.stdout.flush()
                 return None
             
-            # Log pincode and courier for debugging
-            print(f"[INFO] Creating Shipdaak shipment for order {order.id}: pincode={pincode}, courier_id={courier_id}, courier_name={courier_name}, store={store.id}")
-            sys.stdout.flush()
-            
             # Fix phone number - ensure exactly 10 digits
             phone = order.phone
             # Remove all non-digit characters
@@ -422,8 +424,8 @@ class ShipdaakService:
             if pay_type == "cod":
                 cod_fee = float(order.total_amount) * 0.02  # 2% COD fee
             
-            # Prepare shipment data
-            shipment_data = {
+            # Prepare base shipment data (without courier - will be added per attempt)
+            base_shipment_data = {
                 "order_no": order.order_number,
                 "pay_type": pay_type,
                 "weight": weight,
@@ -436,7 +438,6 @@ class ShipdaakService:
                 "cod_fee": cod_fee,
                 "discount_amount": 0,  # Can be calculated from coupons if needed
                 "total_amount": float(order.total_amount),
-                "courier": courier_id,
                 "pickup_warehouse": store.shipdaak_pickup_warehouse_id,
                 "rto_warehouse": store.shipdaak_rto_warehouse_id or store.shipdaak_pickup_warehouse_id,
                 "tags": "",
@@ -457,32 +458,69 @@ class ShipdaakService:
                 "order_items": order_items
             }
             
-            response = self._make_request('POST', '/v1/shipments/generate-shipment', data=shipment_data)
+            # Try each courier in order until one succeeds
+            last_error_message = None
+            last_error_response = None
             
-            if response and response.get('status') and response.get('data'):
-                data = response['data']
-                print(f"[INFO] Successfully created Shipdaak shipment for order {order.id}, AWB: {data.get('awb_number')}")
+            for courier_config in couriers_to_try:
+                current_courier_id = courier_config.courier_id
+                current_courier_name = courier_config.courier_name
+                
+                print(f"[INFO] Trying to create Shipdaak shipment for order {order.id}: pincode={pincode}, courier_id={current_courier_id}, courier_name={current_courier_name}, store={store.id}")
                 sys.stdout.flush()
-                return {
-                    'awb_number': data.get('awb_number'),
-                    'shipment_id': data.get('shipment_id'),
-                    'order_id': data.get('order_id'),
-                    'label': data.get('label'),
-                    'manifest': data.get('manifest'),
-                    'status': data.get('status'),
-                    'courier_id': data.get('courier_id'),
-                    'courier_name': data.get('courier_name')
-                }
-            else:
-                # Enhanced error logging with pincode and courier details
-                error_message = response.get('message', 'Unknown error') if response else 'No response from API'
-                print(
-                    f"[ERROR] Shipdaak shipment creation failed for order {order.id}: {error_message}. "
-                    f"Pincode: {pincode}, Courier ID: {courier_id}, Courier Name: {courier_name}, "
-                    f"Store: {store.name} (ID: {store.id}), Full response: {response}"
-                )
-                sys.stdout.flush()
-                return None
+                
+                # Add courier to shipment data
+                shipment_data = base_shipment_data.copy()
+                shipment_data["courier"] = current_courier_id
+                
+                response = self._make_request('POST', '/v1/shipments/generate-shipment', data=shipment_data)
+                
+                if response and response.get('status') and response.get('data'):
+                    data = response['data']
+                    print(f"[INFO] Successfully created Shipdaak shipment for order {order.id} with courier {current_courier_name} (ID: {current_courier_id}), AWB: {data.get('awb_number')}")
+                    sys.stdout.flush()
+                    return {
+                        'awb_number': data.get('awb_number'),
+                        'shipment_id': data.get('shipment_id'),
+                        'order_id': data.get('order_id'),
+                        'label': data.get('label'),
+                        'manifest': data.get('manifest'),
+                        'status': data.get('status'),
+                        'courier_id': data.get('courier_id'),
+                        'courier_name': data.get('courier_name')
+                    }
+                else:
+                    # Check if error is "Pincode not serviceable" - if so, try next courier
+                    error_message = response.get('message', 'Unknown error') if response else 'No response from API'
+                    last_error_message = error_message
+                    last_error_response = response
+                    
+                    # Check if this is a serviceability issue
+                    is_serviceability_error = (
+                        'pincode' in error_message.lower() and 
+                        ('not serviceable' in error_message.lower() or 'not serviced' in error_message.lower())
+                    )
+                    
+                    if is_serviceability_error:
+                        print(f"[WARNING] Courier {current_courier_name} (ID: {current_courier_id}) does not service pincode {pincode}. Trying next courier...")
+                        sys.stdout.flush()
+                        continue  # Try next courier
+                    else:
+                        # Non-serviceability error - log and try next courier anyway (might be temporary issue)
+                        print(f"[WARNING] Courier {current_courier_name} (ID: {current_courier_id}) failed with error: {error_message}. Trying next courier...")
+                        sys.stdout.flush()
+                        continue
+            
+            # All couriers failed
+            print(
+                f"[ERROR] Shipdaak shipment creation failed for order {order.id} with all {len(couriers_to_try)} courier(s). "
+                f"Last error: {last_error_message}. "
+                f"Pincode: {pincode}, Store: {store.name} (ID: {store.id}), "
+                f"Tried couriers: {[f'{c.courier_name} (ID: {c.courier_id})' for c in couriers_to_try]}, "
+                f"Last response: {last_error_response}"
+            )
+            sys.stdout.flush()
+            return None
                 
         except Exception as e:
             print(f"[ERROR] Error creating Shipdaak shipment for order {order.id}: {str(e)}")
