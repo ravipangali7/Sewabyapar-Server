@@ -44,3 +44,43 @@ def cms_page_by_slug(request, slug):
             'error': 'Failed to get page'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])  # Allow public access for contact form
+def contact_form_submit(request):
+    """Handle contact form submission"""
+    try:
+        name = request.data.get('name', '').strip()
+        email = request.data.get('email', '').strip()
+        subject = request.data.get('subject', '').strip()
+        message = request.data.get('message', '').strip()
+        
+        # Basic validation
+        if not all([name, email, subject, message]):
+            return Response({
+                'success': False,
+                'error': 'All fields are required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Basic email validation
+        if '@' not in email or '.' not in email.split('@')[-1]:
+            return Response({
+                'success': False,
+                'error': 'Please enter a valid email address.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Here you could save to database, send email, etc.
+        # For now, just return success (matching website behavior)
+        logger.info(f"Contact form submission from {name} ({email}): {subject}")
+        
+        return Response({
+            'success': True,
+            'message': 'Thank you for your message. We will get back to you soon!'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error processing contact form: {str(e)}")
+        return Response({
+            'success': False,
+            'error': 'Failed to submit contact form. Please try again later.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

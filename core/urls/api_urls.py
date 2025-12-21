@@ -38,4 +38,7 @@ urlpatterns = [
     
     # CMS Pages URLs
     path('cms-pages/<slug:slug>/', cms_views.cms_page_by_slug, name='cms-page-by-slug'),
+    
+    # Contact Form URL
+    path('contact/submit/', cms_views.contact_form_submit, name='contact-submit'),
 ]
