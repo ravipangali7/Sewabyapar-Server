@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 def check_merchant_permission(user):
     """Check if user is a merchant"""
     if not user.is_merchant:
+        logger.warning(f'Non-merchant user {user.id} ({user.phone}) attempted to access merchant endpoint')
         return False
     return True
 
@@ -26,9 +27,14 @@ def check_merchant_permission(user):
 @permission_classes([permissions.IsAuthenticated])
 def merchant_products(request):
     """List merchant's products or create a new product"""
+    # Log authentication status for debugging
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header:
+        logger.info(f'Merchant products request from user {request.user.id} ({request.user.phone})')
+    
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     if request.method == 'GET':
@@ -170,9 +176,14 @@ def merchant_products(request):
 @permission_classes([permissions.IsAuthenticated])
 def merchant_product_detail(request, pk):
     """Get, update or delete a merchant's product"""
+    # Log authentication status for debugging
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header:
+        logger.info(f'Merchant product detail request from user {request.user.id} ({request.user.phone}) for product {pk}')
+    
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get product and ensure it belongs to merchant's store
@@ -204,9 +215,14 @@ def merchant_product_detail(request, pk):
 @permission_classes([permissions.IsAuthenticated])
 def merchant_orders(request):
     """List orders for merchant's stores"""
+    # Log authentication status for debugging
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header:
+        logger.info(f'Merchant orders request from user {request.user.id} ({request.user.phone})')
+    
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get all stores owned by the merchant
@@ -262,9 +278,14 @@ def merchant_orders(request):
 @permission_classes([permissions.IsAuthenticated])
 def merchant_order_detail(request, pk):
     """Get order details for merchant"""
+    # Log authentication status for debugging
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header:
+        logger.info(f'Merchant order detail request from user {request.user.id} ({request.user.phone}) for order {pk}')
+    
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get stores owned by merchant
@@ -283,7 +304,7 @@ def merchant_order_update_status(request, pk):
     """Update order status (merchant can update status)"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get stores owned by merchant
@@ -327,7 +348,7 @@ def merchant_accept_order(request, pk):
     """Accept order, set merchant_ready_date, status='accepted'"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get stores owned by merchant
@@ -403,7 +424,7 @@ def merchant_reject_order(request, pk):
     """Reject order, set reject_reason, status='rejected'"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get stores owned by merchant
@@ -443,7 +464,7 @@ def merchant_stats(request):
     """Get merchant statistics"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Get all stores owned by the merchant
@@ -542,7 +563,7 @@ def merchant_stores(request):
     """List merchant's stores or create a new store"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     if request.method == 'GET':
@@ -592,7 +613,7 @@ def merchant_store_detail(request, pk):
     """Get, update or delete merchant's store"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     store = get_object_or_404(Store, pk=pk, owner=request.user)
@@ -639,7 +660,7 @@ def merchant_shipments_track(request, awb_number):
     """Track shipment by AWB number"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     # Verify that the AWB belongs to one of merchant's orders
@@ -683,7 +704,7 @@ def merchant_shipments_cancel(request):
     """Cancel shipment by AWB number"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     awb_number = request.data.get('awb_number')
@@ -743,7 +764,7 @@ def merchant_couriers(request):
     """Get list of available couriers from Shipdaak"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:

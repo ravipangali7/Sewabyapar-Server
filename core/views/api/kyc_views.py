@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 @permission_classes([permissions.IsAuthenticated])
 def kyc_submit(request):
     """Submit KYC documents"""
+    # Log authentication status for debugging
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if not auth_header:
+        logger.warning('KYC submit request without Authorization header')
+    else:
+        logger.info(f'KYC submit request from user {request.user.id} ({request.user.phone})')
+    
     user = request.user
     
     # Check if already verified
@@ -68,6 +75,13 @@ def kyc_submit(request):
 @permission_classes([permissions.IsAuthenticated])
 def kyc_status(request):
     """Get current KYC status"""
+    # Log authentication status for debugging
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if not auth_header:
+        logger.warning('KYC status request without Authorization header')
+    else:
+        logger.info(f'KYC status request from user {request.user.id} ({request.user.phone})')
+    
     user = request.user
     serializer = KYCStatusSerializer(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
