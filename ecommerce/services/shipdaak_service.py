@@ -345,8 +345,26 @@ class ShipdaakService:
                 logger.error(f"Order {order.id} has no shipping address")
                 return None
             
-            # Extract pincode from address
-            pincode = shipping_address.zip_code if hasattr(shipping_address, 'zip_code') else "110001"
+            # Extract and validate pincode from address
+            pincode = shipping_address.zip_code if hasattr(shipping_address, 'zip_code') else None
+            
+            # Clean and validate pincode
+            if pincode:
+                # Remove all non-digit characters
+                pincode = re.sub(r'\D', '', str(pincode))
+                # Take only first 6 digits
+                if len(pincode) >= 6:
+                    pincode = pincode[:6]
+                elif len(pincode) > 0:
+                    # Pad with zeros if less than 6 digits
+                    pincode = pincode.zfill(6)
+                else:
+                    pincode = None
+            
+            # Validate pincode is exactly 6 digits
+            if not pincode or len(pincode) != 6 or not pincode.isdigit():
+                logger.error(f"Order {order.id} has invalid or missing pincode in shipping address. Pincode: {shipping_address.zip_code if hasattr(shipping_address, 'zip_code') else 'None'}")
+                return None
             
             # Fix phone number - ensure exactly 10 digits
             phone = order.phone
