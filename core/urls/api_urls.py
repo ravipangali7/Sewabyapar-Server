@@ -41,4 +41,7 @@ urlpatterns = [
     
     # Contact Form URL
     path('contact/submit/', cms_views.contact_form_submit, name='contact-submit'),
+    
+    # Website Settings URL
+    path('website-settings/', cms_views.website_settings, name='website-settings'),
 ]

@@ -2,7 +2,7 @@ from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from website.models import CMSPages
+from website.models import CMSPages, MySetting
 import logging
 
 logger = logging.getLogger(__name__)
@@ -83,4 +83,45 @@ def contact_form_submit(request):
         return Response({
             'success': False,
             'error': 'Failed to submit contact form. Please try again later.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])  # Allow public access for website settings
+def website_settings(request):
+    """Get website settings, specifically about section data"""
+    try:
+        setting = MySetting.objects.first()
+        
+        if not setting:
+            return Response({
+                'success': True,
+                'data': {
+                    'about_title': None,
+                    'about_tag': None,
+                    'about_image': None,
+                    'about_description': None,
+                }
+            }, status=status.HTTP_200_OK)
+        
+        # Build image URL if image exists
+        about_image_url = None
+        if setting.about_image:
+            about_image_url = request.build_absolute_uri(setting.about_image.url)
+        
+        return Response({
+            'success': True,
+            'data': {
+                'about_title': setting.about_title,
+                'about_tag': setting.about_tag,
+                'about_image': about_image_url,
+                'about_description': setting.about_description,  # HTML content from CKEditor
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error getting website settings: {str(e)}")
+        return Response({
+            'success': False,
+            'error': 'Failed to get website settings'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
