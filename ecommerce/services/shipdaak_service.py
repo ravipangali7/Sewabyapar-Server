@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, List
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class ShipdaakService:
             # Get expiry (exp is Unix timestamp)
             exp = data.get('exp')
             if exp:
-                return datetime.fromtimestamp(exp, tz=timezone.utc)
+                return datetime.fromtimestamp(exp, tz=dt_timezone.utc)
             return None
         except Exception as e:
             logger.warning(f"Failed to decode JWT expiry: {str(e)}")
