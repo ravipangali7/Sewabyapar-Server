@@ -31,7 +31,7 @@ class CourierConfigurationListView(StaffRequiredMixin, ListView):
         if search:
             queryset = queryset.filter(
                 Q(store__name__icontains=search) |
-                Q(default_courier_name__icontains=search)
+                Q(courier_name__icontains=search)
             )
         
         if is_active == 'yes':

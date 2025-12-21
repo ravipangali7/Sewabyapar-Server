@@ -45,6 +45,8 @@
                                 <th>Store</th>
                                 <th>Courier Name</th>
                                 <th>Courier ID</th>
+                                <th>Default</th>
+                                <th>Priority</th>
                                 <th>Status</th>
                                 <th>Created</th>
                                 <th>Actions</th>
@@ -54,8 +56,16 @@
                             {% for config in configs %}
                             <tr>
                                 <td><strong>{{ config.store.name }}</strong></td>
-                                <td>{{ config.default_courier_name }}</td>
-                                <td><span class="badge bg-info">{{ config.default_courier_id }}</span></td>
+                                <td>{{ config.courier_name }}</td>
+                                <td><span class="badge bg-info">{{ config.courier_id }}</span></td>
+                                <td>
+                                    {% if config.is_default %}
+                                        <span class="badge bg-primary">Default</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ config.priority }}</td>
                                 <td>
                                     {% if config.is_active %}
                                         <span class="badge bg-success">Active</span>
@@ -78,7 +88,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="text-center">No courier configurations found</td>
+                                <td colspan="8" class="text-center">No courier configurations found</td>
                             </tr>
                             {% endfor %}
                         </tbody>

@@ -15,7 +15,7 @@
                 </div>
                 <div class="card-body">
                     <p>Are you sure you want to delete the courier configuration for <strong>{{ object.store.name }}</strong>?</p>
-                    <p class="text-muted">Courier: {{ object.default_courier_name }} (ID: {{ object.default_courier_id }})</p>
+                    <p class="text-muted">Courier: {{ object.courier_name }} (ID: {{ object.courier_id }})</p>
                     <form method="post">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">

@@ -380,6 +380,30 @@ def merchant_accept_order(request, pk):
     else:
         order.merchant_ready_date = timezone.now()
     
+    # Get courier_id from request if provided
+    courier_id = request.data.get('courier_id')
+    courier_config = None
+    if courier_id:
+        # Validate courier belongs to merchant's store
+        from ecommerce.models import CourierConfiguration
+        courier_config = CourierConfiguration.objects.filter(
+            store=order.merchant,
+            courier_id=courier_id,
+            is_active=True
+        ).first()
+        if not courier_config:
+            return Response({
+                'error': f'Courier ID {courier_id} is not available for this store'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        # Get default courier if no courier_id provided
+        from ecommerce.models import CourierConfiguration
+        courier_config = CourierConfiguration.objects.filter(
+            store=order.merchant,
+            is_default=True,
+            is_active=True
+        ).first()
+    
     # Accept the order
     order.status = 'accepted'
     order.reject_reason = None  # Clear any previous reject reason
@@ -392,7 +416,9 @@ def merchant_accept_order(request, pk):
         try:
             from ecommerce.services.shipdaak_service import ShipdaakService
             shipdaak = ShipdaakService()
-            shipment_data = shipdaak.create_shipment(order)
+            # Pass courier_id if provided or from default courier
+            selected_courier_id = courier_config.courier_id if courier_config else None
+            shipment_data = shipdaak.create_shipment(order, courier_id=selected_courier_id)
             if shipment_data:
                 order.shipdaak_awb_number = shipment_data.get('awb_number')
                 order.shipdaak_shipment_id = shipment_data.get('shipment_id')
@@ -788,4 +814,36 @@ def merchant_couriers(request):
             'success': False,
             'error': 'An error occurred while fetching couriers'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_get_available_couriers(request):
+    """Get available couriers configured for merchant's store"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    if not stores.exists():
+        return Response({
+            'error': 'No active store found'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    store = stores.first()
+    from ecommerce.models import CourierConfiguration
+    courier_configs = CourierConfiguration.objects.filter(
+        store=store,
+        is_active=True
+    ).order_by('priority', 'courier_name')
+    
+    couriers = [{
+        'id': config.courier_id,
+        'name': config.courier_name,
+        'is_default': config.is_default,
+        'priority': config.priority
+    } for config in courier_configs]
+    
+    return Response({'couriers': couriers})
 

@@ -64,5 +64,6 @@ urlpatterns = [
     path('merchant/shipments/track/<str:awb_number>/', merchant_views.merchant_shipments_track, name='merchant-shipments-track'),
     path('merchant/shipments/cancel/', merchant_views.merchant_shipments_cancel, name='merchant-shipments-cancel'),
     path('merchant/couriers/', merchant_views.merchant_couriers, name='merchant-couriers'),
+    path('merchant/couriers/available/', merchant_views.merchant_get_available_couriers, name='merchant-get-available-couriers'),
 ]
 

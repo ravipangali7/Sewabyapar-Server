@@ -31,11 +31,25 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Courier Name:</strong></div>
-                        <div class="col-sm-8">{{ config.default_courier_name }}</div>
+                        <div class="col-sm-8">{{ config.courier_name }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Courier ID:</strong></div>
-                        <div class="col-sm-8"><span class="badge bg-info fs-6">{{ config.default_courier_id }}</span></div>
+                        <div class="col-sm-8"><span class="badge bg-info fs-6">{{ config.courier_id }}</span></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Is Default:</strong></div>
+                        <div class="col-sm-8">
+                            {% if config.is_default %}
+                                <span class="badge bg-primary">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Priority:</strong></div>
+                        <div class="col-sm-8">{{ config.priority }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Status:</strong></div>

@@ -271,17 +271,20 @@ class ShipdaakService:
             logger.error(f"Error creating Shipdaak warehouse for store {store.id}: {str(e)}", exc_info=True)
             return None
     
-    def create_shipment(self, order) -> Optional[Dict[str, Any]]:
+    def create_shipment(self, order, courier_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         Create shipment in Shipdaak from order data
         
         Args:
             order: Order model instance
+            courier_id: Optional courier ID to use. If not provided, uses store's default courier.
         
         Returns:
             Dict with shipment data (awb_number, shipment_id, label_url, etc.) or None if fails
         """
         try:
+            from ecommerce.models import CourierConfiguration
+            
             store = order.merchant
             if not store:
                 logger.error(f"Order {order.id} has no merchant/store")
@@ -291,20 +294,44 @@ class ShipdaakService:
                 logger.error(f"Store {store.id} has no Shipdaak warehouse ID")
                 return None
             
-            # Get courier configuration for this store
-            courier_id = None
+            # Get courier - use provided courier_id or fallback to default
             courier_name = None
-            try:
-                courier_config = store.courier_config
-                if courier_config and courier_config.is_active:
-                    courier_id = courier_config.default_courier_id
-                    courier_name = courier_config.default_courier_name
-            except:
-                pass  # No courier config, will use default or fail
+            if courier_id:
+                # Validate courier exists in store's courier configs
+                courier_config = CourierConfiguration.objects.filter(
+                    store=store,
+                    courier_id=courier_id,
+                    is_active=True
+                ).first()
+                if courier_config:
+                    courier_id = courier_config.courier_id
+                    courier_name = courier_config.courier_name
+                else:
+                    logger.warning(f"Courier ID {courier_id} not found or inactive for store {store.id}, using default")
+                    courier_id = None
+            
+            if not courier_id:
+                # Get default courier from store
+                courier_config = CourierConfiguration.objects.filter(
+                    store=store,
+                    is_default=True,
+                    is_active=True
+                ).first()
+                if courier_config:
+                    courier_id = courier_config.courier_id
+                    courier_name = courier_config.courier_name
+                else:
+                    # Try to get any active courier as fallback
+                    courier_config = CourierConfiguration.objects.filter(
+                        store=store,
+                        is_active=True
+                    ).order_by('priority', 'courier_name').first()
+                    if courier_config:
+                        courier_id = courier_config.courier_id
+                        courier_name = courier_config.courier_name
             
             if not courier_id:
                 logger.warning(f"No courier configured for store {store.id}, shipment creation may fail")
-                # You might want to get a default courier or raise an error
             
             # Calculate weight from order items (default 500g if not available)
             # In real implementation, you might store weight per product
@@ -320,6 +347,16 @@ class ShipdaakService:
             
             # Extract pincode from address
             pincode = shipping_address.zip_code if hasattr(shipping_address, 'zip_code') else "110001"
+            
+            # Fix phone number - ensure exactly 10 digits
+            phone = order.phone
+            # Remove all non-digit characters
+            phone_digits = re.sub(r'\D', '', phone)
+            # Take last 10 digits if longer, pad with 0 if shorter
+            if len(phone_digits) > 10:
+                phone_digits = phone_digits[-10:]
+            elif len(phone_digits) < 10:
+                phone_digits = phone_digits.zfill(10)
             
             # Prepare order items
             order_items = []
@@ -368,7 +405,7 @@ class ShipdaakService:
                     "city": shipping_address.city if hasattr(shipping_address, 'city') else "",
                     "state": shipping_address.state if hasattr(shipping_address, 'state') else "",
                     "pincode": pincode,
-                    "phone": order.phone,
+                    "phone": phone_digits,  # Use normalized phone number
                     "shipping_gst_number": ""
                 },
                 "order_items": order_items

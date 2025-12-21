@@ -5,14 +5,6 @@ from .models import (
 )
 
 
-class CourierConfigurationInline(admin.StackedInline):
-    model = CourierConfiguration
-    extra = 0
-    can_delete = False
-    verbose_name = "Courier Configuration"
-    verbose_name_plural = "Courier Configuration"
-
-
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'shipdaak_pickup_warehouse_id', 'created_at']
@@ -20,7 +12,6 @@ class StoreAdmin(admin.ModelAdmin):
     search_fields = ['name', 'owner__username', 'email']
     readonly_fields = ['created_at', 'updated_at', 'shipdaak_pickup_warehouse_id', 
                       'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at']
-    inlines = [CourierConfigurationInline]
 
 
 @admin.register(Category)
@@ -104,7 +95,8 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(CourierConfiguration)
 class CourierConfigurationAdmin(admin.ModelAdmin):
-    list_display = ['store', 'default_courier_name', 'default_courier_id', 'is_active', 'created_at']
-    list_filter = ['is_active', 'created_at']
-    search_fields = ['store__name', 'default_courier_name']
+    list_display = ['store', 'courier_name', 'courier_id', 'is_default', 'is_active', 'priority', 'created_at']
+    list_filter = ['is_active', 'is_default', 'store', 'created_at']
+    search_fields = ['store__name', 'courier_name']
     readonly_fields = ['created_at', 'updated_at']
+    list_editable = ['is_default', 'is_active', 'priority']
