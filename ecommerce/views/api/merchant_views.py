@@ -126,6 +126,15 @@ def merchant_products(request):
             store_id = store.id if hasattr(store, 'id') else store
             store = get_object_or_404(Store, id=store_id, owner=request.user)
             
+            # Check if warehouse exists for this store
+            warehouse_warning = None
+            if not store.shipdaak_pickup_warehouse_id:
+                warehouse_warning = (
+                    f'Warning: Warehouse not created for store "{store.name}". '
+                    f'Please update your store to create warehouse in Shipdaak. '
+                    f'Products can still be added, but shipments cannot be created until warehouse is set up.'
+                )
+            
             # Update validated_data with the verified store
             serializer.validated_data['store'] = store
             
@@ -146,8 +155,11 @@ def merchant_products(request):
                         alt_text=f"{product.name} - Image {index + 1}"
                     )
             
-            return Response(ProductSerializer(product, context={'request': request}).data, 
-                          status=status.HTTP_201_CREATED)
+            response_data = ProductSerializer(product, context={'request': request}).data
+            if warehouse_warning:
+                response_data['warning'] = warehouse_warning
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
         
         # Log validation errors for debugging
         logger.error(f"Product creation validation errors: {serializer.errors}")
@@ -595,6 +607,24 @@ def merchant_store_detail(request, pk):
                                     context={'request': request})
         if serializer.is_valid():
             serializer.save()
+            
+            # Auto-create warehouse if it doesn't exist
+            if not store.shipdaak_pickup_warehouse_id:
+                try:
+                    from ecommerce.services.shipdaak_service import ShipdaakService
+                    shipdaak = ShipdaakService()
+                    warehouse_data = shipdaak.create_warehouse(store)
+                    if warehouse_data:
+                        store.shipdaak_pickup_warehouse_id = warehouse_data.get('pickup_warehouse_id')
+                        store.shipdaak_rto_warehouse_id = warehouse_data.get('rto_warehouse_id')
+                        store.shipdaak_warehouse_created_at = timezone.now()
+                        store.save(update_fields=['shipdaak_pickup_warehouse_id', 
+                                                'shipdaak_rto_warehouse_id', 
+                                                'shipdaak_warehouse_created_at'])
+                        logger.info(f"Successfully created Shipdaak warehouse for store {store.id} on update")
+                except Exception as e:
+                    logger.error(f"Error creating Shipdaak warehouse for store {store.id} on update: {str(e)}", exc_info=True)
+            
             return Response(StoreSerializer(store, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     

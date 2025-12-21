@@ -1,6 +1,7 @@
 """
 Store management views
 """
+import logging
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
@@ -8,6 +9,8 @@ from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Store
 from myadmin.forms.ecommerce_forms import StoreForm
+
+logger = logging.getLogger(__name__)
 
 
 class StoreListView(StaffRequiredMixin, ListView):
@@ -62,8 +65,32 @@ class StoreUpdateView(StaffRequiredMixin, UpdateView):
     template_name = 'admin/ecommerce/store_form.html'
     
     def form_valid(self, form):
-        messages.success(self.request, 'Store updated successfully.')
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        
+        # Auto-create warehouse if it doesn't exist
+        if not self.object.shipdaak_pickup_warehouse_id:
+            try:
+                from ecommerce.services.shipdaak_service import ShipdaakService
+                from django.utils import timezone
+                shipdaak = ShipdaakService()
+                warehouse_data = shipdaak.create_warehouse(self.object)
+                if warehouse_data:
+                    self.object.shipdaak_pickup_warehouse_id = warehouse_data.get('pickup_warehouse_id')
+                    self.object.shipdaak_rto_warehouse_id = warehouse_data.get('rto_warehouse_id')
+                    self.object.shipdaak_warehouse_created_at = timezone.now()
+                    self.object.save(update_fields=['shipdaak_pickup_warehouse_id', 
+                                                   'shipdaak_rto_warehouse_id', 
+                                                   'shipdaak_warehouse_created_at'])
+                    messages.success(self.request, 'Store updated and warehouse created successfully in Shipdaak.')
+                else:
+                    messages.warning(self.request, 'Store updated, but warehouse creation in Shipdaak failed.')
+            except Exception as e:
+                logger.error(f"Error creating Shipdaak warehouse for store {self.object.id} on update: {str(e)}", exc_info=True)
+                messages.warning(self.request, f'Store updated, but warehouse creation failed: {str(e)}')
+        else:
+            messages.success(self.request, 'Store updated successfully.')
+        
+        return response
     
     def get_success_url(self):
         return reverse_lazy('myadmin:ecommerce:store_detail', kwargs={'pk': self.object.pk})
