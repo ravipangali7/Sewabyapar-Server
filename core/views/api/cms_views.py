@@ -89,7 +89,7 @@ def contact_form_submit(request):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])  # Allow public access for website settings
 def website_settings(request):
-    """Get website settings, specifically about section data"""
+    """Get website settings, including about section and contact information"""
     try:
         setting = MySetting.objects.first()
         
@@ -101,6 +101,10 @@ def website_settings(request):
                     'about_tag': None,
                     'about_image': None,
                     'about_description': None,
+                    'phone': None,
+                    'email': None,
+                    'address': None,
+                    'website': None,
                 }
             }, status=status.HTTP_200_OK)
         
@@ -116,6 +120,10 @@ def website_settings(request):
                 'about_tag': setting.about_tag,
                 'about_image': about_image_url,
                 'about_description': setting.about_description,  # HTML content from CKEditor
+                'phone': setting.phone,
+                'email': setting.email,
+                'address': setting.address,
+                'website': setting.website,
             }
         }, status=status.HTTP_200_OK)
         
