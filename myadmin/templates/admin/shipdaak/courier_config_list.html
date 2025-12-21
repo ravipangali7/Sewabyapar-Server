@@ -1,0 +1,98 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Courier Configuration</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:shipdaak:courier_config_create' %}">
+            <i class="align-middle" data-feather="plus"></i> Add Configuration
+        </a>
+        <a class="btn btn-info ms-2" href="{% url 'myadmin:shipdaak:courier_sync' %}">
+            <i class="align-middle" data-feather="refresh-cw"></i> Sync Couriers
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:dashboard' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Courier Configurations</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" name="search" placeholder="Search by store name, courier..." value="{{ search }}">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" name="is_active">
+                                    <option value="">All Status</option>
+                                    <option value="yes" {% if is_active == 'yes' %}selected{% endif %}>Active</option>
+                                    <option value="no" {% if is_active == 'no' %}selected{% endif %}>Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">
+                                    <i class="align-middle" data-feather="search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Store</th>
+                                <th>Courier Name</th>
+                                <th>Courier ID</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for config in configs %}
+                            <tr>
+                                <td><strong>{{ config.store.name }}</strong></td>
+                                <td>{{ config.default_courier_name }}</td>
+                                <td><span class="badge bg-info">{{ config.default_courier_id }}</span></td>
+                                <td>
+                                    {% if config.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ config.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'myadmin:shipdaak:courier_config_detail' config.pk %}" class="btn btn-sm btn-info">
+                                        <i class="align-middle" data-feather="eye"></i> View
+                                    </a>
+                                    <a href="{% url 'myadmin:shipdaak:courier_config_update' config.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="align-middle" data-feather="edit"></i> Edit
+                                    </a>
+                                    <a href="{% url 'myadmin:shipdaak:courier_config_delete' config.pk %}" class="btn btn-sm btn-danger">
+                                        <i class="align-middle" data-feather="trash-2"></i> Delete
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No courier configurations found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% include 'admin/includes/pagination.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

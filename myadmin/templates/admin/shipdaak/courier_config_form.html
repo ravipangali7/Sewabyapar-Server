@@ -1,0 +1,77 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Courier Configuration</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Courier Configuration Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% include 'admin/includes/form_fields.html' with form=form %}
+                        
+                        {% if available_couriers %}
+                        <div class="mb-3">
+                            <label class="form-label">Available Couriers from Shipdaak:</label>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for courier in available_couriers %}
+                                        <tr>
+                                            <td>{{ courier.id }}</td>
+                                            <td>{{ courier.name }}</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="selectCourier({{ courier.id }}, '{{ courier.name }}')">
+                                                    Select
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="align-middle" data-feather="save"></i> Save
+                            </button>
+                            <a href="{% url 'myadmin:shipdaak:courier_config_list' %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function selectCourier(id, name) {
+        document.getElementById('id_default_courier_id').value = id;
+        document.getElementById('id_default_courier_name').value = name;
+    }
+    
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

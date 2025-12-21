@@ -140,6 +140,23 @@
                     <i class="align-middle" data-feather="file-text"></i> <span class="align-middle">CMS Pages</span>
                 </a>
             </li>
+
+            <li class="sidebar-header">Shipdaak</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:shipdaak:tracking_list' %}">
+                    <i class="align-middle" data-feather="truck"></i> <span class="align-middle">Shipment Tracking</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:shipdaak:warehouse_list' %}">
+                    <i class="align-middle" data-feather="package"></i> <span class="align-middle">Warehouse Management</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
+                    <i class="align-middle" data-feather="settings"></i> <span class="align-middle">Courier Configuration</span>
+                </a>
+            </li>
         </ul>
     </div>
 </nav>

@@ -1,0 +1,208 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Warehouse Details</h1>
+        {% if not store.shipdaak_pickup_warehouse_id %}
+        <form method="post" action="{% url 'myadmin:shipdaak:warehouse_create' store.pk %}" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="align-middle" data-feather="plus"></i> Create Warehouse in Shipdaak
+            </button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'myadmin:shipdaak:warehouse_sync' store.pk %}" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">
+                <i class="align-middle" data-feather="refresh-cw"></i> Sync Warehouse
+            </button>
+        </form>
+        {% endif %}
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shipdaak:warehouse_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Pickup Warehouse ID</h6>
+                            {% if store.shipdaak_pickup_warehouse_id %}
+                                <h5 class="mb-0">{{ store.shipdaak_pickup_warehouse_id }}</h5>
+                            {% else %}
+                                <span class="badge bg-danger">Not Created</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="package"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">RTO Warehouse ID</h6>
+                            {% if store.shipdaak_rto_warehouse_id %}
+                                <h5 class="mb-0">{{ store.shipdaak_rto_warehouse_id }}</h5>
+                            {% else %}
+                                <span class="badge bg-danger">Not Created</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="rotate-ccw"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            {% if store.shipdaak_pickup_warehouse_id %}
+                                <span class="badge bg-success fs-6">Active</span>
+                            {% else %}
+                                <span class="badge bg-warning fs-6">Pending</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if store.shipdaak_pickup_warehouse_id %}check-circle{% else %}clock{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Created Date</h6>
+                            <div class="fs-6">
+                                {% if store.shipdaak_warehouse_created_at %}
+                                    {{ store.shipdaak_warehouse_created_at|date:"M d, Y" }}
+                                {% else %}
+                                    <span class="text-muted">Not created</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Store Information -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="store"></i> Store Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Store Name:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ store.name }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Owner:</strong></div>
+                        <div class="col-sm-8">{{ store.owner.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Phone:</strong></div>
+                        <div class="col-sm-8">{{ store.phone }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Email:</strong></div>
+                        <div class="col-sm-8">{{ store.email|default:"-" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Address:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ store.address|linebreaks|default:"Not provided" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Warehouse Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Pickup Warehouse:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if store.shipdaak_pickup_warehouse_id %}
+                                <span class="badge bg-success">{{ store.shipdaak_pickup_warehouse_id }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">Not Created</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>RTO Warehouse:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if store.shipdaak_rto_warehouse_id %}
+                                <span class="badge bg-success">{{ store.shipdaak_rto_warehouse_id }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">Not Created</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    {% if store.shipdaak_warehouse_created_at %}
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            {{ store.shipdaak_warehouse_created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ store.shipdaak_warehouse_created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

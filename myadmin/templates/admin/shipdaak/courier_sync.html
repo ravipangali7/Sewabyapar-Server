@@ -1,0 +1,50 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Available Couriers from Shipdaak</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Couriers List</h5>
+                </div>
+                <div class="card-body">
+                    {% if couriers %}
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Courier Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for courier in couriers %}
+                            <tr>
+                                <td><span class="badge bg-info">{{ courier.id }}</span></td>
+                                <td><strong>{{ courier.name }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="align-middle" data-feather="alert-circle"></i> No couriers found or error fetching from Shipdaak API.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

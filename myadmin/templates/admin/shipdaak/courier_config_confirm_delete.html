@@ -1,0 +1,39 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Delete Courier Configuration</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Confirm Deletion</h5>
+                </div>
+                <div class="card-body">
+                    <p>Are you sure you want to delete the courier configuration for <strong>{{ object.store.name }}</strong>?</p>
+                    <p class="text-muted">Courier: {{ object.default_courier_name }} (ID: {{ object.default_courier_id }})</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="align-middle" data-feather="trash-2"></i> Yes, Delete
+                        </button>
+                        <a href="{% url 'myadmin:shipdaak:courier_config_list' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

@@ -1,0 +1,246 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Shipment Tracking Details</h1>
+        <form method="post" action="{% url 'myadmin:shipdaak:tracking_update' order.pk %}" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="align-middle" data-feather="refresh-cw"></i> Refresh Tracking
+            </button>
+        </form>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shipdaak:tracking_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">AWB Number</h6>
+                            <h5 class="mb-0">{{ order.shipdaak_awb_number|default:"N/A" }}</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="hash"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            <span class="badge bg-{% if order.shipdaak_status == 'delivered' %}success{% elif order.shipdaak_status == 'pending pickup' or order.shipdaak_status == 'pending' %}warning{% elif 'rto' in order.shipdaak_status|lower or order.shipdaak_status == 'cancelled' %}danger{% else %}info{% endif %} fs-6">
+                                {{ order.shipdaak_status|default:"Unknown" }}
+                            </span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="package"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Courier</h6>
+                            <div class="fs-6">{{ order.shipdaak_courier_name|default:"N/A" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="truck"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Order Total</h6>
+                            <h5 class="mb-0">₹{{ order.total_amount|floatformat:2 }}</h5>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Order Information -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="shopping-cart"></i> Order Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Order Number:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ order.order_number }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Customer:</strong></div>
+                        <div class="col-sm-8">{{ order.user.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Merchant:</strong></div>
+                        <div class="col-sm-8">{% if order.merchant %}{{ order.merchant.name }}{% else %}-{% endif %}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Payment Method:</strong></div>
+                        <div class="col-sm-8">{{ order.get_payment_method_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Order Status:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'pending' or order.status == 'accepted' %}warning{% elif order.status == 'rejected' or order.status == 'cancelled' %}danger{% else %}info{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if order.shipdaak_label_url %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Label:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{{ order.shipdaak_label_url }}" target="_blank" class="btn btn-sm btn-primary">
+                                <i class="align-middle" data-feather="download"></i> Download Label
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if order.shipdaak_manifest_url %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Manifest:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{{ order.shipdaak_manifest_url }}" target="_blank" class="btn btn-sm btn-primary">
+                                <i class="align-middle" data-feather="download"></i> Download Manifest
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tracking History -->
+            {% if tracking_data %}
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="map"></i> Tracking History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if tracking_data.history %}
+                    <div class="timeline">
+                        {% for event in tracking_data.history %}
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <div class="timeline-marker bg-primary"></div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-1">{{ event.statusCode|default:"Update" }}</h6>
+                                    <p class="mb-1">{{ event.message|default:"" }}</p>
+                                    {% if event.location %}
+                                    <small class="text-muted"><i class="align-middle" data-feather="map-pin"></i> {{ event.location }}</small>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted"><i class="align-middle" data-feather="clock"></i> {{ event.eventTime|default:"" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No tracking history available</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Shipment Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Shipment ID:</strong></div>
+                        <div class="col-12 mt-1">{{ order.shipdaak_shipment_id|default:"N/A" }}</div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Courier ID:</strong></div>
+                        <div class="col-12 mt-1">{{ order.shipdaak_courier_id|default:"N/A" }}</div>
+                    </div>
+                    <hr>
+                    {% if order.pickup_date %}
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Pickup Date:</strong></div>
+                        <div class="col-12 mt-1">{{ order.pickup_date|date:"F d, Y g:i A" }}</div>
+                    </div>
+                    <hr>
+                    {% endif %}
+                    {% if order.delivered_date %}
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Delivered Date:</strong></div>
+                        <div class="col-12 mt-1">{{ order.delivered_date|date:"F d, Y g:i A" }}</div>
+                    </div>
+                    <hr>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-12"><strong>Created:</strong></div>
+                        <div class="col-12 mt-1">{{ order.created_at|date:"F d, Y g:i A" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 5px;
+}
+</style>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+
