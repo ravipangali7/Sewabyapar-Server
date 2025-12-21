@@ -16,9 +16,8 @@ from ecommerce.services.phonepe_service import (
 )
 import random
 import string
-import logging
-
-logger = logging.getLogger(__name__)
+import sys
+import traceback
 
 
 def split_order_by_vendor(temp_order):
@@ -28,7 +27,8 @@ def split_order_by_vendor(temp_order):
     try:
         # Check if this is a temporary order with CART_DATA
         if not temp_order.notes or not temp_order.notes.startswith('CART_DATA:'):
-            logger.warning(f"Order {temp_order.id} does not have CART_DATA, skipping split")
+            print(f"[WARNING] Order {temp_order.id} does not have CART_DATA, skipping split")
+            sys.stdout.flush()
             return None
         
         # Parse cart data from notes
@@ -56,14 +56,17 @@ def split_order_by_vendor(temp_order):
                         'price': price,
                     })
                 except (Store.DoesNotExist, Product.DoesNotExist) as e:
-                    logger.error(f"Store or Product not found: {str(e)}")
+                    print(f"[ERROR] Store or Product not found: {str(e)}")
+                    sys.stdout.flush()
                     continue
             except ValueError as e:
-                logger.error(f"Error parsing cart item data: {item_str}, error: {str(e)}")
+                print(f"[ERROR] Error parsing cart item data: {item_str}, error: {str(e)}")
+                sys.stdout.flush()
                 continue
         
         if not vendor_items:
-            logger.warning(f"No valid vendor items found in order {temp_order.id}")
+            print(f"[WARNING] No valid vendor items found in order {temp_order.id}")
+            sys.stdout.flush()
             return None
         
         # Get SuperSetting
@@ -73,7 +76,8 @@ def split_order_by_vendor(temp_order):
                 super_setting = SuperSetting.objects.create()
             basic_shipping_charge = super_setting.basic_shipping_charge
         except Exception as e:
-            logger.error(f"Error getting SuperSetting: {str(e)}")
+            print(f"[ERROR] Error getting SuperSetting: {str(e)}")
+            sys.stdout.flush()
             basic_shipping_charge = 0
         
         # Create separate order for each vendor
@@ -127,11 +131,13 @@ def split_order_by_vendor(temp_order):
         # Delete temporary order
         temp_order.delete()
         
-        logger.info(f"Successfully split order into {len(created_orders)} vendor orders")
+        print(f"[INFO] Successfully split order into {len(created_orders)} vendor orders")
+        sys.stdout.flush()
         return created_orders
     
     except Exception as e:
-        logger.error(f"Error splitting order by vendor: {str(e)}", exc_info=True)
+        print(f"[ERROR] Error splitting order by vendor: {str(e)}")
+        traceback.print_exc()
         return None
 
 
@@ -162,7 +168,8 @@ def process_checkout(request):
             super_setting = SuperSetting.objects.create()
         basic_shipping_charge = super_setting.basic_shipping_charge
     except Exception as e:
-        logger.error(f"Error getting SuperSetting: {str(e)}")
+        print(f"[ERROR] Error getting SuperSetting: {str(e)}")
+        sys.stdout.flush()
         basic_shipping_charge = 0
     
     # Group cart items by vendor (store)
@@ -255,7 +262,8 @@ def process_checkout(request):
             })
         
         except Exception as e:
-            logger.error(f"Error initiating payment: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error initiating payment: {str(e)}")
+            traceback.print_exc()
             return JsonResponse({
                 'success': False,
                 'message': f'Error initiating payment: {str(e)}'
@@ -328,7 +336,8 @@ def process_checkout(request):
             })
         
         except Exception as e:
-            logger.error(f"Error creating COD orders: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error creating COD orders: {str(e)}")
+            traceback.print_exc()
             return JsonResponse({
                 'success': False,
                 'message': f'Error creating order: {str(e)}'
@@ -455,26 +464,32 @@ def payment_result_view(request):
     if merchant_order_id:
         try:
             order = Order.objects.get(phonepe_merchant_order_id=merchant_order_id, user=request.user)
-            logger.info(f"Order found for merchant_order_id: {merchant_order_id}, Order ID: {order.id}")
+            print(f"[INFO] Order found for merchant_order_id: {merchant_order_id}, Order ID: {order.id}")
+            sys.stdout.flush()
         except Order.DoesNotExist:
-            logger.warning(f"Order not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
+            print(f"[WARNING] Order not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
+            sys.stdout.flush()
     elif transaction_id:
         try:
             order = Order.objects.get(phonepe_transaction_id=transaction_id, user=request.user)
-            logger.info(f"Order found for transaction_id: {transaction_id}, Order ID: {order.id}")
+            print(f"[INFO] Order found for transaction_id: {transaction_id}, Order ID: {order.id}")
+            sys.stdout.flush()
         except Order.DoesNotExist:
-            logger.warning(f"Order not found for transaction_id: {transaction_id}, user: {request.user.id}")
+            print(f"[WARNING] Order not found for transaction_id: {transaction_id}, user: {request.user.id}")
+            sys.stdout.flush()
     
     # Always call PhonePe API to verify transaction status when merchant_order_id is present
     # This ensures we get the latest status from PhonePe, even if order exists in DB
     if merchant_order_id:
         try:
-            logger.info(f"Calling PhonePe API to check payment status for merchant_order_id: {merchant_order_id}")
+            print(f"[INFO] Calling PhonePe API to check payment status for merchant_order_id: {merchant_order_id}")
+            sys.stdout.flush()
             status_response = check_payment_status_by_order_id(merchant_order_id)
             
             if 'error' not in status_response:
                 payment_status_data = status_response.get('data', {})
-                logger.info(f"PhonePe API response received: {payment_status_data}")
+                print(f"[INFO] PhonePe API response received: {payment_status_data}")
+                sys.stdout.flush()
                 
                 # Extract payment status from PhonePe response
                 # PhonePe SDK returns 'state' as primary field (COMPLETED, FAILED, PENDING)
@@ -493,14 +508,16 @@ def payment_result_view(request):
                 else:
                     payment_status_value = ''
                 
-                logger.info(f"Payment status from PhonePe - state: {payment_state}, status: {payment_status_value}")
+                print(f"[INFO] Payment status from PhonePe - state: {payment_state}, status: {payment_status_value}")
+                sys.stdout.flush()
                 
                 # Update order if found
                 if order:
                     # Ensure payment_method is 'online' for PhonePe orders
                     if order.payment_method != 'online':
                         order.payment_method = 'online'
-                        logger.info(f"Updated payment_method to 'online' for order {order.id}")
+                        print(f"[INFO] Updated payment_method to 'online' for order {order.id}")
+                        sys.stdout.flush()
                     
                     # Map PhonePe state/status values to our payment_status field
                     # PhonePe SDK state values: COMPLETED, FAILED, PENDING (primary)
@@ -508,51 +525,62 @@ def payment_result_view(request):
                     if payment_status_value in ['COMPLETED', 'PAYMENT_SUCCESS', 'SUCCESS', 'PAID']:
                         order.payment_status = 'success'
                         order.status = 'confirmed'
-                        logger.info(f"Order {order.id} marked as payment success (status: {payment_status_value})")
+                        print(f"[INFO] Order {order.id} marked as payment success (status: {payment_status_value})")
+                        sys.stdout.flush()
                         
                         # If this is a temporary order with CART_DATA, split it by vendor
                         if order.notes and order.notes.startswith('CART_DATA:'):
-                            logger.info(f"Splitting temporary order {order.id} by vendor")
+                            print(f"[INFO] Splitting temporary order {order.id} by vendor")
+                            sys.stdout.flush()
                             created_orders = split_order_by_vendor(order)
                             if created_orders:
                                 # Update order to the first created order for display
                                 order = created_orders[0]
-                                logger.info(f"Order split into {len(created_orders)} vendor orders")
+                                print(f"[INFO] Order split into {len(created_orders)} vendor orders")
+                                sys.stdout.flush()
                             else:
-                                logger.error(f"Failed to split order {order.id} by vendor")
+                                print(f"[ERROR] Failed to split order {order.id} by vendor")
+                                sys.stdout.flush()
                     elif payment_status_value in ['FAILED', 'PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILURE', 'ERROR']:
                         order.payment_status = 'failed'
-                        logger.info(f"Order {order.id} marked as payment failed (status: {payment_status_value})")
+                        print(f"[INFO] Order {order.id} marked as payment failed (status: {payment_status_value})")
+                        sys.stdout.flush()
                     elif payment_status_value in ['PENDING', 'PAYMENT_PENDING', 'INITIATED', 'AUTHORIZED']:
                         order.payment_status = 'pending'
-                        logger.info(f"Order {order.id} marked as payment pending (status: {payment_status_value})")
+                        print(f"[INFO] Order {order.id} marked as payment pending (status: {payment_status_value})")
+                        sys.stdout.flush()
                     else:
                         # Unknown status - keep as pending but log it
                         order.payment_status = 'pending'
-                        logger.warning(f"Unknown payment status '{payment_status_value}' for order {order.id}, set to pending")
+                        print(f"[WARNING] Unknown payment status '{payment_status_value}' for order {order.id}, set to pending")
+                        sys.stdout.flush()
                     
                     # Update transaction ID if available
                     transaction_id_from_api = payment_details.get('transactionId') or payment_status_data.get('transactionId')
                     if transaction_id_from_api and not order.phonepe_transaction_id:
                         order.phonepe_transaction_id = transaction_id_from_api
-                        logger.info(f"Updated transaction_id for order {order.id}: {transaction_id_from_api}")
+                        print(f"[INFO] Updated transaction_id for order {order.id}: {transaction_id_from_api}")
+                        sys.stdout.flush()
                     
                     # Save all PhonePe transaction details
                     order_id_from_api = payment_status_data.get('orderId')
                     if order_id_from_api and not order.phonepe_order_id:
                         order.phonepe_order_id = order_id_from_api
-                        logger.info(f"Updated order_id for order {order.id}: {order_id_from_api}")
+                        print(f"[INFO] Updated order_id for order {order.id}: {order_id_from_api}")
+                        sys.stdout.flush()
                     
                     # Save UTR and VPA from payment details
                     utr_from_api = payment_details.get('utr') or payment_status_data.get('utr')
                     if utr_from_api and not order.phonepe_utr:
                         order.phonepe_utr = utr_from_api
-                        logger.info(f"Updated UTR for order {order.id}: {utr_from_api}")
+                        print(f"[INFO] Updated UTR for order {order.id}: {utr_from_api}")
+                        sys.stdout.flush()
                     
                     vpa_from_api = payment_details.get('vpa') or payment_status_data.get('vpa')
                     if vpa_from_api and not order.phonepe_vpa:
                         order.phonepe_vpa = vpa_from_api
-                        logger.info(f"Updated VPA for order {order.id}: {vpa_from_api}")
+                        print(f"[INFO] Updated VPA for order {order.id}: {vpa_from_api}")
+                        sys.stdout.flush()
                     
                     # Save transaction date
                     transaction_date_str = payment_details.get('transactionDate') or payment_status_data.get('transactionDate')
@@ -561,79 +589,95 @@ def payment_result_view(request):
                             from datetime import datetime
                             transaction_date = datetime.fromisoformat(transaction_date_str)
                             order.phonepe_transaction_date = transaction_date
-                            logger.info(f"Updated transaction_date for order {order.id}: {transaction_date}")
+                            print(f"[INFO] Updated transaction_date for order {order.id}: {transaction_date}")
+                            sys.stdout.flush()
                         except (ValueError, TypeError) as e:
-                            logger.warning(f"Could not parse transaction_date for order {order.id}: {e}")
+                            print(f"[WARNING] Could not parse transaction_date for order {order.id}: {e}")
+                            sys.stdout.flush()
                     
                     # Save processing mechanism
                     processing_mechanism = payment_details.get('processingMechanism') or payment_status_data.get('processingMechanism')
                     if processing_mechanism and not order.phonepe_processing_mechanism:
                         order.phonepe_processing_mechanism = processing_mechanism
-                        logger.info(f"Updated processing_mechanism for order {order.id}: {processing_mechanism}")
+                        print(f"[INFO] Updated processing_mechanism for order {order.id}: {processing_mechanism}")
+                        sys.stdout.flush()
                     
                     # Save product type
                     product_type = payment_details.get('productType') or payment_status_data.get('productType')
                     if product_type and not order.phonepe_product_type:
                         order.phonepe_product_type = product_type
-                        logger.info(f"Updated product_type for order {order.id}: {product_type}")
+                        print(f"[INFO] Updated product_type for order {order.id}: {product_type}")
+                        sys.stdout.flush()
                     
                     # Save instrument type
                     instrument_type = payment_details.get('instrumentType') or payment_status_data.get('instrumentType')
                     if instrument_type and not order.phonepe_instrument_type:
                         order.phonepe_instrument_type = instrument_type
-                        logger.info(f"Updated instrument_type for order {order.id}: {instrument_type}")
+                        print(f"[INFO] Updated instrument_type for order {order.id}: {instrument_type}")
+                        sys.stdout.flush()
                     
                     # Save payment mode
                     payment_mode = payment_details.get('paymentMode') or payment_status_data.get('paymentMode')
                     if payment_mode and not order.phonepe_payment_mode:
                         order.phonepe_payment_mode = payment_mode
-                        logger.info(f"Updated payment_mode for order {order.id}: {payment_mode}")
+                        print(f"[INFO] Updated payment_mode for order {order.id}: {payment_mode}")
+                        sys.stdout.flush()
                     
                     # Save bank ID
                     bank_id = payment_details.get('bankId') or payment_status_data.get('bankId')
                     if bank_id and not order.phonepe_bank_id:
                         order.phonepe_bank_id = bank_id
-                        logger.info(f"Updated bank_id for order {order.id}: {bank_id}")
+                        print(f"[INFO] Updated bank_id for order {order.id}: {bank_id}")
+                        sys.stdout.flush()
                     
                     # Save card network
                     card_network = payment_details.get('cardNetwork') or payment_status_data.get('cardNetwork')
                     if card_network and not order.phonepe_card_network:
                         order.phonepe_card_network = card_network
-                        logger.info(f"Updated card_network for order {order.id}: {card_network}")
+                        print(f"[INFO] Updated card_network for order {order.id}: {card_network}")
+                        sys.stdout.flush()
                     
                     # Save transaction note
                     transaction_note = payment_details.get('transactionNote') or payment_status_data.get('transactionNote')
                     if transaction_note and not order.phonepe_transaction_note:
                         order.phonepe_transaction_note = transaction_note
-                        logger.info(f"Updated transaction_note for order {order.id}: {transaction_note}")
+                        print(f"[INFO] Updated transaction_note for order {order.id}: {transaction_note}")
+                        sys.stdout.flush()
                     
                     order.save()
-                    logger.info(f"Order {order.id} saved with payment_status: {order.payment_status}")
+                    print(f"[INFO] Order {order.id} saved with payment_status: {order.payment_status}")
+                    sys.stdout.flush()
                 else:
                     # Order not found in DB but PhonePe has record - log this case
-                    logger.warning(f"PhonePe API returned status but order not found in DB for merchant_order_id: {merchant_order_id}")
+                    print(f"[WARNING] PhonePe API returned status but order not found in DB for merchant_order_id: {merchant_order_id}")
+                    sys.stdout.flush()
             else:
                 # PhonePe API returned an error
                 api_error = status_response.get('error', 'Unknown error')
-                logger.error(f"PhonePe API error for merchant_order_id {merchant_order_id}: {api_error}")
+                print(f"[ERROR] PhonePe API error for merchant_order_id {merchant_order_id}: {api_error}")
+                sys.stdout.flush()
                 
                 # If order exists but API call failed, we still show the order
                 # but payment status might be outdated
                 if order:
-                    logger.warning(f"PhonePe API call failed for existing order {order.id}, using current DB status")
+                    print(f"[WARNING] PhonePe API call failed for existing order {order.id}, using current DB status")
+                    sys.stdout.flush()
         
         except Exception as e:
             api_error = str(e)
-            logger.error(f"Exception while calling PhonePe API for merchant_order_id {merchant_order_id}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Exception while calling PhonePe API for merchant_order_id {merchant_order_id}: {str(e)}")
+            traceback.print_exc()
             
             # If order exists but API call failed, we still show the order
             if order:
-                logger.warning(f"PhonePe API call exception for existing order {order.id}, using current DB status")
+                print(f"[WARNING] PhonePe API call exception for existing order {order.id}, using current DB status")
+                sys.stdout.flush()
     
     elif transaction_id:
         # Try to check by transaction_id (though PhonePe SDK primarily uses merchant_order_id)
         try:
-            logger.info(f"Calling PhonePe API to check payment status for transaction_id: {transaction_id}")
+            print(f"[INFO] Calling PhonePe API to check payment status for transaction_id: {transaction_id}")
+            sys.stdout.flush()
             status_response = check_payment_status_by_transaction_id(transaction_id)
             
             if 'error' not in status_response:
@@ -656,10 +700,12 @@ def payment_result_view(request):
                     order.save()
             else:
                 api_error = status_response.get('error', 'Unknown error')
-                logger.error(f"PhonePe API error for transaction_id {transaction_id}: {api_error}")
+                print(f"[ERROR] PhonePe API error for transaction_id {transaction_id}: {api_error}")
+                sys.stdout.flush()
         except Exception as e:
             api_error = str(e)
-            logger.error(f"Exception while calling PhonePe API for transaction_id {transaction_id}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Exception while calling PhonePe API for transaction_id {transaction_id}: {str(e)}")
+            traceback.print_exc()
     
     context = {
         'settings': site_settings,

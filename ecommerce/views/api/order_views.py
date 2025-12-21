@@ -8,13 +8,13 @@ from collections import defaultdict
 from decimal import Decimal
 import random
 import string
-import logging
+import sys
+import traceback
 from ...models import Order
 from ...serializers import OrderSerializer, OrderCreateSerializer
 from ...services.phonepe_service import initiate_payment, generate_merchant_order_id
 from core.models import SuperSetting
 
-logger = logging.getLogger(__name__)
 
 
 @api_view(['GET', 'POST'])
@@ -161,7 +161,9 @@ def order_list_create(request):
                 }, status=status.HTTP_200_OK)
             
             except Exception as e:
-                logger.error(f"Error initiating payment: {str(e)}", exc_info=True)
+                print(f"[ERROR] Error initiating payment: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 return Response(
                     {
                         'success': False,

@@ -1,7 +1,8 @@
 """
 Courier configuration views for Shipdaak
 """
-import logging
+import sys
+import traceback
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -11,8 +12,6 @@ from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import CourierConfiguration, Store
 from myadmin.forms.shipdaak_forms import CourierConfigurationForm
 from ecommerce.services.shipdaak_service import ShipdaakService
-
-logger = logging.getLogger(__name__)
 
 
 class CourierConfigurationListView(StaffRequiredMixin, ListView):
@@ -82,7 +81,8 @@ class CourierConfigurationCreateView(StaffRequiredMixin, CreateView):
             couriers = shipdaak.get_couriers()
             context['available_couriers'] = couriers or []
         except Exception as e:
-            logger.error(f"Error fetching couriers: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error fetching couriers: {str(e)}")
+            traceback.print_exc()
             context['available_couriers'] = []
         return context
 
@@ -108,7 +108,8 @@ class CourierConfigurationUpdateView(StaffRequiredMixin, UpdateView):
             couriers = shipdaak.get_couriers()
             context['available_couriers'] = couriers or []
         except Exception as e:
-            logger.error(f"Error fetching couriers: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error fetching couriers: {str(e)}")
+            traceback.print_exc()
             context['available_couriers'] = []
         return context
 
@@ -137,7 +138,8 @@ class SyncCouriersView(StaffRequiredMixin, ListView):
             couriers = shipdaak.get_couriers()
             return couriers or []
         except Exception as e:
-            logger.error(f"Error fetching couriers: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error fetching couriers: {str(e)}")
+            traceback.print_exc()
             messages.error(self.request, f'Error fetching couriers: {str(e)}')
             return []
     

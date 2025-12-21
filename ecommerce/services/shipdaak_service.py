@@ -3,17 +3,16 @@ Shipdaak Logistics API Service
 Handles all Shipdaak API interactions for warehouse and shipment management
 """
 import requests
-import logging
 import re
 import base64
 import json
+import traceback
+import sys
 from typing import Dict, Any, Optional, List
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import datetime, timedelta, timezone as dt_timezone
-
-logger = logging.getLogger(__name__)
 
 
 class ShipdaakService:
@@ -27,9 +26,11 @@ class ShipdaakService:
         self.token_expiry_cache_key = getattr(settings, 'SHIPDAAK_TOKEN_EXPIRY_CACHE_KEY', 'shipdaak_token_expiry')
         
         if not self.base_url:
-            logger.warning("SHIPDAAK_API_BASE_URL not configured in settings")
+            print("[WARNING] SHIPDAAK_API_BASE_URL not configured in settings")
+            sys.stdout.flush()
         if not self.email or not self.password:
-            logger.warning("SHIPDAAK_API_EMAIL or SHIPDAAK_API_PASSWORD not configured in settings")
+            print("[WARNING] SHIPDAAK_API_EMAIL or SHIPDAAK_API_PASSWORD not configured in settings")
+            sys.stdout.flush()
     
     def _decode_jwt_expiry(self, token: str) -> Optional[datetime]:
         """
@@ -63,7 +64,8 @@ class ShipdaakService:
                 return datetime.fromtimestamp(exp, tz=dt_timezone.utc)
             return None
         except Exception as e:
-            logger.warning(f"Failed to decode JWT expiry: {str(e)}")
+            print(f"[WARNING] Failed to decode JWT expiry: {str(e)}")
+            sys.stdout.flush()
             return None
     
     def _get_access_token(self, force_refresh: bool = False) -> Optional[str]:
@@ -96,7 +98,8 @@ class ShipdaakService:
             
             # Check for error response first
             if 'error' in data:
-                logger.error(f"Shipdaak authentication failed: {data.get('error')}")
+                print(f"[ERROR] Shipdaak authentication failed: {data.get('error')}")
+                sys.stdout.flush()
                 # Clear any cached token
                 cache.delete(self.token_cache_key)
                 cache.delete(self.token_expiry_cache_key)
@@ -116,33 +119,40 @@ class ShipdaakService:
                     if cache_seconds > 0:
                         cache.set(self.token_cache_key, access_token, cache_seconds)
                         cache.set(self.token_expiry_cache_key, expiry_datetime, cache_seconds)
-                        logger.info(f"Successfully obtained Shipdaak access token, expires at {expiry_datetime}")
+                        print(f"[INFO] Successfully obtained Shipdaak access token, expires at {expiry_datetime}")
+                        sys.stdout.flush()
                     else:
-                        logger.warning("Token already expired, not caching")
+                        print("[WARNING] Token already expired, not caching")
+                        sys.stdout.flush()
                 else:
                     # Fallback: cache for 12 hours if can't decode expiry
-                    logger.warning("Could not decode JWT expiry, using 12 hour cache")
+                    print("[WARNING] Could not decode JWT expiry, using 12 hour cache")
+                    sys.stdout.flush()
                     cache.set(self.token_cache_key, access_token, 60 * 60 * 12)
                     cache.set(self.token_expiry_cache_key, timezone.now() + timedelta(hours=12), 60 * 60 * 12)
                 
                 return access_token
             else:
-                logger.error(f"Shipdaak token response missing access_token: {data}")
+                print(f"[ERROR] Shipdaak token response missing access_token: {data}")
+                sys.stdout.flush()
                 # Clear cache on error
                 cache.delete(self.token_cache_key)
                 cache.delete(self.token_expiry_cache_key)
                 return None
                 
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Shipdaak token HTTP error: {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
+            print(f"[ERROR] Shipdaak token HTTP error: {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
+            sys.stdout.flush()
             cache.delete(self.token_cache_key)
             cache.delete(self.token_expiry_cache_key)
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to get Shipdaak access token: {str(e)}")
+            print(f"[ERROR] Failed to get Shipdaak access token: {str(e)}")
+            sys.stdout.flush()
             return None
         except Exception as e:
-            logger.error(f"Unexpected error getting Shipdaak access token: {str(e)}")
+            print(f"[ERROR] Unexpected error getting Shipdaak access token: {str(e)}")
+            sys.stdout.flush()
             return None
     
     def _make_request(self, method: str, endpoint: str, data: Optional[Dict] = None, 
@@ -162,7 +172,8 @@ class ShipdaakService:
         """
         token = self._get_access_token()
         if not token:
-            logger.error("Cannot make request: No access token available")
+            print("[ERROR] Cannot make request: No access token available")
+            sys.stdout.flush()
             return None
         
         url = f"{self.base_url}{endpoint}"
@@ -182,12 +193,14 @@ class ShipdaakService:
             elif method.upper() == 'DELETE':
                 response = requests.delete(url, headers=headers, timeout=30)
             else:
-                logger.error(f"Unsupported HTTP method: {method}")
+                print(f"[ERROR] Unsupported HTTP method: {method}")
+                sys.stdout.flush()
                 return None
             
             # Handle 401 Unauthorized - token might be expired
             if response.status_code == 401 and retry_on_401:
-                logger.warning(f"Received 401 Unauthorized, clearing token cache and retrying once")
+                print(f"[WARNING] Received 401 Unauthorized, clearing token cache and retrying once")
+                sys.stdout.flush()
                 # Clear cached token
                 cache.delete(self.token_cache_key)
                 cache.delete(self.token_expiry_cache_key)
@@ -199,15 +212,18 @@ class ShipdaakService:
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
-                logger.error(f"Shipdaak API authentication failed ({method} {endpoint}): 401 Unauthorized")
+                print(f"[ERROR] Shipdaak API authentication failed ({method} {endpoint}): 401 Unauthorized")
             else:
-                logger.error(f"Shipdaak API HTTP error ({method} {endpoint}): {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
+                print(f"[ERROR] Shipdaak API HTTP error ({method} {endpoint}): {e.response.status_code} - {e.response.text if hasattr(e, 'response') else str(e)}")
+            sys.stdout.flush()
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Shipdaak API request error ({method} {endpoint}): {str(e)}")
+            print(f"[ERROR] Shipdaak API request error ({method} {endpoint}): {str(e)}")
+            sys.stdout.flush()
             return None
         except Exception as e:
-            logger.error(f"Unexpected error in Shipdaak API request ({method} {endpoint}): {str(e)}")
+            print(f"[ERROR] Unexpected error in Shipdaak API request ({method} {endpoint}): {str(e)}")
+            sys.stdout.flush()
             return None
     
     def create_warehouse(self, store) -> Optional[Dict[str, int]]:
@@ -264,11 +280,13 @@ class ShipdaakService:
                     'rto_warehouse_id': data.get('rto_warehouse_id')
                 }
             else:
-                logger.error(f"Shipdaak warehouse creation failed: {response}")
+                print(f"[ERROR] Shipdaak warehouse creation failed: {response}")
+                sys.stdout.flush()
                 return None
                 
         except Exception as e:
-            logger.error(f"Error creating Shipdaak warehouse for store {store.id}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error creating Shipdaak warehouse for store {store.id}: {str(e)}")
+            traceback.print_exc()
             return None
     
     def create_shipment(self, order, courier_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
@@ -287,11 +305,13 @@ class ShipdaakService:
             
             store = order.merchant
             if not store:
-                logger.error(f"Order {order.id} has no merchant/store")
+                print(f"[ERROR] Order {order.id} has no merchant/store")
+                sys.stdout.flush()
                 return None
             
             if not store.shipdaak_pickup_warehouse_id:
-                logger.error(f"Store {store.id} has no Shipdaak warehouse ID")
+                print(f"[ERROR] Store {store.id} has no Shipdaak warehouse ID")
+                sys.stdout.flush()
                 return None
             
             # Get courier - use provided courier_id or fallback to default
@@ -307,7 +327,8 @@ class ShipdaakService:
                     courier_id = courier_config.courier_id
                     courier_name = courier_config.courier_name
                 else:
-                    logger.warning(f"Courier ID {courier_id} not found or inactive for store {store.id}, using default")
+                    print(f"[WARNING] Courier ID {courier_id} not found or inactive for store {store.id}, using default")
+                    sys.stdout.flush()
                     courier_id = None
             
             if not courier_id:
@@ -331,7 +352,8 @@ class ShipdaakService:
                         courier_name = courier_config.courier_name
             
             if not courier_id:
-                logger.warning(f"No courier configured for store {store.id}, shipment creation may fail")
+                print(f"[WARNING] No courier configured for store {store.id}, shipment creation may fail")
+                sys.stdout.flush()
             
             # Calculate weight from order items (default 500g if not available)
             # In real implementation, you might store weight per product
@@ -342,7 +364,8 @@ class ShipdaakService:
             # Get shipping address
             shipping_address = order.shipping_address
             if not shipping_address:
-                logger.error(f"Order {order.id} has no shipping address")
+                print(f"[ERROR] Order {order.id} has no shipping address")
+                sys.stdout.flush()
                 return None
             
             # Extract and validate pincode from address
@@ -363,8 +386,13 @@ class ShipdaakService:
             
             # Validate pincode is exactly 6 digits
             if not pincode or len(pincode) != 6 or not pincode.isdigit():
-                logger.error(f"Order {order.id} has invalid or missing pincode in shipping address. Pincode: {shipping_address.zip_code if hasattr(shipping_address, 'zip_code') else 'None'}")
+                print(f"[ERROR] Order {order.id} has invalid or missing pincode in shipping address. Pincode: {shipping_address.zip_code if hasattr(shipping_address, 'zip_code') else 'None'}")
+                sys.stdout.flush()
                 return None
+            
+            # Log pincode and courier for debugging
+            print(f"[INFO] Creating Shipdaak shipment for order {order.id}: pincode={pincode}, courier_id={courier_id}, courier_name={courier_name}, store={store.id}")
+            sys.stdout.flush()
             
             # Fix phone number - ensure exactly 10 digits
             phone = order.phone
@@ -433,6 +461,8 @@ class ShipdaakService:
             
             if response and response.get('status') and response.get('data'):
                 data = response['data']
+                print(f"[INFO] Successfully created Shipdaak shipment for order {order.id}, AWB: {data.get('awb_number')}")
+                sys.stdout.flush()
                 return {
                     'awb_number': data.get('awb_number'),
                     'shipment_id': data.get('shipment_id'),
@@ -444,11 +474,19 @@ class ShipdaakService:
                     'courier_name': data.get('courier_name')
                 }
             else:
-                logger.error(f"Shipdaak shipment creation failed for order {order.id}: {response}")
+                # Enhanced error logging with pincode and courier details
+                error_message = response.get('message', 'Unknown error') if response else 'No response from API'
+                print(
+                    f"[ERROR] Shipdaak shipment creation failed for order {order.id}: {error_message}. "
+                    f"Pincode: {pincode}, Courier ID: {courier_id}, Courier Name: {courier_name}, "
+                    f"Store: {store.name} (ID: {store.id}), Full response: {response}"
+                )
+                sys.stdout.flush()
                 return None
                 
         except Exception as e:
-            logger.error(f"Error creating Shipdaak shipment for order {order.id}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error creating Shipdaak shipment for order {order.id}: {str(e)}")
+            traceback.print_exc()
             return None
     
     def cancel_shipment(self, awb_number: str) -> bool:
@@ -465,14 +503,17 @@ class ShipdaakService:
             response = self._make_request('POST', '/v1/shipments/cancel-shipment', data={"awb_number": awb_number})
             
             if response and response.get('status'):
-                logger.info(f"Successfully cancelled Shipdaak shipment {awb_number}")
+                print(f"[INFO] Successfully cancelled Shipdaak shipment {awb_number}")
+                sys.stdout.flush()
                 return True
             else:
-                logger.error(f"Failed to cancel Shipdaak shipment {awb_number}: {response}")
+                print(f"[ERROR] Failed to cancel Shipdaak shipment {awb_number}: {response}")
+                sys.stdout.flush()
                 return False
                 
         except Exception as e:
-            logger.error(f"Error cancelling Shipdaak shipment {awb_number}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error cancelling Shipdaak shipment {awb_number}: {str(e)}")
+            traceback.print_exc()
             return False
     
     def track_shipment(self, awb_number: str) -> Optional[Dict[str, Any]]:
@@ -491,11 +532,13 @@ class ShipdaakService:
             if response and response.get('status') and response.get('data'):
                 return response['data']
             else:
-                logger.error(f"Failed to track Shipdaak shipment {awb_number}: {response}")
+                print(f"[ERROR] Failed to track Shipdaak shipment {awb_number}: {response}")
+                sys.stdout.flush()
                 return None
                 
         except Exception as e:
-            logger.error(f"Error tracking Shipdaak shipment {awb_number}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error tracking Shipdaak shipment {awb_number}: {str(e)}")
+            traceback.print_exc()
             return None
     
     def get_couriers(self) -> Optional[List[Dict[str, Any]]]:
@@ -511,11 +554,13 @@ class ShipdaakService:
             if response and response.get('status') and response.get('data'):
                 return response['data']
             else:
-                logger.error(f"Failed to get Shipdaak couriers: {response}")
+                print(f"[ERROR] Failed to get Shipdaak couriers: {response}")
+                sys.stdout.flush()
                 return None
                 
         except Exception as e:
-            logger.error(f"Error getting Shipdaak couriers: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error getting Shipdaak couriers: {str(e)}")
+            traceback.print_exc()
             return None
     
     def generate_bulk_label(self, awb_numbers: List[str], label_format: str = "standard") -> Optional[str]:
@@ -538,11 +583,13 @@ class ShipdaakService:
             if response and response.get('status') and response.get('data'):
                 return response['data']  # URL string
             else:
-                logger.error(f"Failed to generate bulk labels: {response}")
+                print(f"[ERROR] Failed to generate bulk labels: {response}")
+                sys.stdout.flush()
                 return None
                 
         except Exception as e:
-            logger.error(f"Error generating bulk labels: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error generating bulk labels: {str(e)}")
+            traceback.print_exc()
             return None
     
     def generate_bulk_manifest(self, awb_numbers: List[str]) -> Optional[str]:
@@ -563,10 +610,12 @@ class ShipdaakService:
             if response and response.get('status') and response.get('data'):
                 return response['data']  # URL string
             else:
-                logger.error(f"Failed to generate bulk manifest: {response}")
+                print(f"[ERROR] Failed to generate bulk manifest: {response}")
+                sys.stdout.flush()
                 return None
                 
         except Exception as e:
-            logger.error(f"Error generating bulk manifest: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error generating bulk manifest: {str(e)}")
+            traceback.print_exc()
             return None
 

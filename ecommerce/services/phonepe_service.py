@@ -397,9 +397,6 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
     sys.stdout.flush()
     
     try:
-        import logging
-        logger = logging.getLogger(__name__)
-        
         # Validate merchant ID is configured
         merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
         # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
@@ -444,12 +441,14 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
                 'error_message': 'PhonePe CLIENT_VERSION is required for SDK initialization'
             }
         
-        logger.info(f"Initializing PhonePe client for merchant: {merchant_id}")
+        print(f"[INFO] Initializing PhonePe client for merchant: {merchant_id}")
+        sys.stdout.flush()
         
         # Get SDK client with error handling
         try:
             client = get_phonepe_client()
-            logger.info("PhonePe client initialized successfully")
+            print("[INFO] PhonePe client initialized successfully")
+            sys.stdout.flush()
         except ValueError as ve:
             # ValueError from get_phonepe_client means missing settings
             import traceback
@@ -492,7 +491,8 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         # Convert amount from rupees to paise
         try:
             amount_in_paise = int(float(amount) * 100)
-            logger.info(f"Converted amount: {amount} rupees = {amount_in_paise} paise")
+            print(f"[INFO] Converted amount: {amount} rupees = {amount_in_paise} paise")
+            sys.stdout.flush()
         except (ValueError, TypeError) as e:
             print(f"ERROR: Invalid amount value: {amount}, error: {str(e)}")
             sys.stdout.flush()
@@ -506,7 +506,8 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         if not redirect_url:
             redirect_url = f"{getattr(settings, 'PHONEPE_BASE_URL', 'https://www.sewabyapar.com')}/api/payments/callback/?merchant_order_id={merchant_order_id}"
         
-        logger.info(f"Building payment request: merchant_order_id={merchant_order_id}, amount={amount_in_paise}")
+        print(f"[INFO] Building payment request: merchant_order_id={merchant_order_id}, amount={amount_in_paise}")
+        sys.stdout.flush()
         
         # Build payment request
         try:
@@ -515,7 +516,8 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
                 amount=amount_in_paise,
                 redirect_url=redirect_url
             )
-            logger.info("Payment request built successfully")
+            print("[INFO] Payment request built successfully")
+            sys.stdout.flush()
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
@@ -530,10 +532,12 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             }
         
         # Initiate payment - this creates the order
-        logger.info("Calling PhonePe client.pay()")
+        print("[INFO] Calling PhonePe client.pay()")
+        sys.stdout.flush()
         try:
             response = client.pay(pay_request)
-            logger.info("PhonePe client.pay() completed successfully")
+            print("[INFO] PhonePe client.pay() completed successfully")
+            sys.stdout.flush()
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
@@ -555,7 +559,8 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         token = None
         redirect_url_from_response = redirect_url
         
-        logger.info("Extracting order details from PhonePe response")
+        print("[INFO] Extracting order details from PhonePe response")
+        sys.stdout.flush()
         
         # Extract redirect URL from response (for reference)
         if hasattr(response, 'redirect_url'):
@@ -615,14 +620,17 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         # According to PhonePe docs, for mobile SDK we can use merchant_order_id as token
         if not order_id:
             order_id = merchant_order_id
-            logger.info(f"Using merchant_order_id as orderId: {order_id}")
+            print(f"[INFO] Using merchant_order_id as orderId: {order_id}")
+            sys.stdout.flush()
         
         if not token:
             # Use merchant_order_id as token (PhonePe mobile SDK accepts this)
             token = merchant_order_id
-            logger.info(f"Using merchant_order_id as token: {token}")
+            print(f"[INFO] Using merchant_order_id as token: {token}")
+            sys.stdout.flush()
         
-        logger.info(f"Order created successfully: orderId={order_id}, token={token[:20]}...")
+        print(f"[INFO] Order created successfully: orderId={order_id}, token={token[:20]}...")
+        sys.stdout.flush()
         
         return {
             'success': True,

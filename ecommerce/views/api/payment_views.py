@@ -346,12 +346,9 @@ def create_order_token_for_mobile(request, order_id):
     POST /api/payments/create-order-token/{order_id}/
     Returns: {orderId, token, merchantId, merchantOrderId}
     """
-    import logging
     import traceback
     import sys
     from django.http import Http404
-    
-    logger = logging.getLogger(__name__)
     
     # Print at the start to confirm function is being called
     print(f"=== create_order_token_for_mobile called: order_id={order_id}, user={request.user.id if request.user else 'None'} ===")
@@ -461,11 +458,8 @@ def create_order_token_for_mobile(request, order_id):
         redirect_url = f"{base_url}/api/payments/callback/?merchant_order_id={merchant_order_id}"
         
         # Create order for mobile SDK with additional error handling
-        import logging
-        logger = logging.getLogger(__name__)
-        print(f"Creating PhonePe order token for order_id={order_id}, merchant_order_id={merchant_order_id}, amount={order_amount}, redirect_url={redirect_url}")
+        print(f"[INFO] Creating PhonePe order token for order_id={order_id}, merchant_order_id={merchant_order_id}, amount={order_amount}, redirect_url={redirect_url}")
         sys.stdout.flush()
-        logger.info(f"Creating PhonePe order token for order_id={order_id}, merchant_order_id={merchant_order_id}, amount={order_amount}")
         
         try:
             print(f"Calling create_order_for_mobile_sdk with amount={order_amount}, merchant_order_id={merchant_order_id}")
@@ -513,9 +507,8 @@ def create_order_token_for_mobile(request, order_id):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        print(f"PhonePe order created successfully: orderId={order_response.get('orderId')}, token={order_response.get('token')[:20] if order_response.get('token') else 'None'}...")
+        print(f"[INFO] PhonePe order created successfully: orderId={order_response.get('orderId')}, token={order_response.get('token')[:20] if order_response.get('token') else 'None'}...")
         sys.stdout.flush()
-        logger.info(f"PhonePe order created successfully: orderId={order_response.get('orderId')}")
         
         # Update order payment status to pending
         order.payment_status = 'pending'

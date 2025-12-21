@@ -2,9 +2,8 @@ from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from ...models import SuperSetting
-import logging
-
-logger = logging.getLogger(__name__)
+import sys
+import traceback
 
 
 @api_view(['GET'])
@@ -23,7 +22,8 @@ def super_setting(request):
             'balance': float(setting.balance),
         }, status=status.HTTP_200_OK)
     except Exception as e:
-        logger.error(f"Error getting SuperSetting: {str(e)}")
+        print(f"[ERROR] Error getting SuperSetting: {str(e)}")
+        traceback.print_exc()
         return Response({
             'error': 'Failed to get settings'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,7 +1,8 @@
 """
 KYC management views
 """
-import logging
+import sys
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, View
@@ -9,8 +10,6 @@ from django.utils import timezone
 from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
 from core.models import User
-
-logger = logging.getLogger(__name__)
 
 
 class KYCListView(StaffRequiredMixin, ListView):
@@ -96,7 +95,8 @@ class KYCVerifyView(StaffRequiredMixin, View):
                 return redirect('myadmin:core:kyc_list')
             return redirect('myadmin:core:kyc_verification', user_id=user_id)
         except Exception as e:
-            logger.error(f'Error verifying KYC: {str(e)}')
+            print(f'[ERROR] Error verifying KYC: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while verifying KYC.')
             return redirect('myadmin:core:kyc_verification', user_id=user_id)
 
@@ -125,7 +125,8 @@ class KYCRejectView(StaffRequiredMixin, View):
                 return redirect('myadmin:core:kyc_list')
             return redirect('myadmin:core:kyc_verification', user_id=user_id)
         except Exception as e:
-            logger.error(f'Error rejecting KYC: {str(e)}')
+            print(f'[ERROR] Error rejecting KYC: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while rejecting KYC.')
             return redirect('myadmin:core:kyc_verification', user_id=user_id)
 
@@ -153,7 +154,8 @@ class KYCBulkVerifyView(StaffRequiredMixin, View):
             else:
                 messages.info(request, 'Selected users are already verified.')
         except Exception as e:
-            logger.error(f'Error bulk verifying KYC: {str(e)}')
+            print(f'[ERROR] Error bulk verifying KYC: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while verifying KYC.')
         
         return redirect('myadmin:core:kyc_list')

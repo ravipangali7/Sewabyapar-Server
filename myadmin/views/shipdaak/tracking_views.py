@@ -1,7 +1,8 @@
 """
 Shipment tracking views for Shipdaak
 """
-import logging
+import sys
+import traceback
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView
@@ -11,8 +12,6 @@ from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Order
 from ecommerce.services.shipdaak_service import ShipdaakService
-
-logger = logging.getLogger(__name__)
 
 
 class ShipmentTrackingListView(StaffRequiredMixin, ListView):
@@ -80,7 +79,8 @@ class ShipmentTrackingDetailView(StaffRequiredMixin, DetailView):
                 shipdaak = ShipdaakService()
                 tracking_data = shipdaak.track_shipment(order.shipdaak_awb_number)
             except Exception as e:
-                logger.error(f"Error fetching tracking data: {str(e)}", exc_info=True)
+                print(f"[ERROR] Error fetching tracking data: {str(e)}")
+                traceback.print_exc()
                 messages.warning(self.request, f"Could not fetch tracking data: {str(e)}")
         
         context['tracking_data'] = tracking_data
@@ -158,7 +158,8 @@ class UpdateTrackingView(StaffRequiredMixin, View):
                 messages.warning(request, 'Could not fetch tracking data from Shipdaak')
                 
         except Exception as e:
-            logger.error(f"Error updating tracking: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error updating tracking: {str(e)}")
+            traceback.print_exc()
             messages.error(request, f'Error updating tracking: {str(e)}')
         
         return redirect('myadmin:shipdaak:tracking_detail', pk=order.pk)

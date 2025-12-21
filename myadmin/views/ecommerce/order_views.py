@@ -1,7 +1,8 @@
 """
 Order management views
 """
-import logging
+import sys
+import traceback
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -14,8 +15,6 @@ from ecommerce.models import Order
 from myadmin.forms.ecommerce_forms import OrderForm, OrderItemFormSet
 from myadmin.utils.export import export_orders_csv
 from myadmin.utils.bulk_actions import bulk_delete, bulk_update_status, get_selected_ids
-
-logger = logging.getLogger(__name__)
 
 
 class OrderListView(StaffRequiredMixin, ListView):
@@ -106,11 +105,13 @@ class OrderCreateView(StaffRequiredMixin, CreateView):
                 messages.success(self.request, 'Order created successfully.')
                 return redirect(self.get_success_url())
             except IntegrityError as e:
-                logger.error(f'Error creating order: {str(e)}')
+                print(f'[ERROR] Error creating order: {str(e)}')
+                sys.stdout.flush()
                 messages.error(self.request, 'Error creating order. Please check the data and try again.')
                 return self.form_invalid(form)
             except Exception as e:
-                logger.error(f'Unexpected error creating order: {str(e)}')
+                print(f'[ERROR] Unexpected error creating order: {str(e)}')
+                traceback.print_exc()
                 messages.error(self.request, 'An unexpected error occurred while creating the order.')
                 return self.form_invalid(form)
         else:
@@ -152,11 +153,13 @@ class OrderUpdateView(StaffRequiredMixin, UpdateView):
                 messages.success(self.request, 'Order updated successfully.')
                 return redirect(self.get_success_url())
             except IntegrityError as e:
-                logger.error(f'Error updating order: {str(e)}')
+                print(f'[ERROR] Error updating order: {str(e)}')
+                sys.stdout.flush()
                 messages.error(self.request, 'Error updating order. Please check the data and try again.')
                 return self.form_invalid(form)
             except Exception as e:
-                logger.error(f'Unexpected error updating order: {str(e)}')
+                print(f'[ERROR] Unexpected error updating order: {str(e)}')
+                traceback.print_exc()
                 messages.error(self.request, 'An unexpected error occurred while updating the order.')
                 return self.form_invalid(form)
         else:
@@ -180,11 +183,13 @@ class OrderDeleteView(StaffRequiredMixin, DeleteView):
             messages.success(request, f'Order "{order_number}" deleted successfully.')
             return redirect(self.success_url)
         except IntegrityError as e:
-            logger.error(f'Error deleting order: {str(e)}')
+            print(f'[ERROR] Error deleting order: {str(e)}')
+            sys.stdout.flush()
             messages.error(request, 'Cannot delete order. This order may be referenced by other records.')
             return redirect('myadmin:ecommerce:order_detail', pk=self.object.pk)
         except Exception as e:
-            logger.error(f'Unexpected error deleting order: {str(e)}')
+            print(f'[ERROR] Unexpected error deleting order: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An unexpected error occurred while deleting the order.')
             return redirect('myadmin:ecommerce:order_detail', pk=self.object.pk)
 
@@ -202,7 +207,8 @@ def update_order_status(request, pk):
             else:
                 messages.error(request, 'Invalid status selected.')
         except Exception as e:
-            logger.error(f'Error updating order status: {str(e)}')
+            print(f'[ERROR] Error updating order status: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while updating the order status.')
         return redirect('myadmin:ecommerce:order_detail', pk=pk)
         return redirect('myadmin:ecommerce:order_list')

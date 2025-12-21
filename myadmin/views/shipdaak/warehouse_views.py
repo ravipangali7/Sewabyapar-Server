@@ -1,7 +1,8 @@
 """
 Warehouse management views for Shipdaak
 """
-import logging
+import sys
+import traceback
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView
@@ -10,8 +11,6 @@ from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Store
 from ecommerce.services.shipdaak_service import ShipdaakService
-
-logger = logging.getLogger(__name__)
 
 
 class WarehouseListView(StaffRequiredMixin, ListView):
@@ -84,7 +83,8 @@ class CreateWarehouseView(StaffRequiredMixin, View):
                 messages.error(request, 'Failed to create warehouse in Shipdaak')
                 
         except Exception as e:
-            logger.error(f"Error creating warehouse: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error creating warehouse: {str(e)}")
+            traceback.print_exc()
             messages.error(request, f'Error creating warehouse: {str(e)}')
         
         return redirect('myadmin:shipdaak:warehouse_detail', pk=store.pk)

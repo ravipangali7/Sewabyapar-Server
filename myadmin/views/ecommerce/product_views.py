@@ -1,8 +1,9 @@
 """
 Product management views
 """
-import logging
 import json
+import sys
+import traceback
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.views import View
@@ -15,8 +16,6 @@ from ecommerce.models import Product
 from myadmin.forms.ecommerce_forms import ProductForm, ProductImageFormSet
 from myadmin.utils.export import export_products_csv
 from myadmin.utils.bulk_actions import bulk_delete, bulk_activate, bulk_deactivate, get_selected_ids
-
-logger = logging.getLogger(__name__)
 
 
 class ProductListView(StaffRequiredMixin, ListView):
@@ -85,7 +84,8 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
                     variants_data = json.loads(variants_json) if variants_json else {}
                     self.object.variants = variants_data
                 except (json.JSONDecodeError, ValueError) as e:
-                    logger.warning(f'Invalid variant JSON: {str(e)}')
+                    print(f'[WARNING] Invalid variant JSON: {str(e)}')
+                    sys.stdout.flush()
                     self.object.variants = {}
                 
                 self.object.save()
@@ -94,11 +94,13 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
                 messages.success(self.request, 'Product created successfully.')
                 return redirect(self.get_success_url())
             except IntegrityError as e:
-                logger.error(f'Error creating product: {str(e)}')
+                print(f'[ERROR] Error creating product: {str(e)}')
+                sys.stdout.flush()
                 messages.error(self.request, 'Error creating product. Please check the form data and try again.')
                 return self.form_invalid(form)
             except Exception as e:
-                logger.error(f'Unexpected error creating product: {str(e)}')
+                print(f'[ERROR] Unexpected error creating product: {str(e)}')
+                traceback.print_exc()
                 messages.error(self.request, 'An unexpected error occurred while creating the product.')
                 return self.form_invalid(form)
         else:
@@ -141,7 +143,8 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
                     variants_data = json.loads(variants_json) if variants_json else {}
                     self.object.variants = variants_data
                 except (json.JSONDecodeError, ValueError) as e:
-                    logger.warning(f'Invalid variant JSON: {str(e)}')
+                    print(f'[WARNING] Invalid variant JSON: {str(e)}')
+                    sys.stdout.flush()
                     # Keep existing variants if invalid JSON provided
                     if not self.object.variants:
                         self.object.variants = {}
@@ -152,11 +155,13 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
                 messages.success(self.request, 'Product updated successfully.')
                 return redirect(self.get_success_url())
             except IntegrityError as e:
-                logger.error(f'Error updating product: {str(e)}')
+                print(f'[ERROR] Error updating product: {str(e)}')
+                sys.stdout.flush()
                 messages.error(self.request, 'Error updating product. Please check the form data and try again.')
                 return self.form_invalid(form)
             except Exception as e:
-                logger.error(f'Unexpected error updating product: {str(e)}')
+                print(f'[ERROR] Unexpected error updating product: {str(e)}')
+                traceback.print_exc()
                 messages.error(self.request, 'An unexpected error occurred while updating the product.')
                 return self.form_invalid(form)
         else:
@@ -180,11 +185,13 @@ class ProductDeleteView(StaffRequiredMixin, DeleteView):
             messages.success(request, f'Product "{product_name}" deleted successfully.')
             return redirect(self.success_url)
         except IntegrityError as e:
-            logger.error(f'Error deleting product: {str(e)}')
+            print(f'[ERROR] Error deleting product: {str(e)}')
+            sys.stdout.flush()
             messages.error(request, 'Cannot delete product. This product may be referenced by orders or other records.')
             return redirect('myadmin:ecommerce:product_detail', pk=self.object.pk)
         except Exception as e:
-            logger.error(f'Unexpected error deleting product: {str(e)}')
+            print(f'[ERROR] Unexpected error deleting product: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An unexpected error occurred while deleting the product.')
             return redirect('myadmin:ecommerce:product_detail', pk=self.object.pk)
 
@@ -234,7 +241,8 @@ class ProductApproveView(StaffRequiredMixin, View):
         except Product.DoesNotExist:
             messages.error(request, 'Product not found.')
         except Exception as e:
-            logger.error(f'Error approving product: {str(e)}')
+            print(f'[ERROR] Error approving product: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while approving the product.')
         return redirect('myadmin:ecommerce:product_list')
 
@@ -250,7 +258,8 @@ class ProductRejectView(StaffRequiredMixin, View):
         except Product.DoesNotExist:
             messages.error(request, 'Product not found.')
         except Exception as e:
-            logger.error(f'Error rejecting product: {str(e)}')
+            print(f'[ERROR] Error rejecting product: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while rejecting the product.')
         return redirect('myadmin:ecommerce:product_list')
 

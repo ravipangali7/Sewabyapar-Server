@@ -1,15 +1,13 @@
 """
 KYC API views for submitting and retrieving KYC status
 """
-import logging
+import sys
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
 from ...models import User
 from ...serializers import KYCSubmitSerializer, KYCStatusSerializer
-
-logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
@@ -19,9 +17,11 @@ def kyc_submit(request):
     # Log authentication status for debugging
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if not auth_header:
-        logger.warning('KYC submit request without Authorization header')
+        print('[WARNING] KYC submit request without Authorization header')
+        sys.stdout.flush()
     else:
-        logger.info(f'KYC submit request from user {request.user.id} ({request.user.phone})')
+        print(f'[INFO] KYC submit request from user {request.user.id} ({request.user.phone})')
+        sys.stdout.flush()
     
     user = request.user
     
@@ -78,9 +78,11 @@ def kyc_status(request):
     # Log authentication status for debugging
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if not auth_header:
-        logger.warning('KYC status request without Authorization header')
+        print('[WARNING] KYC status request without Authorization header')
+        sys.stdout.flush()
     else:
-        logger.info(f'KYC status request from user {request.user.id} ({request.user.phone})')
+        print(f'[INFO] KYC status request from user {request.user.id} ({request.user.phone})')
+        sys.stdout.flush()
     
     user = request.user
     serializer = KYCStatusSerializer(user)

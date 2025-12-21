@@ -1,7 +1,8 @@
 """
 Store management views
 """
-import logging
+import sys
+import traceback
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
@@ -9,8 +10,6 @@ from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Store
 from myadmin.forms.ecommerce_forms import StoreForm
-
-logger = logging.getLogger(__name__)
 
 
 class StoreListView(StaffRequiredMixin, ListView):
@@ -85,7 +84,8 @@ class StoreUpdateView(StaffRequiredMixin, UpdateView):
                 else:
                     messages.warning(self.request, 'Store updated, but warehouse creation in Shipdaak failed.')
             except Exception as e:
-                logger.error(f"Error creating Shipdaak warehouse for store {self.object.id} on update: {str(e)}", exc_info=True)
+                print(f"[ERROR] Error creating Shipdaak warehouse for store {self.object.id} on update: {str(e)}")
+                traceback.print_exc()
                 messages.warning(self.request, f'Store updated, but warehouse creation failed: {str(e)}')
         else:
             messages.success(self.request, 'Store updated successfully.')

@@ -7,9 +7,7 @@ from django.utils import timezone
 from django.db.models import Q
 from ecommerce.models import Order
 from ecommerce.services.shipdaak_service import ShipdaakService
-import logging
-
-logger = logging.getLogger(__name__)
+import traceback
 
 
 class Command(BaseCommand):
@@ -112,11 +110,11 @@ class Command(BaseCommand):
                 
             except Exception as e:
                 error_count += 1
-                logger.error(
-                    f"Error updating tracking for order {order.order_number} "
-                    f"(AWB: {order.shipdaak_awb_number}): {str(e)}",
-                    exc_info=True
+                print(
+                    f"[ERROR] Error updating tracking for order {order.order_number} "
+                    f"(AWB: {order.shipdaak_awb_number}): {str(e)}"
                 )
+                traceback.print_exc()
                 self.stdout.write(
                     self.style.ERROR(
                         f'Error processing order {order.order_number}: {str(e)}'

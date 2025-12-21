@@ -7,18 +7,18 @@ from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
 import json
-import logging
+import sys
+import traceback
 from ...models import Product, Store, Order, OrderItem, Category, ProductImage
 from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer
 from core.models import User
-
-logger = logging.getLogger(__name__)
 
 
 def check_merchant_permission(user):
     """Check if user is a merchant"""
     if not user.is_merchant:
-        logger.warning(f'Non-merchant user {user.id} ({user.phone}) attempted to access merchant endpoint')
+        print(f'[WARNING] Non-merchant user {user.id} ({user.phone}) attempted to access merchant endpoint')
+        sys.stdout.flush()
         return False
     return True
 
@@ -30,7 +30,8 @@ def merchant_products(request):
     # Log authentication status for debugging
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header:
-        logger.info(f'Merchant products request from user {request.user.id} ({request.user.phone})')
+        print(f'[INFO] Merchant products request from user {request.user.id} ({request.user.phone})')
+        sys.stdout.flush()
     
     if not check_merchant_permission(request.user):
         return Response({
@@ -94,7 +95,8 @@ def merchant_products(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Log request data for debugging
-        logger.debug(f"Product creation request data: {request.data}")
+        print(f"[DEBUG] Product creation request data: {request.data}")
+        sys.stdout.flush()
         
         # Handle both JSON and multipart/form-data requests
         # For multipart/form-data, extract product data from request.POST
@@ -168,7 +170,8 @@ def merchant_products(request):
             return Response(response_data, status=status.HTTP_201_CREATED)
         
         # Log validation errors for debugging
-        logger.error(f"Product creation validation errors: {serializer.errors}")
+        print(f"[ERROR] Product creation validation errors: {serializer.errors}")
+        sys.stdout.flush()
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -179,7 +182,8 @@ def merchant_product_detail(request, pk):
     # Log authentication status for debugging
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header:
-        logger.info(f'Merchant product detail request from user {request.user.id} ({request.user.phone}) for product {pk}')
+        print(f'[INFO] Merchant product detail request from user {request.user.id} ({request.user.phone}) for product {pk}')
+        sys.stdout.flush()
     
     if not check_merchant_permission(request.user):
         return Response({
@@ -218,7 +222,8 @@ def merchant_orders(request):
     # Log authentication status for debugging
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header:
-        logger.info(f'Merchant orders request from user {request.user.id} ({request.user.phone})')
+        print(f'[INFO] Merchant orders request from user {request.user.id} ({request.user.phone})')
+        sys.stdout.flush()
     
     if not check_merchant_permission(request.user):
         return Response({
@@ -281,7 +286,8 @@ def merchant_order_detail(request, pk):
     # Log authentication status for debugging
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header:
-        logger.info(f'Merchant order detail request from user {request.user.id} ({request.user.phone}) for order {pk}')
+        print(f'[INFO] Merchant order detail request from user {request.user.id} ({request.user.phone}) for order {pk}')
+        sys.stdout.flush()
     
     if not check_merchant_permission(request.user):
         return Response({
@@ -409,7 +415,8 @@ def merchant_accept_order(request, pk):
     order.reject_reason = None  # Clear any previous reject reason
     order.save()
     
-    logger.info(f"Order {order.id} accepted by merchant {request.user.id}")
+    print(f"[INFO] Order {order.id} accepted by merchant {request.user.id}")
+    sys.stdout.flush()
     
     # Auto-create shipment in Shipdaak
     if order.merchant and order.merchant.shipdaak_pickup_warehouse_id:
@@ -433,11 +440,14 @@ def merchant_accept_order(request, pk):
                     'shipdaak_label_url', 'shipdaak_manifest_url', 'shipdaak_status',
                     'shipdaak_courier_id', 'shipdaak_courier_name'
                 ])
-                logger.info(f"Successfully created Shipdaak shipment for order {order.id}, AWB: {order.shipdaak_awb_number}")
+                print(f"[INFO] Successfully created Shipdaak shipment for order {order.id}, AWB: {order.shipdaak_awb_number}")
+                sys.stdout.flush()
             else:
-                logger.warning(f"Failed to create Shipdaak shipment for order {order.id}, but order was accepted")
+                print(f"[WARNING] Failed to create Shipdaak shipment for order {order.id}, but order was accepted")
+                sys.stdout.flush()
         except Exception as e:
-            logger.error(f"Error creating Shipdaak shipment for order {order.id}: {str(e)}", exc_info=True)
+            print(f"[ERROR] Error creating Shipdaak shipment for order {order.id}: {str(e)}")
+            traceback.print_exc()
             # Order is still accepted, but without Shipdaak shipment
     
     serializer = OrderSerializer(order, context={'request': request})
@@ -478,7 +488,8 @@ def merchant_reject_order(request, pk):
     order.merchant_ready_date = None  # Clear any previous ready date
     order.save()
     
-    logger.info(f"Order {order.id} rejected by merchant {request.user.id}, reason: {reject_reason}")
+    print(f"[INFO] Order {order.id} rejected by merchant {request.user.id}, reason: {reject_reason}")
+    sys.stdout.flush()
     
     serializer = OrderSerializer(order, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -619,14 +630,17 @@ def merchant_stores(request):
                     store.shipdaak_pickup_warehouse_id = warehouse_data.get('pickup_warehouse_id')
                     store.shipdaak_rto_warehouse_id = warehouse_data.get('rto_warehouse_id')
                     store.shipdaak_warehouse_created_at = timezone.now()
-                    store.save(update_fields=['shipdaak_pickup_warehouse_id', 
-                                            'shipdaak_rto_warehouse_id', 
-                                            'shipdaak_warehouse_created_at'])
-                    logger.info(f"Successfully created Shipdaak warehouse for store {store.id}")
+                    store.save(update_fields=['shipdaak_pickup_warehouse_id',
+                                             'shipdaak_rto_warehouse_id',
+                                             'shipdaak_warehouse_created_at'])
+                    print(f"[INFO] Successfully created Shipdaak warehouse for store {store.id}")
+                    sys.stdout.flush()
                 else:
-                    logger.warning(f"Failed to create Shipdaak warehouse for store {store.id}, but store was created")
+                    print(f"[WARNING] Failed to create Shipdaak warehouse for store {store.id}, but store was created")
+                    sys.stdout.flush()
             except Exception as e:
-                logger.error(f"Error creating Shipdaak warehouse for store {store.id}: {str(e)}", exc_info=True)
+                print(f"[ERROR] Error creating Shipdaak warehouse for store {store.id}: {str(e)}")
+                traceback.print_exc()
                 # Store is still created, but without Shipdaak integration
             
             return Response(StoreSerializer(store, context={'request': request}).data, status=status.HTTP_201_CREATED)
@@ -668,9 +682,11 @@ def merchant_store_detail(request, pk):
                         store.save(update_fields=['shipdaak_pickup_warehouse_id', 
                                                 'shipdaak_rto_warehouse_id', 
                                                 'shipdaak_warehouse_created_at'])
-                        logger.info(f"Successfully created Shipdaak warehouse for store {store.id} on update")
+                        print(f"[INFO] Successfully created Shipdaak warehouse for store {store.id} on update")
+                        sys.stdout.flush()
                 except Exception as e:
-                    logger.error(f"Error creating Shipdaak warehouse for store {store.id} on update: {str(e)}", exc_info=True)
+                    print(f"[ERROR] Error creating Shipdaak warehouse for store {store.id} on update: {str(e)}")
+                    traceback.print_exc()
             
             return Response(StoreSerializer(store, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -716,8 +732,9 @@ def merchant_shipments_track(request, awb_number):
                 'success': False,
                 'error': 'Failed to track shipment'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    except Exception as e:
-        logger.error(f"Error tracking shipment {awb_number}: {str(e)}", exc_info=True)
+        except Exception as e:
+        print(f"[ERROR] Error tracking shipment {awb_number}: {str(e)}")
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': 'An error occurred while tracking shipment'
@@ -776,8 +793,9 @@ def merchant_shipments_cancel(request):
                 'success': False,
                 'error': 'Failed to cancel shipment'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    except Exception as e:
-        logger.error(f"Error cancelling shipment {awb_number}: {str(e)}", exc_info=True)
+        except Exception as e:
+        print(f"[ERROR] Error cancelling shipment {awb_number}: {str(e)}")
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': 'An error occurred while cancelling shipment'
@@ -808,8 +826,9 @@ def merchant_couriers(request):
                 'success': False,
                 'error': 'Failed to fetch couriers'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    except Exception as e:
-        logger.error(f"Error fetching couriers: {str(e)}", exc_info=True)
+        except Exception as e:
+        print(f"[ERROR] Error fetching couriers: {str(e)}")
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': 'An error occurred while fetching couriers'

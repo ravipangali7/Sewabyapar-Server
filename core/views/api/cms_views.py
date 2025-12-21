@@ -3,9 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from website.models import CMSPages, MySetting
-import logging
-
-logger = logging.getLogger(__name__)
+import sys
+import traceback
 
 
 @api_view(['GET'])
@@ -38,7 +37,8 @@ def cms_page_by_slug(request, slug):
             'error': 'Page not found'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.error(f"Error getting CMS page by slug '{slug}': {str(e)}")
+        print(f"[ERROR] Error getting CMS page by slug '{slug}': {str(e)}")
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': 'Failed to get page'
@@ -71,7 +71,8 @@ def contact_form_submit(request):
         
         # Here you could save to database, send email, etc.
         # For now, just return success (matching website behavior)
-        logger.info(f"Contact form submission from {name} ({email}): {subject}")
+        print(f"[INFO] Contact form submission from {name} ({email}): {subject}")
+        sys.stdout.flush()
         
         return Response({
             'success': True,
@@ -79,7 +80,8 @@ def contact_form_submit(request):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Error processing contact form: {str(e)}")
+        print(f"[ERROR] Error processing contact form: {str(e)}")
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': 'Failed to submit contact form. Please try again later.'
@@ -128,7 +130,8 @@ def website_settings(request):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Error getting website settings: {str(e)}")
+        print(f"[ERROR] Error getting website settings: {str(e)}")
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': 'Failed to get website settings'

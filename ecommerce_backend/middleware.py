@@ -1,10 +1,7 @@
 """
 Custom middleware for API CSRF exemption
 """
-import logging
 from django.utils.deprecation import MiddlewareMixin
-
-logger = logging.getLogger(__name__)
 
 
 class ApiCsrfExemptMiddleware(MiddlewareMixin):

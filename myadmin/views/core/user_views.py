@@ -1,7 +1,8 @@
 """
 User management views
 """
-import logging
+import sys
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -15,8 +16,6 @@ from core.models import User
 from myadmin.forms.core_forms import UserForm, UserCreateForm
 from myadmin.utils.export import export_users_csv
 from myadmin.utils.bulk_actions import bulk_delete, get_selected_ids
-
-logger = logging.getLogger(__name__)
 
 
 class UserListView(StaffRequiredMixin, ListView):
@@ -95,11 +94,13 @@ class UserCreateView(StaffRequiredMixin, CreateView):
             messages.success(self.request, 'User created successfully.')
             return super().form_valid(form)
         except IntegrityError as e:
-            logger.error(f'Error creating user: {str(e)}')
+            print(f'[ERROR] Error creating user: {str(e)}')
+            sys.stdout.flush()
             messages.error(self.request, 'Error creating user. This phone number or email may already be in use.')
             return self.form_invalid(form)
         except Exception as e:
-            logger.error(f'Unexpected error creating user: {str(e)}')
+            print(f'[ERROR] Unexpected error creating user: {str(e)}')
+            traceback.print_exc()
             messages.error(self.request, 'An unexpected error occurred while creating the user.')
             return self.form_invalid(form)
     
@@ -118,11 +119,13 @@ class UserUpdateView(StaffRequiredMixin, UpdateView):
             messages.success(self.request, 'User updated successfully.')
             return super().form_valid(form)
         except IntegrityError as e:
-            logger.error(f'Error updating user: {str(e)}')
+            print(f'[ERROR] Error updating user: {str(e)}')
+            sys.stdout.flush()
             messages.error(self.request, 'Error updating user. This phone number or email may already be in use.')
             return self.form_invalid(form)
         except Exception as e:
-            logger.error(f'Unexpected error updating user: {str(e)}')
+            print(f'[ERROR] Unexpected error updating user: {str(e)}')
+            traceback.print_exc()
             messages.error(self.request, 'An unexpected error occurred while updating the user.')
             return self.form_invalid(form)
     
@@ -144,11 +147,13 @@ class UserDeleteView(StaffRequiredMixin, DeleteView):
             messages.success(request, f'User "{user_name}" deleted successfully.')
             return redirect(self.success_url)
         except IntegrityError as e:
-            logger.error(f'Error deleting user: {str(e)}')
+            print(f'[ERROR] Error deleting user: {str(e)}')
+            sys.stdout.flush()
             messages.error(request, 'Cannot delete user. This user may be referenced by other records.')
             return redirect('myadmin:core:user_detail', pk=self.object.pk)
         except Exception as e:
-            logger.error(f'Unexpected error deleting user: {str(e)}')
+            print(f'[ERROR] Unexpected error deleting user: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An unexpected error occurred while deleting the user.')
             return redirect('myadmin:core:user_detail', pk=self.object.pk)
 
@@ -164,7 +169,8 @@ def verify_kyc(request, pk):
             messages.success(request, f'KYC verified for {user.name}.')
             return redirect('myadmin:core:user_detail', pk=pk)
         except Exception as e:
-            logger.error(f'Error verifying KYC: {str(e)}')
+            print(f'[ERROR] Error verifying KYC: {str(e)}')
+            traceback.print_exc()
             messages.error(request, 'An error occurred while verifying KYC.')
             return redirect('myadmin:core:user_detail', pk=pk)
     return redirect('myadmin:core:user_list')
