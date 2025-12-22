@@ -303,7 +303,7 @@ class ShipdaakService:
             Dict with shipment data (awb_number, shipment_id, label_url, etc.) or None if fails
         """
         try:
-            from ecommerce.models import CourierConfiguration
+            from ecommerce.models import GlobalCourier
             
             store = order.merchant
             if not store:
@@ -316,14 +316,13 @@ class ShipdaakService:
                 sys.stdout.flush()
                 return None
             
-            # Get all active couriers for this store, ordered by priority
-            all_courier_configs = CourierConfiguration.objects.filter(
-                store=store,
+            # Get all active global couriers, ordered by priority
+            all_courier_configs = GlobalCourier.objects.filter(
                 is_active=True
             ).order_by('priority', 'courier_name')
             
             if not all_courier_configs.exists():
-                print(f"[WARNING] No courier configured for store {store.id}, shipment creation may fail")
+                print(f"[WARNING] No active global couriers configured, shipment creation may fail")
                 sys.stdout.flush()
                 # Continue anyway - might work without courier or fail gracefully
             
@@ -340,24 +339,15 @@ class ShipdaakService:
                         if config.courier_id != courier_id:
                             couriers_to_try.append(config)
                 else:
-                    print(f"[WARNING] Courier ID {courier_id} not found or inactive for store {store.id}, trying all available couriers")
+                    print(f"[WARNING] Courier ID {courier_id} not found or inactive, trying all available couriers")
                     sys.stdout.flush()
                     couriers_to_try = list(all_courier_configs)
             else:
-                # No specific courier requested - try default first, then others
-                default_courier = all_courier_configs.filter(is_default=True).first()
-                if default_courier:
-                    couriers_to_try.append(default_courier)
-                    # Add other couriers after default
-                    for config in all_courier_configs:
-                        if config.courier_id != default_courier.courier_id:
-                            couriers_to_try.append(config)
-                else:
-                    # No default, just use all couriers in priority order
-                    couriers_to_try = list(all_courier_configs)
+                # No specific courier requested - use all couriers in priority order
+                couriers_to_try = list(all_courier_configs)
             
             if not couriers_to_try:
-                print(f"[ERROR] No active couriers found for store {store.id}. Cannot create shipment without a courier.")
+                print(f"[ERROR] No active global couriers found. Cannot create shipment without a courier.")
                 sys.stdout.flush()
                 return None
             

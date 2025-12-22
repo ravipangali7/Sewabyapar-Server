@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container-fluid p-0">
     <div class="mb-3">
-        <h1 class="h3 d-inline align-middle">Courier Configuration Details</h1>
+        <h1 class="h3 d-inline align-middle">Global Courier Details</h1>
         <a class="btn btn-primary ms-2" href="{% url 'myadmin:shipdaak:courier_config_update' config.pk %}">
             <i class="align-middle" data-feather="edit"></i> Edit
         </a>
@@ -21,31 +21,17 @@
             <div class="card mb-3">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
-                        <i class="align-middle" data-feather="settings"></i> Configuration Information
+                        <i class="align-middle" data-feather="settings"></i> Courier Information
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Store:</strong></div>
-                        <div class="col-sm-8"><h5 class="mb-0">{{ config.store.name }}</h5></div>
-                    </div>
-                    <div class="row mb-3">
                         <div class="col-sm-4"><strong>Courier Name:</strong></div>
-                        <div class="col-sm-8">{{ config.courier_name }}</div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ config.courier_name }}</h5></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Courier ID:</strong></div>
                         <div class="col-sm-8"><span class="badge bg-info fs-6">{{ config.courier_id }}</span></div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Is Default:</strong></div>
-                        <div class="col-sm-8">
-                            {% if config.is_default %}
-                                <span class="badge bg-primary">Yes</span>
-                            {% else %}
-                                <span class="badge bg-secondary">No</span>
-                            {% endif %}
-                        </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Priority:</strong></div>

@@ -2,9 +2,9 @@
 {% block content %}
 <div class="container-fluid p-0">
     <div class="mb-3">
-        <h1 class="h3 d-inline align-middle">Courier Configuration</h1>
+        <h1 class="h3 d-inline align-middle">Global Courier Management</h1>
         <a class="btn btn-primary ms-2" href="{% url 'myadmin:shipdaak:courier_config_create' %}">
-            <i class="align-middle" data-feather="plus"></i> Add Configuration
+            <i class="align-middle" data-feather="plus"></i> Add Courier
         </a>
         <a class="btn btn-info ms-2" href="{% url 'myadmin:shipdaak:courier_sync' %}">
             <i class="align-middle" data-feather="refresh-cw"></i> Sync Couriers
@@ -17,13 +17,13 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">All Courier Configurations</h5>
+                    <h5 class="card-title mb-0">All Global Couriers</h5>
                 </div>
                 <div class="card-body">
                     <form method="get" class="mb-3">
                         <div class="row">
                             <div class="col-md-4">
-                                <input type="text" class="form-control" name="search" placeholder="Search by store name, courier..." value="{{ search }}">
+                                <input type="text" class="form-control" name="search" placeholder="Search by courier name or ID..." value="{{ search }}">
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select" name="is_active">
@@ -42,10 +42,8 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Store</th>
                                 <th>Courier Name</th>
                                 <th>Courier ID</th>
-                                <th>Default</th>
                                 <th>Priority</th>
                                 <th>Status</th>
                                 <th>Created</th>
@@ -55,16 +53,8 @@
                         <tbody>
                             {% for config in configs %}
                             <tr>
-                                <td><strong>{{ config.store.name }}</strong></td>
-                                <td>{{ config.courier_name }}</td>
+                                <td><strong>{{ config.courier_name }}</strong></td>
                                 <td><span class="badge bg-info">{{ config.courier_id }}</span></td>
-                                <td>
-                                    {% if config.is_default %}
-                                        <span class="badge bg-primary">Default</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">-</span>
-                                    {% endif %}
-                                </td>
                                 <td>{{ config.priority }}</td>
                                 <td>
                                     {% if config.is_active %}
@@ -88,7 +78,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="8" class="text-center">No courier configurations found</td>
+                                <td colspan="6" class="text-center">No global couriers found</td>
                             </tr>
                             {% endfor %}
                         </tbody>

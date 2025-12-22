@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, CourierConfiguration
+    Review, Wishlist, Coupon, GlobalCourier
 )
 
 
@@ -93,10 +93,10 @@ class CouponAdmin(admin.ModelAdmin):
     readonly_fields = ['used_count', 'created_at']
 
 
-@admin.register(CourierConfiguration)
-class CourierConfigurationAdmin(admin.ModelAdmin):
-    list_display = ['store', 'courier_name', 'courier_id', 'is_default', 'is_active', 'priority', 'created_at']
-    list_filter = ['is_active', 'is_default', 'store', 'created_at']
-    search_fields = ['store__name', 'courier_name']
+@admin.register(GlobalCourier)
+class GlobalCourierAdmin(admin.ModelAdmin):
+    list_display = ['courier_name', 'courier_id', 'is_active', 'priority', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['courier_name', 'courier_id']
     readonly_fields = ['created_at', 'updated_at']
-    list_editable = ['is_default', 'is_active', 'priority']
+    list_editable = ['is_active', 'priority']

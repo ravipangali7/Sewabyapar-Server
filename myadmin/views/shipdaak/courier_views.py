@@ -1,5 +1,5 @@
 """
-Courier configuration views for Shipdaak
+Global courier configuration views
 """
 import sys
 import traceback
@@ -9,28 +9,28 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.db.models import Q
 from myadmin.mixins import StaffRequiredMixin
-from ecommerce.models import CourierConfiguration, Store
-from myadmin.forms.shipdaak_forms import CourierConfigurationForm
+from ecommerce.models import GlobalCourier
+from myadmin.forms.shipdaak_forms import GlobalCourierForm
 from ecommerce.services.shipdaak_service import ShipdaakService
 
 
 class CourierConfigurationListView(StaffRequiredMixin, ListView):
-    """List all courier configurations"""
-    model = CourierConfiguration
+    """List all global couriers"""
+    model = GlobalCourier
     template_name = 'admin/shipdaak/courier_config_list.html'
     context_object_name = 'configs'
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = CourierConfiguration.objects.select_related('store').order_by('-created_at')
+        queryset = GlobalCourier.objects.all().order_by('priority', 'courier_name')
         
         search = self.request.GET.get('search')
         is_active = self.request.GET.get('is_active')
         
         if search:
             queryset = queryset.filter(
-                Q(store__name__icontains=search) |
-                Q(courier_name__icontains=search)
+                Q(courier_name__icontains=search) |
+                Q(courier_id__icontains=search)
             )
         
         if is_active == 'yes':
@@ -48,8 +48,8 @@ class CourierConfigurationListView(StaffRequiredMixin, ListView):
 
 
 class CourierConfigurationDetailView(StaffRequiredMixin, DetailView):
-    """Courier configuration detail view"""
-    model = CourierConfiguration
+    """Global courier detail view"""
+    model = GlobalCourier
     template_name = 'admin/shipdaak/courier_config_detail.html'
     context_object_name = 'config'
     
@@ -61,16 +61,16 @@ class CourierConfigurationDetailView(StaffRequiredMixin, DetailView):
 
 
 class CourierConfigurationCreateView(StaffRequiredMixin, CreateView):
-    """Create courier configuration for a store"""
-    model = CourierConfiguration
-    form_class = CourierConfigurationForm
+    """Create global courier"""
+    model = GlobalCourier
+    form_class = GlobalCourierForm
     template_name = 'admin/shipdaak/courier_config_form.html'
     
     def get_success_url(self):
         return reverse_lazy('myadmin:shipdaak:courier_config_list')
     
     def form_valid(self, form):
-        messages.success(self.request, 'Courier configuration created successfully')
+        messages.success(self.request, 'Global courier created successfully')
         return super().form_valid(form)
     
     def get_context_data(self, **kwargs):
@@ -88,16 +88,16 @@ class CourierConfigurationCreateView(StaffRequiredMixin, CreateView):
 
 
 class CourierConfigurationUpdateView(StaffRequiredMixin, UpdateView):
-    """Update courier configuration"""
-    model = CourierConfiguration
-    form_class = CourierConfigurationForm
+    """Update global courier"""
+    model = GlobalCourier
+    form_class = GlobalCourierForm
     template_name = 'admin/shipdaak/courier_config_form.html'
     
     def get_success_url(self):
         return reverse_lazy('myadmin:shipdaak:courier_config_list')
     
     def form_valid(self, form):
-        messages.success(self.request, 'Courier configuration updated successfully')
+        messages.success(self.request, 'Global courier updated successfully')
         return super().form_valid(form)
     
     def get_context_data(self, **kwargs):
@@ -115,15 +115,15 @@ class CourierConfigurationUpdateView(StaffRequiredMixin, UpdateView):
 
 
 class CourierConfigurationDeleteView(StaffRequiredMixin, DeleteView):
-    """Delete courier configuration"""
-    model = CourierConfiguration
+    """Delete global courier"""
+    model = GlobalCourier
     template_name = 'admin/shipdaak/courier_config_confirm_delete.html'
     
     def get_success_url(self):
         return reverse_lazy('myadmin:shipdaak:courier_config_list')
     
     def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Courier configuration deleted successfully')
+        messages.success(request, 'Global courier deleted successfully')
         return super().delete(request, *args, **kwargs)
 
 

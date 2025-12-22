@@ -390,25 +390,16 @@ def merchant_accept_order(request, pk):
     courier_id = request.data.get('courier_id')
     courier_config = None
     if courier_id:
-        # Validate courier belongs to merchant's store
-        from ecommerce.models import CourierConfiguration
-        courier_config = CourierConfiguration.objects.filter(
-            store=order.merchant,
+        # Validate courier is active globally
+        from ecommerce.models import GlobalCourier
+        courier_config = GlobalCourier.objects.filter(
             courier_id=courier_id,
             is_active=True
         ).first()
         if not courier_config:
             return Response({
-                'error': f'Courier ID {courier_id} is not available for this store'
+                'error': f'Courier ID {courier_id} is not available or inactive'
             }, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        # Get default courier if no courier_id provided
-        from ecommerce.models import CourierConfiguration
-        courier_config = CourierConfiguration.objects.filter(
-            store=order.merchant,
-            is_default=True,
-            is_active=True
-        ).first()
     
     # Accept the order
     order.status = 'accepted'
@@ -838,29 +829,20 @@ def merchant_couriers(request):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def merchant_get_available_couriers(request):
-    """Get available couriers configured for merchant's store"""
+    """Get available couriers - all active global couriers (not store-specific)"""
     if not check_merchant_permission(request.user):
         return Response({
             'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
         }, status=status.HTTP_403_FORBIDDEN)
     
-    stores = Store.objects.filter(owner=request.user, is_active=True)
-    if not stores.exists():
-        return Response({
-            'error': 'No active store found'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    store = stores.first()
-    from ecommerce.models import CourierConfiguration
-    courier_configs = CourierConfiguration.objects.filter(
-        store=store,
+    from ecommerce.models import GlobalCourier
+    courier_configs = GlobalCourier.objects.filter(
         is_active=True
     ).order_by('priority', 'courier_name')
     
     couriers = [{
         'id': config.courier_id,
         'name': config.courier_name,
-        'is_default': config.is_default,
         'priority': config.priority
     } for config in courier_configs]
     

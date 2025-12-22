@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container-fluid p-0">
     <div class="mb-3">
-        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Courier Configuration</h1>
+        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Global Courier</h1>
         <a class="btn btn-secondary ms-2" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
             <i class="align-middle" data-feather="arrow-left"></i> Back
         </a>
@@ -11,7 +11,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Courier Configuration Information</h5>
+                    <h5 class="card-title mb-0">Global Courier Information</h5>
                 </div>
                 <div class="card-body">
                     <form method="post">

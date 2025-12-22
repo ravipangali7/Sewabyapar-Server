@@ -315,22 +315,19 @@ class Coupon(models.Model):
         ordering = ['-created_at']
 
 
-class CourierConfiguration(models.Model):
-    """Courier configuration for stores - admin can set multiple couriers per merchant"""
-    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='courier_configs', help_text='Store for this courier configuration')
-    courier_id = models.IntegerField(help_text='Shipdaak courier ID')
+class GlobalCourier(models.Model):
+    """Global courier configuration - all merchants see all active couriers"""
+    courier_id = models.IntegerField(unique=True, help_text='Shipdaak courier ID')
     courier_name = models.CharField(max_length=100, help_text='Courier name')
-    is_default = models.BooleanField(default=False, help_text='Default courier for this store')
-    is_active = models.BooleanField(default=True, help_text='Whether this courier configuration is active')
+    is_active = models.BooleanField(default=True, help_text='Whether this courier is active globally')
     priority = models.IntegerField(default=0, help_text='Priority order (lower = higher priority)')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.store.name} - {self.courier_name} (ID: {self.courier_id})"
+        return f"{self.courier_name} (ID: {self.courier_id})"
     
     class Meta:
         ordering = ['priority', 'courier_name']
-        unique_together = ['store', 'courier_id']  # Prevent duplicate courier per store
-        verbose_name = 'Courier Configuration'
-        verbose_name_plural = 'Courier Configurations'
+        verbose_name = 'Global Courier'
+        verbose_name_plural = 'Global Couriers'
