@@ -369,9 +369,14 @@ def merchant_accept_order(request, pk):
             'error': f'Order with status "{order.status}" cannot be accepted. Only pending or confirmed orders can be accepted.'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Get merchant_ready_date from request if provided
+    # Validate required fields
+    errors = {}
+    
+    # Validate merchant_ready_date (required)
     merchant_ready_date_str = request.data.get('merchant_ready_date')
-    if merchant_ready_date_str:
+    if not merchant_ready_date_str:
+        errors['merchant_ready_date'] = 'merchant_ready_date is required'
+    else:
         try:
             # Parse ISO format datetime string
             merchant_ready_date = datetime.fromisoformat(merchant_ready_date_str.replace('Z', '+00:00'))
@@ -380,26 +385,89 @@ def merchant_accept_order(request, pk):
                 merchant_ready_date = timezone.make_aware(merchant_ready_date)
             order.merchant_ready_date = merchant_ready_date
         except (ValueError, TypeError) as e:
-            return Response({
-                'error': f'Invalid merchant_ready_date format: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        order.merchant_ready_date = timezone.now()
+            errors['merchant_ready_date'] = f'Invalid merchant_ready_date format: {str(e)}'
     
-    # Get courier_id from request if provided
+    # Validate courier_id (required if couriers are available)
+    from ecommerce.models import GlobalCourier
+    available_couriers = GlobalCourier.objects.filter(is_active=True)
     courier_id = request.data.get('courier_id')
     courier_config = None
-    if courier_id:
-        # Validate courier is active globally
-        from ecommerce.models import GlobalCourier
+    if available_couriers.exists():
+        if not courier_id:
+            errors['courier_id'] = 'courier_id is required when couriers are available'
+        else:
+            courier_config = available_couriers.filter(courier_id=courier_id).first()
+            if not courier_config:
+                errors['courier_id'] = f'Courier ID {courier_id} is not available or inactive'
+    elif courier_id:
+        # If courier_id is provided but no couriers are available, still validate it
         courier_config = GlobalCourier.objects.filter(
             courier_id=courier_id,
             is_active=True
         ).first()
         if not courier_config:
-            return Response({
-                'error': f'Courier ID {courier_id} is not available or inactive'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            errors['courier_id'] = f'Courier ID {courier_id} is not available or inactive'
+    
+    # Validate package dimensions (required)
+    package_length = request.data.get('package_length')
+    package_breadth = request.data.get('package_breadth')
+    package_height = request.data.get('package_height')
+    package_weight = request.data.get('package_weight')
+    
+    if package_length is None:
+        errors['package_length'] = 'package_length is required'
+    else:
+        try:
+            package_length = float(package_length)
+            if package_length <= 0:
+                errors['package_length'] = 'package_length must be a positive number'
+            else:
+                order.package_length = package_length
+        except (ValueError, TypeError):
+            errors['package_length'] = 'package_length must be a valid number'
+    
+    if package_breadth is None:
+        errors['package_breadth'] = 'package_breadth is required'
+    else:
+        try:
+            package_breadth = float(package_breadth)
+            if package_breadth <= 0:
+                errors['package_breadth'] = 'package_breadth must be a positive number'
+            else:
+                order.package_breadth = package_breadth
+        except (ValueError, TypeError):
+            errors['package_breadth'] = 'package_breadth must be a valid number'
+    
+    if package_height is None:
+        errors['package_height'] = 'package_height is required'
+    else:
+        try:
+            package_height = float(package_height)
+            if package_height <= 0:
+                errors['package_height'] = 'package_height must be a positive number'
+            else:
+                order.package_height = package_height
+        except (ValueError, TypeError):
+            errors['package_height'] = 'package_height must be a valid number'
+    
+    if package_weight is None:
+        errors['package_weight'] = 'package_weight is required'
+    else:
+        try:
+            package_weight = float(package_weight)
+            if package_weight <= 0:
+                errors['package_weight'] = 'package_weight must be a positive number'
+            else:
+                order.package_weight = package_weight
+        except (ValueError, TypeError):
+            errors['package_weight'] = 'package_weight must be a valid number'
+    
+    # Return errors if any validation failed
+    if errors:
+        return Response({
+            'error': 'Validation failed',
+            'errors': errors
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     # Accept the order
     order.status = 'accepted'

@@ -351,11 +351,17 @@ class ShipdaakService:
                 sys.stdout.flush()
                 return None
             
-            # Calculate weight from order items (default 500g if not available)
-            # In real implementation, you might store weight per product
-            weight = 500  # Default weight in grams
-            total_items = sum(item.quantity for item in order.items.all())
-            weight = max(500, total_items * 200)  # Rough estimate: 200g per item, minimum 500g
+            # Validate package dimensions exist
+            if not order.package_length or not order.package_breadth or not order.package_height or not order.package_weight:
+                print(f"[ERROR] Order {order.id} is missing package dimensions. Package dimensions must be set when merchant accepts order.")
+                sys.stdout.flush()
+                return None
+            
+            # Use package dimensions from order
+            weight = float(order.package_weight)
+            package_length = float(order.package_length)
+            package_breadth = float(order.package_breadth)
+            package_height = float(order.package_height)
             
             # Get shipping address
             shipping_address = order.shipping_address
@@ -406,13 +412,9 @@ class ShipdaakService:
                     "sku": f"SKU{item.product.id}"  # Using product ID as SKU if not available
                 })
             
-            # Map payment method
-            pay_type = "cod" if order.payment_method == "cod" else "prepaid"
-            
-            # Calculate COD fee (typically 2% of order value for COD)
-            cod_fee = 0
-            if pay_type == "cod":
-                cod_fee = float(order.total_amount) * 0.02  # 2% COD fee
+            # Always use prepaid payment type for Shipdaak (regardless of order payment method)
+            pay_type = "prepaid"
+            cod_fee = 0  # No COD fee since always prepaid
             
             # Prepare base shipment data (without courier - will be added per attempt)
             base_shipment_data = {
@@ -420,9 +422,9 @@ class ShipdaakService:
                 "pay_type": pay_type,
                 "weight": weight,
                 "dimensions": {
-                    "length": 40,  # Default dimensions in cm
-                    "breadth": 30,
-                    "height": 20
+                    "length": package_length,  # Package dimensions from order (in cm)
+                    "breadth": package_breadth,
+                    "height": package_height
                 },
                 "shipping_fee": float(order.shipping_cost),
                 "cod_fee": cod_fee,

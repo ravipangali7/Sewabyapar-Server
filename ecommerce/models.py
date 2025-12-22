@@ -220,6 +220,11 @@ class Order(models.Model):
     shipdaak_status = models.CharField(max_length=50, blank=True, null=True, help_text='Current Shipdaak shipment status')
     shipdaak_courier_id = models.IntegerField(null=True, blank=True, help_text='Shipdaak courier ID used for shipment')
     shipdaak_courier_name = models.CharField(max_length=100, blank=True, null=True, help_text='Shipdaak courier name')
+    # Package dimensions (set when merchant accepts order)
+    package_length = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package length in cm')
+    package_breadth = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package breadth in cm')
+    package_height = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package height in cm')
+    package_weight = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package weight in grams')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

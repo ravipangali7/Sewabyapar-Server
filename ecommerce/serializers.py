@@ -192,12 +192,14 @@ class OrderSerializer(serializers.ModelSerializer):
                  'delivered_date', 'reject_reason', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
                  'shipdaak_awb_number', 'shipdaak_shipment_id', 'shipdaak_order_id', 'shipdaak_label_url',
                  'shipdaak_manifest_url', 'shipdaak_status', 'shipdaak_courier_id', 'shipdaak_courier_name',
+                 'package_length', 'package_breadth', 'package_height', 'package_weight',
                  'created_at', 'updated_at']
         read_only_fields = ['id', 'order_number', 'payment_status', 'merchant_ready_date', 'pickup_date',
                            'delivered_date', 'phonepe_transaction_id', 'phonepe_merchant_order_id',
                            'shipdaak_awb_number', 'shipdaak_shipment_id', 'shipdaak_order_id', 
                            'shipdaak_label_url', 'shipdaak_manifest_url', 'shipdaak_status',
-                           'shipdaak_courier_id', 'shipdaak_courier_name', 'created_at', 'updated_at']
+                           'shipdaak_courier_id', 'shipdaak_courier_name', 'package_length', 
+                           'package_breadth', 'package_height', 'package_weight', 'created_at', 'updated_at']
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
