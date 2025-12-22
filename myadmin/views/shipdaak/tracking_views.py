@@ -9,6 +9,8 @@ from django.views.generic import ListView, DetailView
 from django.views import View
 from django.urls import reverse_lazy
 from django.db.models import Q
+from django.utils import timezone
+from datetime import datetime
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import Order
 from ecommerce.services.shipdaak_service import ShipdaakService
@@ -46,6 +48,123 @@ class ShipmentTrackingListView(StaffRequiredMixin, ListView):
             queryset = queryset.filter(shipdaak_status__icontains=status)
         
         return queryset
+    
+    def update_tracking_data(self, shipments):
+        """
+        Update tracking data for shipments on current page
+        Uses same logic as management command update_shipdaak_tracking.py
+        """
+        # Filter shipments that are not delivered/cancelled/refunded
+        shipments_to_update = [
+            shipment for shipment in shipments
+            if shipment.status not in ['delivered', 'cancelled', 'refunded']
+        ]
+        
+        if not shipments_to_update:
+            return
+        
+        shipdaak = ShipdaakService()
+        updated_count = 0
+        
+        for order in shipments_to_update:
+            try:
+                if not order.shipdaak_awb_number:
+                    continue
+                
+                tracking_data = shipdaak.track_shipment(order.shipdaak_awb_number)
+                
+                if not tracking_data:
+                    continue
+                
+                # Update Shipdaak status
+                shipdaak_status = tracking_data.get('status', '').lower()
+                order.shipdaak_status = tracking_data.get('status')
+                
+                # Map Shipdaak status to order status (same as management command)
+                status_mapping = {
+                    'pending pickup': 'accepted',
+                    'picked up': 'shipped',
+                    'in transit': 'shipped',
+                    'out for delivery': 'shipped',
+                    'delivered': 'delivered',
+                    'rto': 'cancelled',  # Handle RTO as cancelled
+                    'cancelled': 'cancelled',
+                }
+                
+                # Update order status based on Shipdaak status
+                new_status = None
+                for shipdaak_key, order_status in status_mapping.items():
+                    if shipdaak_key in shipdaak_status:
+                        new_status = order_status
+                        break
+                
+                if new_status and new_status != order.status:
+                    order.status = new_status
+                
+                # Update dates from tracking data
+                if tracking_data.get('pickupDate'):
+                    try:
+                        pickup_date = datetime.fromisoformat(
+                            tracking_data['pickupDate'].replace('Z', '+00:00')
+                        )
+                        if timezone.is_naive(pickup_date):
+                            pickup_date = timezone.make_aware(pickup_date)
+                        if not order.pickup_date:
+                            order.pickup_date = pickup_date
+                    except (ValueError, TypeError):
+                        pass
+                
+                if tracking_data.get('deliveredDate'):
+                    try:
+                        delivered_date = datetime.fromisoformat(
+                            tracking_data['deliveredDate'].replace('Z', '+00:00')
+                        )
+                        if timezone.is_naive(delivered_date):
+                            delivered_date = timezone.make_aware(delivered_date)
+                        if not order.delivered_date:
+                            order.delivered_date = delivered_date
+                    except (ValueError, TypeError):
+                        pass
+                
+                # Save order
+                order.save()
+                updated_count += 1
+                
+            except Exception as e:
+                # Handle errors gracefully - log but don't break page load
+                print(f"[ERROR] Error updating tracking for order {order.order_number} "
+                      f"(AWB: {order.shipdaak_awb_number}): {str(e)}")
+                traceback.print_exc()
+                sys.stdout.flush()
+        
+        if updated_count > 0:
+            print(f"[INFO] Auto-updated tracking for {updated_count} shipment(s) on page load")
+            sys.stdout.flush()
+    
+    def get(self, request, *args, **kwargs):
+        """Override get() to update tracking data before rendering"""
+        # Get queryset and paginate it
+        queryset = self.get_queryset()
+        page_size = self.get_paginate_by(queryset)
+        
+        if page_size:
+            paginator, page, object_list, is_paginated = self.paginate_queryset(queryset, page_size)
+            self.object_list = object_list
+        else:
+            paginator = None
+            page = None
+            object_list = queryset
+            is_paginated = False
+            self.object_list = object_list
+        
+        # Update tracking data for shipments on current page before rendering
+        if object_list:
+            self.update_tracking_data(list(object_list))
+        
+        # Now call parent get() which will render with updated data
+        # We need to set context manually since we already paginated
+        context = self.get_context_data(object_list=object_list, is_paginated=is_paginated, page_obj=page)
+        return self.render_to_response(context)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
