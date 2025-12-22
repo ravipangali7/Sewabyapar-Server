@@ -27,6 +27,7 @@
                                         <tr>
                                             <th>ID</th>
                                             <th>Name</th>
+                                            <th>Status</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -36,9 +37,22 @@
                                             <td>{{ courier.id }}</td>
                                             <td>{{ courier.name }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="selectCourier({{ courier.id }}, '{{ courier.name }}')">
-                                                    Select
-                                                </button>
+                                                {% if courier.id in added_courier_ids %}
+                                                    <span class="badge bg-warning text-dark">Already Added</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Available</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if courier.id in added_courier_ids %}
+                                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="This courier is already added">
+                                                        Select
+                                                    </button>
+                                                {% else %}
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="selectCourier({{ courier.id }}, '{{ courier.name }}')">
+                                                        Select
+                                                    </button>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}

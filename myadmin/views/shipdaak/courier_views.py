@@ -84,6 +84,16 @@ class CourierConfigurationCreateView(StaffRequiredMixin, CreateView):
             print(f"[ERROR] Error fetching couriers: {str(e)}")
             traceback.print_exc()
             context['available_couriers'] = []
+        
+        # Get already added courier IDs to show which ones are already in the system
+        try:
+            added_courier_ids = set(GlobalCourier.objects.values_list('courier_id', flat=True))
+            context['added_courier_ids'] = added_courier_ids
+        except Exception as e:
+            print(f"[ERROR] Error fetching added couriers: {str(e)}")
+            traceback.print_exc()
+            context['added_courier_ids'] = set()
+        
         return context
 
 
@@ -111,6 +121,16 @@ class CourierConfigurationUpdateView(StaffRequiredMixin, UpdateView):
             print(f"[ERROR] Error fetching couriers: {str(e)}")
             traceback.print_exc()
             context['available_couriers'] = []
+        
+        # Get already added courier IDs, but exclude the current courier being edited
+        try:
+            added_courier_ids = set(GlobalCourier.objects.exclude(pk=self.object.pk).values_list('courier_id', flat=True))
+            context['added_courier_ids'] = added_courier_ids
+        except Exception as e:
+            print(f"[ERROR] Error fetching added couriers: {str(e)}")
+            traceback.print_exc()
+            context['added_courier_ids'] = set()
+        
         return context
 
 

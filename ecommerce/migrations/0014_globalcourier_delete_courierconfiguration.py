@@ -3,6 +3,48 @@
 from django.db import migrations, models
 
 
+def migrate_courier_data(apps, schema_editor):
+    """Migrate unique couriers from CourierConfiguration to GlobalCourier"""
+    CourierConfiguration = apps.get_model('ecommerce', 'CourierConfiguration')
+    GlobalCourier = apps.get_model('ecommerce', 'GlobalCourier')
+    
+    # Dictionary to track unique couriers and their highest priority
+    courier_map = {}
+    
+    # Collect all unique couriers from all stores
+    for config in CourierConfiguration.objects.all():
+        courier_id = config.courier_id
+        if courier_id not in courier_map:
+            courier_map[courier_id] = {
+                'courier_id': courier_id,
+                'courier_name': config.courier_name,
+                'priority': config.priority,
+                'is_active': config.is_active,
+            }
+        else:
+            # Use the highest priority (lowest number) if multiple stores have same courier
+            if config.priority < courier_map[courier_id]['priority']:
+                courier_map[courier_id]['priority'] = config.priority
+            # If any store has it active, keep it active
+            if config.is_active:
+                courier_map[courier_id]['is_active'] = True
+    
+    # Create GlobalCourier entries
+    for courier_data in courier_map.values():
+        GlobalCourier.objects.create(
+            courier_id=courier_data['courier_id'],
+            courier_name=courier_data['courier_name'],
+            priority=courier_data['priority'],
+            is_active=courier_data['is_active'],
+        )
+
+
+def reverse_migrate_courier_data(apps, schema_editor):
+    """Reverse migration - this would be complex, so we'll just clear GlobalCourier"""
+    GlobalCourier = apps.get_model('ecommerce', 'GlobalCourier')
+    GlobalCourier.objects.all().delete()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -27,6 +69,7 @@ class Migration(migrations.Migration):
                 'ordering': ['priority', 'courier_name'],
             },
         ),
+        migrations.RunPython(migrate_courier_data, reverse_migrate_courier_data),
         migrations.DeleteModel(
             name='CourierConfiguration',
         ),
