@@ -244,3 +244,49 @@ class OrderBulkStatusUpdateView(StaffRequiredMixin, View):
                           success_message='Successfully updated {count} order(s) status to {status}.')
         return redirect('myadmin:ecommerce:order_list')
 
+
+class CancelOrderView(StaffRequiredMixin, View):
+    """Cancel an order and optionally cancel Shipdaak shipment"""
+    
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        
+        # Check if order can be cancelled
+        if order.status in ['delivered', 'cancelled', 'refunded']:
+            messages.error(request, f'Cannot cancel order. Order status is "{order.get_status_display()}"')
+            return redirect('myadmin:ecommerce:order_detail', pk=order.pk)
+        
+        try:
+            # If order has Shipdaak shipment, cancel it first
+            if order.shipdaak_awb_number:
+                try:
+                    from ecommerce.services.shipdaak_service import ShipdaakService
+                    shipdaak = ShipdaakService()
+                    shipment_cancelled = shipdaak.cancel_shipment(order.shipdaak_awb_number)
+                    
+                    if shipment_cancelled:
+                        order.shipdaak_status = 'cancelled'
+                        messages.success(request, f'Shipdaak shipment {order.shipdaak_awb_number} cancelled successfully.')
+                        print(f"[INFO] Admin {request.user.id} cancelled Shipdaak shipment {order.shipdaak_awb_number} for order {order.id}")
+                        sys.stdout.flush()
+                    else:
+                        messages.warning(request, 'Order cancelled, but failed to cancel Shipdaak shipment. Please cancel it manually.')
+                except Exception as e:
+                    print(f"[ERROR] Error cancelling Shipdaak shipment {order.shipdaak_awb_number}: {str(e)}")
+                    traceback.print_exc()
+                    messages.warning(request, f'Order cancelled, but error cancelling Shipdaak shipment: {str(e)}')
+            
+            # Update order status
+            order.status = 'cancelled'
+            order.save(update_fields=['status', 'shipdaak_status'])
+            
+            messages.success(request, f'Order {order.order_number} cancelled successfully.')
+            print(f"[INFO] Admin {request.user.id} cancelled order {order.id} ({order.order_number})")
+            sys.stdout.flush()
+            
+        except Exception as e:
+            print(f"[ERROR] Error cancelling order {order.id}: {str(e)}")
+            traceback.print_exc()
+            messages.error(request, f'Error cancelling order: {str(e)}')
+        
+        return redirect('myadmin:ecommerce:order_detail', pk=order.pk)

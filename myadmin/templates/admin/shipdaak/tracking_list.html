@@ -63,6 +63,14 @@
                                     <a href="{% url 'myadmin:shipdaak:tracking_detail' shipment.pk %}" class="btn btn-sm btn-info">
                                         <i class="align-middle" data-feather="eye"></i> View
                                     </a>
+                                    {% if shipment.status != 'delivered' and shipment.status != 'cancelled' and shipment.status != 'refunded' and 'delivered' not in shipment.shipdaak_status|lower and 'cancelled' not in shipment.shipdaak_status|lower %}
+                                    <form method="post" action="{% url 'myadmin:shipdaak:tracking_cancel_shipment' shipment.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel shipment {{ shipment.shipdaak_awb_number }}? This action cannot be undone.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="align-middle" data-feather="x-circle"></i> Cancel
+                                        </button>
+                                    </form>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}

@@ -11,6 +11,7 @@ urlpatterns = [
     path('tracking/', tracking_views.ShipmentTrackingListView.as_view(), name='tracking_list'),
     path('tracking/<int:pk>/', tracking_views.ShipmentTrackingDetailView.as_view(), name='tracking_detail'),
     path('tracking/<int:pk>/update/', tracking_views.UpdateTrackingView.as_view(), name='tracking_update'),
+    path('tracking/<int:pk>/cancel-shipment/', tracking_views.CancelShipmentView.as_view(), name='tracking_cancel_shipment'),
     
     # Warehouse URLs
     path('warehouses/', warehouse_views.WarehouseListView.as_view(), name='warehouse_list'),
