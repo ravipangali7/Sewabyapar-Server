@@ -630,7 +630,15 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
             sys.stdout.flush()
         
         print(f"[INFO] Order created successfully: orderId={order_id}, token={token[:20]}...")
+        print(f"[INFO] Configuration: merchantId={merchant_id}, environment=PRODUCTION")
         sys.stdout.flush()
+        
+        # Note: If mobile SDK returns PR004 "Unauthorized" error, check:
+        # 1. Merchant account is activated for mobile SDK payments
+        # 2. Merchant ID matches the environment (PRODUCTION vs SANDBOX)
+        # 3. CLIENT_ID, CLIENT_SECRET, and MERCHANT_ID are correct
+        # 4. Merchant account has mobile SDK permissions enabled
+        # 5. Contact PhonePe support with merchant ID and error code PR004
         
         return {
             'success': True,
