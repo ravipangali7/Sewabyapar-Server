@@ -9,9 +9,10 @@ from datetime import timedelta, datetime
 import json
 import sys
 import traceback
-from ...models import Product, Store, Order, OrderItem, Category, ProductImage
-from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer
+from ...models import Product, Store, Order, OrderItem, Category, ProductImage, Transaction, Withdrawal
+from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer, TransactionSerializer
 from core.models import User
+from decimal import Decimal
 
 
 def check_merchant_permission(user):
@@ -639,6 +640,30 @@ def merchant_stats(request):
             total=Sum('total')
         )['total'] or 0
     
+    # Get wallet information
+    balance = Decimal(str(request.user.balance))
+    
+    # Get total earnings from completed payouts
+    total_earnings = Transaction.objects.filter(
+        user=request.user,
+        transaction_type='payout',
+        status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # Get pending withdrawals
+    pending_withdrawals = Withdrawal.objects.filter(
+        merchant=request.user,
+        status__in=['pending', 'approved', 'processing']
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    available_balance = balance - pending_withdrawals
+    
+    # Get recent transactions (last 5)
+    recent_transactions = Transaction.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:5]
+    transaction_serializer = TransactionSerializer(recent_transactions, many=True, context={'request': request})
+    
     return Response({
         'stores_count': stores.count(),
         'products_count': products_count,
@@ -650,6 +675,14 @@ def merchant_stats(request):
         'low_stock_products': low_stock_products,
         'best_selling_products': best_sellers_data,
         'date_filtered_revenue': float(date_filtered_revenue) if (start_date or end_date) else None,
+        # Wallet information
+        'wallet': {
+            'balance': float(balance),
+            'total_earnings': float(total_earnings),
+            'pending_withdrawals': float(pending_withdrawals),
+            'available_balance': float(available_balance),
+            'recent_transactions': transaction_serializer.data
+        }
     })
 
 

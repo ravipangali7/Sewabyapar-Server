@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save, pre_save
-from django.db import transaction
+from django.db import transaction as db_transaction
 from django.dispatch import receiver
 from decimal import Decimal, ROUND_HALF_UP
-from .models import Order
+from .models import Order, Transaction
 from core.models import SuperSetting
 import sys
 import traceback
@@ -26,7 +26,7 @@ def handle_order_delivery(sender, instance, created, **kwargs):
         
         try:
             # Use database transaction to ensure atomicity
-            with transaction.atomic():
+            with db_transaction.atomic():
                 # Get SuperSetting
                 super_setting = SuperSetting.objects.select_for_update().first()
                 if not super_setting:
@@ -59,6 +59,37 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 # Round vendor balance to 2 decimal places
                 vendor.balance = vendor.balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 vendor.save()
+                
+                # Create transaction record for commission (for SuperSetting/platform)
+                # Note: Commission transaction is tracked at platform level, not user level
+                # We can create it with a system user or track it separately
+                
+                # Create transaction record for merchant payout
+                Transaction.objects.create(
+                    user=vendor,
+                    transaction_type='payout',
+                    amount=vendor_payout,
+                    status='completed',
+                    description=f'Payout from order {instance.order_number}',
+                    related_order=instance,
+                    utr=instance.phonepe_utr if instance.phonepe_utr else None,
+                    bank_id=instance.phonepe_bank_id if instance.phonepe_bank_id else None,
+                    vpa=instance.phonepe_vpa if instance.phonepe_vpa else None,
+                )
+                
+                # Create PhonePe payment transaction if it's an online payment
+                if instance.payment_method == 'online' and instance.phonepe_transaction_id:
+                    Transaction.objects.create(
+                        user=instance.user,
+                        transaction_type='phonepe_payment',
+                        amount=instance.total_amount,
+                        status='completed' if instance.payment_status == 'success' else 'failed',
+                        description=f'PhonePe payment for order {instance.order_number}',
+                        related_order=instance,
+                        utr=instance.phonepe_utr if instance.phonepe_utr else None,
+                        bank_id=instance.phonepe_bank_id if instance.phonepe_bank_id else None,
+                        vpa=instance.phonepe_vpa if instance.phonepe_vpa else None,
+                    )
                 
                 # Mark commission as processed (use update to avoid triggering signal again)
                 Order.objects.filter(pk=instance.pk).update(commission_processed=True)

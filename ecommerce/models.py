@@ -337,3 +337,84 @@ class GlobalCourier(models.Model):
         ordering = ['priority', 'courier_name']
         verbose_name = 'Global Courier'
         verbose_name_plural = 'Global Couriers'
+
+
+class Transaction(models.Model):
+    """Transaction model to track all financial transactions"""
+    TRANSACTION_TYPE_CHOICES = [
+        ('commission', 'Commission'),
+        ('withdrawal', 'Withdrawal Request'),
+        ('withdrawal_processed', 'Withdrawal Processed'),
+        ('phonepe_payment', 'PhonePe Payment'),
+        ('payout', 'Merchant Payout'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    description = models.TextField(blank=True, help_text='Transaction description')
+    related_order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe transactions')
+    related_withdrawal = models.ForeignKey('Withdrawal', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related withdrawal for withdrawal transactions')
+    # PhonePe transaction fields
+    utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference (UTR) for PhonePe transactions')
+    bank_id = models.CharField(max_length=20, blank=True, null=True, help_text='Bank ID for PhonePe transactions')
+    vpa = models.CharField(max_length=100, blank=True, null=True, help_text='Virtual Payment Address (VPA) for PhonePe transactions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.name} - {self.get_transaction_type_display()} - ₹{self.amount} ({self.get_status_display()})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['transaction_type', '-created_at']),
+        ]
+
+
+class Withdrawal(models.Model):
+    """Withdrawal model for merchant withdrawal requests"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    merchant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='withdrawals', limit_choices_to={'is_merchant': True})
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    # Bank account details
+    bank_account_number = models.CharField(max_length=50, help_text='Bank account number')
+    bank_ifsc = models.CharField(max_length=20, help_text='Bank IFSC code')
+    bank_name = models.CharField(max_length=100, help_text='Bank name')
+    account_holder_name = models.CharField(max_length=100, help_text='Account holder name')
+    # PhonePe transaction fields (filled when withdrawal is processed)
+    utr = models.CharField(max_length=100, blank=True, null=True, help_text='UTR from withdrawal processing')
+    bank_id = models.CharField(max_length=20, blank=True, null=True, help_text='Bank ID if processed via PhonePe')
+    vpa = models.CharField(max_length=100, blank=True, null=True, help_text='VPA if processed via PhonePe')
+    rejection_reason = models.TextField(blank=True, null=True, help_text='Reason for rejection if status is rejected')
+    processed_at = models.DateTimeField(blank=True, null=True, help_text='When withdrawal was processed')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.merchant.name} - ₹{self.amount} ({self.get_status_display()})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['merchant', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]

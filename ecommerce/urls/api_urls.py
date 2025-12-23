@@ -2,7 +2,7 @@ from django.urls import path
 from ..views.api import (
     store_views, category_views, product_views,
     cart_views, order_views, review_views, wishlist_views, coupon_views, payment_views,
-    merchant_views
+    merchant_views, transaction_views, withdrawal_views
 )
 
 urlpatterns = [
@@ -65,5 +65,16 @@ urlpatterns = [
     path('merchant/shipments/cancel/', merchant_views.merchant_shipments_cancel, name='merchant-shipments-cancel'),
     path('merchant/couriers/', merchant_views.merchant_couriers, name='merchant-couriers'),
     path('merchant/couriers/available/', merchant_views.merchant_get_available_couriers, name='merchant-get-available-couriers'),
+    
+    # Transaction URLs
+    path('transactions/', transaction_views.transaction_list, name='transaction-list'),
+    path('transactions/<int:pk>/', transaction_views.transaction_detail, name='transaction-detail'),
+    path('merchant/transactions/', transaction_views.merchant_transactions, name='merchant-transactions'),
+    path('merchant/wallet/', transaction_views.merchant_wallet, name='merchant-wallet'),
+    
+    # Withdrawal URLs
+    path('merchant/withdrawals/', withdrawal_views.withdrawal_list, name='withdrawal-list'),
+    path('merchant/withdrawals/create/', withdrawal_views.create_withdrawal, name='create-withdrawal'),
+    path('merchant/withdrawals/<int:pk>/', withdrawal_views.withdrawal_detail, name='withdrawal-detail'),
 ]
 

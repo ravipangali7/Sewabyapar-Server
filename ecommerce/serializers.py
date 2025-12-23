@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon
+    Review, Wishlist, Coupon, Transaction, Withdrawal
 )
 from core.serializers import UserSerializer, AddressSerializer
 
@@ -355,4 +355,45 @@ class CouponSerializer(serializers.ModelSerializer):
     
     def get_is_valid(self, obj):
         return obj.is_valid()
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    transaction_type_display = serializers.CharField(source='get_transaction_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    related_order_number = serializers.CharField(source='related_order.order_number', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = Transaction
+        fields = ['id', 'user', 'transaction_type', 'transaction_type_display', 'amount', 
+                 'status', 'status_display', 'description', 'related_order', 'related_order_number',
+                 'related_withdrawal', 'utr', 'bank_id', 'vpa', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class WithdrawalSerializer(serializers.ModelSerializer):
+    merchant = UserSerializer(read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = Withdrawal
+        fields = ['id', 'merchant', 'amount', 'status', 'status_display', 
+                 'bank_account_number', 'bank_ifsc', 'bank_name', 'account_holder_name',
+                 'utr', 'bank_id', 'vpa', 'rejection_reason', 'processed_at', 
+                 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'processed_at']
+
+
+class WithdrawalCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating withdrawal requests"""
+    
+    class Meta:
+        model = Withdrawal
+        fields = ['amount', 'bank_account_number', 'bank_ifsc', 'bank_name', 'account_holder_name']
+    
+    def validate_amount(self, value):
+        """Validate withdrawal amount"""
+        if value <= 0:
+            raise serializers.ValidationError("Withdrawal amount must be greater than 0")
+        return value
 
