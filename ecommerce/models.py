@@ -225,6 +225,7 @@ class Order(models.Model):
     package_breadth = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package breadth in cm')
     package_height = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package height in cm')
     package_weight = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Package weight in grams')
+    commission_processed = models.BooleanField(default=False, help_text='Whether commission has been processed for this order')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

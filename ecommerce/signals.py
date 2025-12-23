@@ -1,4 +1,5 @@
 from django.db.models.signals import post_save, pre_save
+from django.db import transaction
 from django.dispatch import receiver
 from .models import Order
 from core.models import SuperSetting
@@ -12,8 +13,10 @@ def handle_order_delivery(sender, instance, created, **kwargs):
     # Only process if order is delivered and payment is successful
     if instance.status == 'delivered' and instance.payment_status == 'success':
         # Check if commission has already been processed (to avoid double processing)
-        # We'll use a flag in notes or check if balance was already updated
-        # For now, we'll process it every time, but in production you might want to add a flag
+        if instance.commission_processed:
+            print(f"[INFO] Order {instance.id} commission already processed, skipping")
+            sys.stdout.flush()
+            return
         
         if not instance.merchant:
             print(f"[WARNING] Order {instance.id} is delivered but has no merchant assigned")
@@ -21,27 +24,36 @@ def handle_order_delivery(sender, instance, created, **kwargs):
             return
         
         try:
-            # Get SuperSetting
-            super_setting = SuperSetting.objects.first()
-            if not super_setting:
-                print("[WARNING] SuperSetting not found, creating default")
+            # Use database transaction to ensure atomicity
+            with transaction.atomic():
+                # Get SuperSetting
+                super_setting = SuperSetting.objects.select_for_update().first()
+                if not super_setting:
+                    print("[WARNING] SuperSetting not found, creating default")
+                    sys.stdout.flush()
+                    super_setting = SuperSetting.objects.create()
+                
+                # Calculate commission
+                sales_commission_percentage = super_setting.sales_commission
+                commission = (instance.subtotal * sales_commission_percentage) / 100
+                
+                # Calculate vendor payout (subtotal - commission)
+                vendor_payout = instance.subtotal - commission
+                
+                # Update SuperSetting balance with commission
+                super_setting.balance += commission
+                super_setting.save()
+                
+                # Update vendor balance with payout
+                vendor = instance.merchant.owner
+                vendor.balance += vendor_payout
+                vendor.save()
+                
+                # Mark commission as processed (use update to avoid triggering signal again)
+                Order.objects.filter(pk=instance.pk).update(commission_processed=True)
+                
+                print(f"[INFO] Order {instance.id} delivered: Commission={commission} (added to SuperSetting), Payout={vendor_payout} (added to vendor), SuperSetting balance={super_setting.balance}, Vendor balance={vendor.balance}")
                 sys.stdout.flush()
-                super_setting = SuperSetting.objects.create()
-            
-            # Calculate commission
-            sales_commission_percentage = super_setting.sales_commission
-            commission = (instance.subtotal * sales_commission_percentage) / 100
-            
-            # Calculate vendor payout (subtotal - commission)
-            vendor_payout = instance.subtotal - commission
-            
-            # Update vendor balance
-            vendor = instance.merchant.owner
-            vendor.balance += vendor_payout
-            vendor.save()
-            
-            print(f"[INFO] Order {instance.id} delivered: Commission={commission}, Payout={vendor_payout}, Vendor balance updated to {vendor.balance}")
-            sys.stdout.flush()
             
         except Exception as e:
             print(f"[ERROR] Error processing commission for order {instance.id}: {str(e)}")

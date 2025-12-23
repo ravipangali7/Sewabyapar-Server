@@ -124,10 +124,6 @@ def split_order_by_vendor(temp_order):
             
             created_orders.append(order)
         
-        # Update SuperSetting balance
-        super_setting.balance += temp_order.total_amount
-        super_setting.save()
-        
         # Delete temporary order
         temp_order.delete()
         
@@ -320,10 +316,6 @@ def process_checkout(request):
                     )
                 
                 created_orders.append(order)
-            
-            # Update SuperSetting balance
-            super_setting.balance += total_amount
-            super_setting.save()
             
             # Clear cart
             cart_items.delete()
