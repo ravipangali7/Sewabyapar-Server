@@ -725,11 +725,21 @@ def initiate_sabpaisa_payment_view(request, order_id):
     
     POST /api/payments/sabpaisa/initiate/<order_id>/
     """
+    import sys
+    print(f"\n=== SabPaisa Payment Initiation Request ===")
+    print(f"Order ID: {order_id}")
+    print(f"User: {request.user.username if request.user else 'Anonymous'}")
+    sys.stdout.flush()
+    
     try:
         order = get_object_or_404(Order, pk=order_id, user=request.user)
+        print(f"Order found: {order.order_number}, Amount: {order.total_amount}, Payment Method: {order.payment_method}")
+        sys.stdout.flush()
         
         # Check if order is already paid
         if order.payment_status == 'success':
+            print(f"ERROR: Order {order_id} is already paid")
+            sys.stdout.flush()
             return Response(
                 {'error': 'Order is already paid'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -737,6 +747,8 @@ def initiate_sabpaisa_payment_view(request, order_id):
         
         # Check if payment method is online
         if order.payment_method != 'online':
+            print(f"ERROR: Order {order_id} payment method is {order.payment_method}, not 'online'")
+            sys.stdout.flush()
             return Response(
                 {'error': 'Payment method is not online'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -751,7 +763,12 @@ def initiate_sabpaisa_payment_view(request, order_id):
             addr = order.shipping_address
             payer_address = f"{addr.address}, {addr.city}, {addr.state} {addr.zip_code}"
         
+        print(f"Payer Details - Name: {payer_name}, Email: {payer_email}, Mobile: {payer_mobile}")
+        sys.stdout.flush()
+        
         # Initiate SabPaisa payment
+        print(f"Calling initiate_sabpaisa_payment...")
+        sys.stdout.flush()
         payment_response = initiate_sabpaisa_payment(
             order=order,
             payer_name=payer_name,
@@ -760,11 +777,21 @@ def initiate_sabpaisa_payment_view(request, order_id):
             payer_address=payer_address
         )
         
+        print(f"Payment response received: {list(payment_response.keys())}")
+        sys.stdout.flush()
+        
         if 'error' in payment_response:
+            print(f"ERROR in payment response: {payment_response['error']}")
+            if 'traceback' in payment_response:
+                print(f"Traceback: {payment_response['traceback']}")
+            sys.stdout.flush()
             return Response(
                 {'error': payment_response['error']},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+        print(f"Payment initiated successfully. Client Txn ID: {payment_response.get('clientTxnId')}")
+        sys.stdout.flush()
         
         return Response({
             'success': True,
@@ -776,14 +803,20 @@ def initiate_sabpaisa_payment_view(request, order_id):
         }, status=status.HTTP_200_OK)
     
     except Order.DoesNotExist:
+        print(f"ERROR: Order {order_id} not found")
+        sys.stdout.flush()
         return Response(
             {'error': 'Order not found'},
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
         import traceback
+        error_traceback = traceback.format_exc()
+        print(f"EXCEPTION in initiate_sabpaisa_payment_view: {str(e)}")
+        print(f"Traceback:\n{error_traceback}")
+        sys.stdout.flush()
         return Response(
-            {'error': f'Unexpected error: {str(e)}', 'traceback': traceback.format_exc()},
+            {'error': f'Unexpected error: {str(e)}', 'traceback': error_traceback},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

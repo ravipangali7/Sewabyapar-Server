@@ -109,6 +109,13 @@ def initiate_sabpaisa_payment(order, payer_name, payer_email, payer_mobile, paye
     Returns:
         dict: Response containing encData, clientCode, and clientTxnId
     """
+    import sys
+    print(f"\n=== initiate_sabpaisa_payment called ===")
+    print(f"Order ID: {order.id}, Order Number: {order.order_number}")
+    print(f"Amount: {order.total_amount}")
+    print(f"Payer Name: {payer_name}, Email: {payer_email}, Mobile: {payer_mobile}")
+    sys.stdout.flush()
+    
     try:
         # Get SabPaisa configuration
         client_code = getattr(settings, 'SABPAISA_CLIENT_CODE', '')
@@ -120,18 +127,38 @@ def initiate_sabpaisa_payment(order, payer_name, payer_email, payer_mobile, paye
         callback_url = f"{getattr(settings, 'PHONEPE_BASE_URL', 'https://www.sewabyapar.com')}/api/payments/sabpaisa/callback/"
         channel_id = 'M'  # 'M' for mobile, 'W' for web
         
+        print(f"Configuration check:")
+        print(f"  Client Code: {'SET' if client_code else 'MISSING'}")
+        print(f"  AES Key: {'SET' if aes_key else 'MISSING'}")
+        print(f"  AES IV: {'SET' if aes_iv else 'MISSING'}")
+        print(f"  Trans User Name: {'SET' if trans_user_name else 'MISSING'}")
+        print(f"  Trans User Password: {'SET' if trans_user_password else 'MISSING'}")
+        sys.stdout.flush()
+        
         # Validate required settings
         if not all([client_code, aes_key, aes_iv, trans_user_name, trans_user_password]):
+            missing = []
+            if not client_code: missing.append('SABPAISA_CLIENT_CODE')
+            if not aes_key: missing.append('SABPAISA_AES_KEY')
+            if not aes_iv: missing.append('SABPAISA_AES_IV')
+            if not trans_user_name: missing.append('SABPAISA_TRANS_USER_NAME')
+            if not trans_user_password: missing.append('SABPAISA_TRANS_USER_PASSWORD')
+            print(f"ERROR: Missing configuration: {', '.join(missing)}")
+            sys.stdout.flush()
             return {
-                'error': 'SabPaisa configuration is incomplete. Please check settings.',
+                'error': f'SabPaisa configuration is incomplete. Missing: {", ".join(missing)}',
                 'error_code': 'CONFIGURATION_ERROR'
             }
         
         # Generate unique client transaction ID
         client_txn_id = generate_client_txn_id()
+        print(f"Generated Client Txn ID: {client_txn_id}")
+        sys.stdout.flush()
         
         # Format transaction date: "2025-02-17 13:47:22"
         trans_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"Transaction Date: {trans_date}")
+        sys.stdout.flush()
         
         # Build parameter string
         # Format: "payerName=value&payerEmail=value&..."
@@ -156,13 +183,31 @@ def initiate_sabpaisa_payment(order, payer_name, payer_email, payer_mobile, paye
         
         # Join parameters with &
         param_string = '&'.join(params)
+        print(f"Parameter string length: {len(param_string)}")
+        print(f"Parameter string (first 200 chars): {param_string[:200]}...")
+        sys.stdout.flush()
         
         # Encrypt the parameter string
-        enc_data = encrypt_sabpaisa_data(aes_key, aes_iv, param_string)
+        print(f"Encrypting data...")
+        sys.stdout.flush()
+        try:
+            enc_data = encrypt_sabpaisa_data(aes_key, aes_iv, param_string)
+            print(f"Encryption successful. Encrypted data length: {len(enc_data)}")
+            sys.stdout.flush()
+        except Exception as enc_error:
+            print(f"ERROR during encryption: {str(enc_error)}")
+            import traceback
+            print(f"Encryption traceback:\n{traceback.format_exc()}")
+            sys.stdout.flush()
+            raise
         
         # Store client transaction ID in order (we can reuse phonepe_merchant_order_id field)
+        print(f"Saving client transaction ID to order...")
+        sys.stdout.flush()
         order.phonepe_merchant_order_id = client_txn_id
         order.save()
+        print(f"Order saved successfully")
+        sys.stdout.flush()
         
         return {
             'success': True,
@@ -175,6 +220,10 @@ def initiate_sabpaisa_payment(order, payer_name, payer_email, payer_mobile, paye
     except Exception as e:
         import traceback
         error_traceback = traceback.format_exc()
+        print(f"EXCEPTION in initiate_sabpaisa_payment: {str(e)}")
+        print(f"Exception type: {type(e).__name__}")
+        print(f"Traceback:\n{error_traceback}")
+        sys.stdout.flush()
         return {
             'error': f'Failed to initiate SabPaisa payment: {str(e)}',
             'error_code': 'INITIATION_ERROR',
