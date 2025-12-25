@@ -236,6 +236,24 @@ def get_base_url():
 
 PHONEPE_BASE_URL = get_base_url()
 
+# SabPaisa Payment Gateway Configuration
+SABPAISA_CLIENT_CODE = 'DJ020'  # TODO: Replace with your actual client code
+SABPAISA_AES_KEY = 'ISTrmmDC2bTvkxzlDRrVguVwetGS8xC/UFPsp6w+Itg='
+SABPAISA_AES_IV = 'M+aUFgRMPq7ci+Cmoytp3KJ2GPBOwO72Z2Cjbr55zY7++pT9mLES2M5cIblnBtaX'
+SABPAISA_TRANS_USER_NAME = 'DJL754@sp'  # TODO: Replace with your actual username
+SABPAISA_TRANS_USER_PASSWORD = '4q3qhgmJNM4m'  # TODO: Replace with your actual password
+SABPAISA_MCC = '5411'  # TODO: Replace with your actual Merchant Category Code
+SABPAISA_ENV = 'staging'  # 'staging' or 'prod'
+SABPAISA_STAGING_URL = 'https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1'
+SABPAISA_LIVE_URL = 'https://securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1'
+
+def get_sabpaisa_url():
+    if SABPAISA_ENV == 'prod':
+        return SABPAISA_LIVE_URL
+    return SABPAISA_STAGING_URL
+
+SABPAISA_URL = get_sabpaisa_url()
+
 # Shipdaak Logistics API Configuration
 SHIPDAAK_API_BASE_URL = 'https://api.shipdaak.com'  # Set this in environment or .env file
 SHIPDAAK_API_EMAIL = 'sewasajilo2@gmail.com'  # Set this in environment or .env file

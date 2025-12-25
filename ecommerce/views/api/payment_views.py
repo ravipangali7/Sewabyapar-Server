@@ -16,6 +16,11 @@ from ...services.phonepe_service import (
     generate_merchant_order_id,
     create_order_for_mobile_sdk
 )
+from ...services.sabpaisa_service import (
+    initiate_sabpaisa_payment,
+    decrypt_sabpaisa_response,
+    parse_sabpaisa_status_code
+)
 
 
 # @api_view(['POST'])
@@ -708,6 +713,180 @@ def payment_callback(request):
     except Exception as e:
         return Response(
             {'error': f'Unexpected error: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def initiate_sabpaisa_payment_view(request, order_id):
+    """
+    Initiate SabPaisa payment for an order
+    
+    POST /api/payments/sabpaisa/initiate/<order_id>/
+    """
+    try:
+        order = get_object_or_404(Order, pk=order_id, user=request.user)
+        
+        # Check if order is already paid
+        if order.payment_status == 'success':
+            return Response(
+                {'error': 'Order is already paid'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if payment method is online
+        if order.payment_method != 'online':
+            return Response(
+                {'error': 'Payment method is not online'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get payer details from order
+        payer_name = order.user.name if order.user.name else 'Customer'
+        payer_email = order.email if order.email else order.user.email
+        payer_mobile = order.phone if order.phone else (order.user.phone if hasattr(order.user, 'phone') else '')
+        payer_address = None
+        if order.shipping_address:
+            addr = order.shipping_address
+            payer_address = f"{addr.address}, {addr.city}, {addr.state} {addr.zip_code}"
+        
+        # Initiate SabPaisa payment
+        payment_response = initiate_sabpaisa_payment(
+            order=order,
+            payer_name=payer_name,
+            payer_email=payer_email,
+            payer_mobile=payer_mobile,
+            payer_address=payer_address
+        )
+        
+        if 'error' in payment_response:
+            return Response(
+                {'error': payment_response['error']},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response({
+            'success': True,
+            'data': {
+                'encData': payment_response['encData'],
+                'clientCode': payment_response['clientCode'],
+                'clientTxnId': payment_response['clientTxnId']
+            }
+        }, status=status.HTTP_200_OK)
+    
+    except Order.DoesNotExist:
+        return Response(
+            {'error': 'Order not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import traceback
+        return Response(
+            {'error': f'Unexpected error: {str(e)}', 'traceback': traceback.format_exc()},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])  # AllowAny because SabPaisa will POST here
+def sabpaisa_payment_callback(request):
+    """
+    Handle SabPaisa payment callback
+    
+    POST /api/payments/sabpaisa/callback/
+    Body: { "encResponse": "..." }
+    """
+    try:
+        # Get encrypted response from request
+        enc_response = request.data.get('encResponse') or request.POST.get('encResponse')
+        
+        if not enc_response:
+            return Response(
+                {'error': 'encResponse parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Decrypt the response
+        decrypt_result = decrypt_sabpaisa_response(enc_response)
+        
+        if 'error' in decrypt_result:
+            return Response(
+                {'error': decrypt_result['error']},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Extract parameters from decrypted response
+        response_data = decrypt_result['data']
+        client_txn_id = response_data.get('clientTxnId')
+        status_code = response_data.get('statusCode')
+        sabpaisa_txn_id = response_data.get('sabpaisaTxnId', '')
+        sabpaisa_message = response_data.get('sabpaisaMessage', '')
+        payment_mode = response_data.get('paymentMode', '')
+        bank_name = response_data.get('bankName', '')
+        paid_amount = response_data.get('paidAmount')
+        
+        if not client_txn_id:
+            return Response(
+                {'error': 'clientTxnId not found in response'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Find order by client transaction ID (stored in phonepe_merchant_order_id field)
+        try:
+            order = Order.objects.get(phonepe_merchant_order_id=client_txn_id)
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Order not found for clientTxnId'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Parse status code and update order
+        payment_status, order_status = parse_sabpaisa_status_code(status_code)
+        order.payment_status = payment_status
+        order.status = order_status
+        
+        # Store SabPaisa transaction details (reuse PhonePe fields for now)
+        if sabpaisa_txn_id:
+            order.phonepe_transaction_id = sabpaisa_txn_id
+        if payment_mode:
+            order.phonepe_payment_mode = payment_mode
+        if bank_name:
+            order.phonepe_bank_id = bank_name
+        
+        # Store additional details in notes if needed
+        sabpaisa_details = f"SabPaisa Message: {sabpaisa_message}"
+        if response_data.get('bankMessage'):
+            sabpaisa_details += f"\nBank Message: {response_data.get('bankMessage')}"
+        if response_data.get('bankErrorCode'):
+            sabpaisa_details += f"\nBank Error Code: {response_data.get('bankErrorCode')}"
+        if order.notes:
+            order.notes += f"\n\n{sabpaisa_details}"
+        else:
+            order.notes = sabpaisa_details
+        
+        order.save()
+        
+        # If payment successful and order has CART_DATA, split by vendor
+        if payment_status == 'success' and order.notes and order.notes.startswith('CART_DATA:'):
+            from website.views.ecommerce.checkout_views import split_order_by_vendor
+            created_orders = split_order_by_vendor(order)
+            if created_orders:
+                order = created_orders[0]
+        
+        return Response({
+            'success': True,
+            'message': 'Payment callback processed successfully',
+            'order_id': order.id,
+            'order_number': order.order_number,
+            'payment_status': payment_status,
+            'status_code': status_code
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        import traceback
+        return Response(
+            {'error': f'Unexpected error: {str(e)}', 'traceback': traceback.format_exc()},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

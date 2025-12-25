@@ -48,6 +48,9 @@ urlpatterns = [
     path('payments/create-order-token/<int:order_id>/', payment_views.create_order_token_for_mobile, name='create-order-token-mobile'),
     path('payments/status/', payment_views.payment_status, name='payment-status'),
     path('payments/callback/', payment_views.payment_callback, name='payment-callback'),
+    # SabPaisa Payment URLs
+    path('payments/sabpaisa/initiate/<int:order_id>/', payment_views.initiate_sabpaisa_payment_view, name='initiate-sabpaisa-payment'),
+    path('payments/sabpaisa/callback/', payment_views.sabpaisa_payment_callback, name='sabpaisa-payment-callback'),
     
     # Merchant URLs
     path('merchant/products/', merchant_views.merchant_products, name='merchant-products'),

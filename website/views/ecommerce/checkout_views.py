@@ -187,39 +187,42 @@ def process_checkout(request):
     # Then split into vendor orders after payment success
     if payment_method == 'online':
         try:
-            # Generate merchant order ID
-            merchant_order_id = generate_merchant_order_id()
-            
             # Create a temporary order to track the payment
             # This will be split into vendor orders after payment success
+            # Note: clientTxnId will be generated and stored by SabPaisa service
             temp_order = Order.objects.create(
                 user=request.user,
                 order_number=''.join(random.choices(string.ascii_uppercase + string.digits, k=10)),
                 subtotal=total_subtotal,
                 shipping_cost=total_shipping,
                 total_amount=total_amount,
-                shipping_address=shipping_address_str,
-                billing_address=billing_address_str,
+                shipping_address=address,  # Store address object, not string
+                billing_address=address,  # Store address object, not string
                 phone=address.phone,
                 email=request.user.email or '',
                 payment_method=payment_method,
                 payment_status='pending',
                 status='pending',
-                phonepe_merchant_order_id=merchant_order_id,
             )
             
             # Store cart items temporarily (we'll create order items after payment success)
             # For now, just store the cart item IDs in notes or create a temporary mapping
             # We'll handle this in the payment callback
             
-            # Build redirect URL
-            redirect_url = f"{settings.PHONEPE_BASE_URL}/payment/result/?merchant_order_id={merchant_order_id}"
+            # Initiate SabPaisa payment
+            from ecommerce.services.sabpaisa_service import initiate_sabpaisa_payment
             
-            # Initiate payment using SDK
-            payment_response = initiate_payment(
-                amount=float(total_amount),
-                merchant_order_id=merchant_order_id,
-                redirect_url=redirect_url
+            payer_name = address.full_name if address.full_name else request.user.name
+            payer_email = request.user.email or ''
+            payer_mobile = address.phone
+            payer_address = f"{address.address}, {address.city}, {address.state} {address.zip_code}"
+            
+            payment_response = initiate_sabpaisa_payment(
+                order=temp_order,
+                payer_name=payer_name,
+                payer_email=payer_email,
+                payer_mobile=payer_mobile,
+                payer_address=payer_address
             )
             
             if 'error' in payment_response:
@@ -229,14 +232,16 @@ def process_checkout(request):
                     'message': f'Payment initiation failed: {payment_response["error"]}'
                 })
             
-            # Extract redirect URL from response
-            redirect_url_from_response = payment_response.get('data', {}).get('redirectUrl') or payment_response.get('redirectUrl')
+            # Extract encData and clientCode from response
+            enc_data = payment_response.get('encData')
+            client_code = payment_response.get('clientCode')
+            client_txn_id = payment_response.get('clientTxnId')
             
-            if not redirect_url_from_response:
+            if not enc_data or not client_code:
                 temp_order.delete()
                 return JsonResponse({
                     'success': False,
-                    'message': 'No redirect URL received from PhonePe'
+                    'message': 'Invalid payment response from SabPaisa'
                 })
             
             # Store cart item data in order notes temporarily (we'll parse it in callback)
@@ -253,8 +258,10 @@ def process_checkout(request):
                 'message': 'Payment initiated successfully',
                 'order_id': temp_order.id,
                 'order_number': temp_order.order_number,
-                'redirectUrl': redirect_url_from_response,
-                'merchantOrderId': merchant_order_id
+                'encData': enc_data,
+                'clientCode': client_code,
+                'clientTxnId': client_txn_id,
+                'sabpaisaUrl': getattr(settings, 'SABPAISA_URL', 'https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1')
             })
         
         except Exception as e:
