@@ -262,6 +262,21 @@ def initiate_sabpaisa_payment(order, payer_name, payer_email, payer_mobile, paye
             enc_data = encrypt_sabpaisa_data(aes_key, aes_iv, param_string)
             print(f"Encryption successful. Encrypted data length: {len(enc_data)}")
             sys.stdout.flush()
+            
+            # Verify encryption by attempting to decrypt (for debugging)
+            try:
+                decrypted_test = decrypt_sabpaisa_data(aes_key, aes_iv, enc_data)
+                print(f"[VERIFICATION] Decryption test successful. Decrypted length: {len(decrypted_test)}")
+                print(f"[VERIFICATION] Decrypted first 100 chars: {decrypted_test[:100]}")
+                # Verify key parameters are in decrypted data
+                if client_txn_id in decrypted_test and client_code in decrypted_test:
+                    print(f"[VERIFICATION] Encryption/Decryption verified successfully")
+                else:
+                    print(f"[WARNING] Encryption verification: clientTxnId or clientCode not found in decrypted data")
+                sys.stdout.flush()
+            except Exception as verify_error:
+                print(f"[WARNING] Encryption verification failed: {str(verify_error)}")
+                sys.stdout.flush()
         except Exception as enc_error:
             print(f"ERROR during encryption: {str(enc_error)}")
             import traceback
