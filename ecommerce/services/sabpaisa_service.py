@@ -251,36 +251,73 @@ def initiate_sabpaisa_payment(order, payer_name, payer_email, payer_mobile, paye
         
         # Join parameters with &
         param_string = '&'.join(params)
-        print(f"Parameter string length: {len(param_string)}")
-        print(f"Parameter string (first 200 chars): {param_string[:200]}...")
+        print("=" * 50)
+        print("[SABPAISA_BACKEND] Payment Parameters")
+        print("=" * 50)
+        print(f"[SABPAISA_BACKEND] Parameter string length: {len(param_string)}")
+        print(f"[SABPAISA_BACKEND] Full parameter string:")
+        print(param_string)
+        print("=" * 50)
         sys.stdout.flush()
         
         # Encrypt the parameter string
-        print(f"Encrypting data...")
+        print("=" * 50)
+        print("[SABPAISA_BACKEND] Starting Encryption")
+        print("=" * 50)
+        print(f"[SABPAISA_BACKEND] Using AES Key (first 30 chars): {aes_key[:30]}...")
+        print(f"[SABPAISA_BACKEND] Using AES IV (first 30 chars): {aes_iv[:30]}...")
         sys.stdout.flush()
         try:
             enc_data = encrypt_sabpaisa_data(aes_key, aes_iv, param_string)
-            print(f"Encryption successful. Encrypted data length: {len(enc_data)}")
+            print("=" * 50)
+            print("[SABPAISA_BACKEND] Encryption Successful")
+            print("=" * 50)
+            print(f"[SABPAISA_BACKEND] Encrypted data length: {len(enc_data)} hex characters")
+            print(f"[SABPAISA_BACKEND] Encrypted data (first 100 chars): {enc_data[:100]}...")
+            print(f"[SABPAISA_BACKEND] Encrypted data (last 100 chars): ...{enc_data[-100:]}")
+            print("=" * 50)
             sys.stdout.flush()
             
             # Verify encryption by attempting to decrypt (for debugging)
+            print("=" * 50)
+            print("[SABPAISA_BACKEND] Verifying Encryption")
+            print("=" * 50)
             try:
                 decrypted_test = decrypt_sabpaisa_data(aes_key, aes_iv, enc_data)
-                print(f"[VERIFICATION] Decryption test successful. Decrypted length: {len(decrypted_test)}")
-                print(f"[VERIFICATION] Decrypted first 100 chars: {decrypted_test[:100]}")
+                print(f"[SABPAISA_BACKEND] Decryption test successful")
+                print(f"[SABPAISA_BACKEND] Decrypted length: {len(decrypted_test)} characters")
+                print(f"[SABPAISA_BACKEND] Decrypted first 200 chars: {decrypted_test[:200]}")
+                print(f"[SABPAISA_BACKEND] Decrypted last 200 chars: {decrypted_test[-200:]}")
                 # Verify key parameters are in decrypted data
                 if client_txn_id in decrypted_test and client_code in decrypted_test:
-                    print(f"[VERIFICATION] Encryption/Decryption verified successfully")
+                    print(f"[SABPAISA_BACKEND] ✓ Encryption/Decryption verified successfully")
+                    print(f"[SABPAISA_BACKEND] ✓ clientTxnId found in decrypted data")
+                    print(f"[SABPAISA_BACKEND] ✓ clientCode found in decrypted data")
                 else:
-                    print(f"[WARNING] Encryption verification: clientTxnId or clientCode not found in decrypted data")
+                    print(f"[SABPAISA_BACKEND] ⚠ WARNING: Encryption verification failed")
+                    if client_txn_id not in decrypted_test:
+                        print(f"[SABPAISA_BACKEND] ⚠ clientTxnId NOT found in decrypted data")
+                    if client_code not in decrypted_test:
+                        print(f"[SABPAISA_BACKEND] ⚠ clientCode NOT found in decrypted data")
+                print("=" * 50)
                 sys.stdout.flush()
             except Exception as verify_error:
-                print(f"[WARNING] Encryption verification failed: {str(verify_error)}")
+                print(f"[SABPAISA_BACKEND] ⚠ WARNING: Encryption verification failed")
+                print(f"[SABPAISA_BACKEND] Error: {str(verify_error)}")
+                import traceback
+                print(f"[SABPAISA_BACKEND] Traceback:\n{traceback.format_exc()}")
+                print("=" * 50)
                 sys.stdout.flush()
         except Exception as enc_error:
-            print(f"ERROR during encryption: {str(enc_error)}")
+            print("=" * 50)
+            print("[SABPAISA_BACKEND] ✗ ENCRYPTION ERROR")
+            print("=" * 50)
+            print(f"[SABPAISA_BACKEND] Error Type: {type(enc_error).__name__}")
+            print(f"[SABPAISA_BACKEND] Error Message: {str(enc_error)}")
             import traceback
-            print(f"Encryption traceback:\n{traceback.format_exc()}")
+            print(f"[SABPAISA_BACKEND] Full Traceback:")
+            print(traceback.format_exc())
+            print("=" * 50)
             sys.stdout.flush()
             raise
         
