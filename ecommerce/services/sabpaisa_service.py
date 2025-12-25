@@ -36,10 +36,46 @@ def encrypt_sabpaisa_data(auth_key, auth_iv, data_string):
     Returns:
         str: Encrypted data (hex string)
     """
+    import sys
     try:
         # Decode base64 key and IV
         key = base64.b64decode(auth_key)
         iv = base64.b64decode(auth_iv)
+        
+        print(f"DEBUG: Key length after decode: {len(key)} bytes")
+        print(f"DEBUG: IV length after decode: {len(iv)} bytes")
+        sys.stdout.flush()
+        
+        # AES requires key to be 16, 24, or 32 bytes (128, 192, or 256 bits)
+        # IV must be exactly 16 bytes for AES-CBC
+        if len(iv) != 16:
+            print(f"ERROR: IV is {len(iv)} bytes, need exactly 16 bytes")
+            print(f"IV (first 50 chars): {auth_iv[:50]}")
+            sys.stdout.flush()
+            # Pad or truncate IV to exactly 16 bytes
+            if len(iv) < 16:
+                # Pad with zeros
+                iv = iv + b'\x00' * (16 - len(iv))
+                print(f"Padded IV to 16 bytes")
+            else:
+                # Truncate to 16 bytes
+                iv = iv[:16]
+                print(f"Truncated IV to 16 bytes")
+            sys.stdout.flush()
+        
+        # Ensure key is valid length (16, 24, or 32 bytes)
+        if len(key) not in [16, 24, 32]:
+            print(f"WARNING: Key is {len(key)} bytes, adjusting...")
+            if len(key) < 16:
+                key = key + b'\x00' * (16 - len(key))
+            elif len(key) < 24:
+                key = key + b'\x00' * (24 - len(key))
+            elif len(key) < 32:
+                key = key + b'\x00' * (32 - len(key))
+            else:
+                key = key[:32]
+            print(f"Adjusted key to {len(key)} bytes")
+            sys.stdout.flush()
         
         # Create AES cipher in CBC mode
         cipher = AES.new(key, AES.MODE_CBC, iv)
@@ -53,8 +89,16 @@ def encrypt_sabpaisa_data(auth_key, auth_iv, data_string):
         # Convert to hex string
         encrypted_hex = encrypted_data.hex().upper()
         
+        print(f"Encryption successful. Encrypted data length: {len(encrypted_hex)} hex chars")
+        sys.stdout.flush()
+        
         return encrypted_hex
     except Exception as e:
+        import sys
+        import traceback
+        print(f"EXCEPTION in encrypt_sabpaisa_data: {str(e)}")
+        print(f"Traceback:\n{traceback.format_exc()}")
+        sys.stdout.flush()
         raise Exception(f'Encryption failed: {str(e)}')
 
 
@@ -70,10 +114,29 @@ def decrypt_sabpaisa_data(auth_key, auth_iv, encrypted_hex):
     Returns:
         str: Decrypted data string
     """
+    import sys
     try:
         # Decode base64 key and IV
         key = base64.b64decode(auth_key)
         iv = base64.b64decode(auth_iv)
+        
+        # Ensure IV is exactly 16 bytes
+        if len(iv) != 16:
+            if len(iv) < 16:
+                iv = iv + b'\x00' * (16 - len(iv))
+            else:
+                iv = iv[:16]
+        
+        # Ensure key is valid length
+        if len(key) not in [16, 24, 32]:
+            if len(key) < 16:
+                key = key + b'\x00' * (16 - len(key))
+            elif len(key) < 24:
+                key = key + b'\x00' * (24 - len(key))
+            elif len(key) < 32:
+                key = key + b'\x00' * (32 - len(key))
+            else:
+                key = key[:32]
         
         # Convert hex string to bytes
         encrypted_data = bytes.fromhex(encrypted_hex)
@@ -92,6 +155,11 @@ def decrypt_sabpaisa_data(auth_key, auth_iv, encrypted_hex):
         
         return decrypted_string
     except Exception as e:
+        import sys
+        import traceback
+        print(f"EXCEPTION in decrypt_sabpaisa_data: {str(e)}")
+        print(f"Traceback:\n{traceback.format_exc()}")
+        sys.stdout.flush()
         raise Exception(f'Decryption failed: {str(e)}')
 
 
