@@ -387,10 +387,10 @@ def create_order_token_for_mobile(request, order_id):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if payment method is online
-        if order.payment_method != 'online':
+        # Check if payment method is online or phonepe
+        if order.payment_method not in ['online', 'phonepe']:
             return Response(
-                {'error': 'Payment method is not online'},
+                {'error': 'Payment method must be online or phonepe'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

@@ -172,6 +172,114 @@ def order_list_create(request):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
+        # For PhonePe payment, create temporary order without auto-initiating payment
+        # Frontend will call create-order-token endpoint to get PhonePe order token
+        elif payment_method == 'phonepe':
+            try:
+                # Validate serializer first to get validated data
+                serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+                if not serializer.is_valid():
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+                validated_data = serializer.validated_data
+                items_data = validated_data.get('items', [])
+                
+                if not items_data:
+                    return Response(
+                        {'error': 'No items found to create order'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Get addresses
+                from core.models import Address
+                shipping_address = Address.objects.get(id=validated_data['shipping_address'])
+                billing_address = Address.objects.get(id=validated_data['billing_address'])
+                
+                # Get SuperSetting for shipping charge
+                try:
+                    super_setting = SuperSetting.objects.first()
+                    if not super_setting:
+                        super_setting = SuperSetting.objects.create()
+                    basic_shipping_charge = super_setting.basic_shipping_charge
+                except Exception:
+                    basic_shipping_charge = Decimal('0')
+                
+                # Group items by vendor to calculate totals
+                from ...models import Store
+                vendor_items = defaultdict(list)
+                for item_data in items_data:
+                    store_id = item_data.get('store')
+                    if store_id:
+                        try:
+                            store = Store.objects.get(id=store_id)
+                            vendor_items[store].append(item_data)
+                        except Store.DoesNotExist:
+                            continue
+                
+                # Calculate total amounts
+                total_subtotal = Decimal(str(sum(item.get('total', 0) for item in items_data)))
+                vendor_count = len(vendor_items)
+                total_shipping = basic_shipping_charge * vendor_count
+                total_amount = total_subtotal + total_shipping
+                
+                # Generate merchant order ID (will be used when creating PhonePe order token)
+                merchant_order_id = generate_merchant_order_id()
+                
+                # Generate order number
+                order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+                while Order.objects.filter(order_number=order_number).exists():
+                    order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+                
+                # Create temporary order (will be split by vendor after payment success)
+                temp_order = Order.objects.create(
+                    user=request.user,
+                    order_number=order_number,
+                    subtotal=total_subtotal,
+                    shipping_cost=total_shipping,
+                    total_amount=total_amount,
+                    shipping_address=shipping_address,
+                    billing_address=billing_address,
+                    phone=validated_data.get('phone', ''),
+                    email=validated_data.get('email', ''),
+                    notes=validated_data.get('notes', '') or '',
+                    payment_method=payment_method,
+                    payment_status='pending',
+                    status='pending',
+                    phonepe_merchant_order_id=merchant_order_id,
+                )
+                
+                # Store cart item data in order notes for vendor splitting after payment
+                # Format: "CART_DATA:store_id:product_id:quantity:price|store_id:product_id:quantity:price|..."
+                cart_data = []
+                for store, items in vendor_items.items():
+                    for item in items:
+                        cart_data.append(f"{store.id}:{item['product']}:{item['quantity']}:{item.get('price', 0)}")
+                temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
+                temp_order.save()
+                
+                # Return order creation response (frontend will call create-order-token endpoint)
+                return Response({
+                    'success': True,
+                    'data': {
+                        'id': temp_order.id,
+                        'order_id': temp_order.id,
+                        'order_number': temp_order.order_number,
+                        'total_amount': str(temp_order.total_amount),
+                    }
+                }, status=status.HTTP_201_CREATED)
+            
+            except Exception as e:
+                print(f"[ERROR] Error creating PhonePe order: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                return Response(
+                    {
+                        'success': False,
+                        'error': f'Error creating order: {str(e)}'
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
         # For COD, use existing flow (create orders directly)
         else:
             serializer = OrderCreateSerializer(data=request.data, context={'request': request})
