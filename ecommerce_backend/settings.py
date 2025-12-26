@@ -230,6 +230,19 @@ PHONEPE_AUTHORIZATION_API_URL = f'{PHONEPE_API_BASE_URL}/identity-manager/v1/oau
 PHONEPE_ORDER_STATUS_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/order/{{merchant_order_id}}/status'
 PHONEPE_TRANSACTION_STATUS_API_URL = f'{PHONEPE_API_BASE_URL}/pg/checkout/v2/transaction/{{transaction_id}}/status'
 
+# PhonePe Mobile SDK Order Token API URLs
+PHONEPE_MOBILE_SDK_ORDER_API_URL_PRODUCTION = 'https://api.phonepe.com/apis/pg/checkout/v2/sdk/order'
+PHONEPE_MOBILE_SDK_ORDER_API_URL_SANDBOX = 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/sdk/order'
+
+# Get mobile SDK order API URL based on environment
+def get_phonepe_mobile_sdk_order_api_url():
+    if PHONEPE_ENV == 'PRODUCTION':
+        return PHONEPE_MOBILE_SDK_ORDER_API_URL_PRODUCTION
+    else:
+        return PHONEPE_MOBILE_SDK_ORDER_API_URL_SANDBOX
+
+PHONEPE_MOBILE_SDK_ORDER_API_URL = get_phonepe_mobile_sdk_order_api_url()
+
 # Base URL for payment redirects (update this for production)
 def get_base_url():
     return "https://www.sewabyapar.com"
