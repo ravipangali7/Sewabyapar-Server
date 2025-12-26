@@ -176,24 +176,54 @@ def order_list_create(request):
         # Frontend will call create-order-token endpoint to get PhonePe order token
         elif payment_method == 'phonepe':
             try:
+                # Log request data for debugging
+                print(f"[INFO] PhonePe order creation request - User: {request.user.id if request.user else 'None'}")
+                print(f"[INFO] Request data keys: {list(request.data.keys())}")
+                print(f"[INFO] Payment method: {payment_method}")
+                sys.stdout.flush()
+                
                 # Validate serializer first to get validated data
                 serializer = OrderCreateSerializer(data=request.data, context={'request': request})
                 if not serializer.is_valid():
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    print(f"[ERROR] PhonePe order creation validation failed:")
+                    print(f"[ERROR] Validation errors: {serializer.errors}")
+                    sys.stdout.flush()
+                    return Response({
+                        'success': False,
+                        'error': 'Validation failed',
+                        'errors': serializer.errors
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 validated_data = serializer.validated_data
                 items_data = validated_data.get('items', [])
                 
                 if not items_data:
-                    return Response(
-                        {'error': 'No items found to create order'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                    return Response({
+                        'success': False,
+                        'error': 'No items found to create order'
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Get addresses
                 from core.models import Address
-                shipping_address = Address.objects.get(id=validated_data['shipping_address'])
-                billing_address = Address.objects.get(id=validated_data['billing_address'])
+                try:
+                    shipping_address = Address.objects.get(id=validated_data['shipping_address'], user=request.user)
+                except Address.DoesNotExist:
+                    print(f"[ERROR] PhonePe: Shipping address not found: {validated_data['shipping_address']}")
+                    sys.stdout.flush()
+                    return Response({
+                        'success': False,
+                        'error': 'Shipping address not found or does not belong to you'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                try:
+                    billing_address = Address.objects.get(id=validated_data['billing_address'], user=request.user)
+                except Address.DoesNotExist:
+                    print(f"[ERROR] PhonePe: Billing address not found: {validated_data['billing_address']}")
+                    sys.stdout.flush()
+                    return Response({
+                        'success': False,
+                        'error': 'Billing address not found or does not belong to you'
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Get SuperSetting for shipping charge
                 try:
