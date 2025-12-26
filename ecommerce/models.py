@@ -169,7 +169,8 @@ class Order(models.Model):
     
     PAYMENT_METHOD_CHOICES = [
         ('cod', 'Cash on Delivery'),
-        ('online', 'Online Payment'),
+        ('online', 'Online Payment'),  # SabPaisa
+        ('phonepe', 'PhonePe Payment'),
     ]
     
     PAYMENT_STATUS_CHOICES = [
