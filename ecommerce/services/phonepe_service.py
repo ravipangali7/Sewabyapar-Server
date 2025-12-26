@@ -4,6 +4,8 @@ Handles all PhonePe API interactions using the official Python SDK
 """
 from datetime import datetime
 import uuid
+import requests
+import json
 from django.conf import settings
 from phonepe.sdk.pg.payments.v2.models.request.standard_checkout_pay_request import StandardCheckoutPayRequest
 from phonepe.sdk.pg.common.exceptions import PhonePeException
@@ -381,13 +383,13 @@ def validate_webhook_callback(username, password, authorization_header, response
 
 def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
     """
-    Create PhonePe order for mobile SDK integration
-    Returns orderId and token needed for Flutter SDK
+    Create PhonePe order token for mobile SDK integration
+    Calls the mobile SDK order token API endpoint directly
     
     Args:
         amount (float): Amount in rupees
-        merchant_order_id (str): Unique merchant order ID
-        redirect_url (str, optional): Redirect URL (not used for mobile SDK but required by API)
+        merchant_order_id (str): Unique merchant order ID (max 63 chars, alphanumeric with _ and -)
+        redirect_url (str, optional): Not used for mobile SDK but kept for compatibility
         
     Returns:
         dict: Response containing orderId, token, merchantId, merchantOrderId or error
@@ -399,7 +401,6 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
     try:
         # Validate merchant ID is configured
         merchant_id = getattr(settings, 'PHONEPE_MERCHANT_ID', None)
-        # Safely check if merchant_id is valid (handle None, empty string, or non-string types)
         if not merchant_id or (isinstance(merchant_id, str) and merchant_id.strip() == ''):
             print("ERROR: PhonePe merchant ID is not configured")
             sys.stdout.flush()
@@ -409,88 +410,23 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
                 'error_message': 'PhonePe merchant ID is required for mobile SDK integration'
             }
         
-        # Validate PhonePe SDK settings before client initialization
-        client_id = getattr(settings, 'PHONEPE_CLIENT_ID', None)
-        client_secret = getattr(settings, 'PHONEPE_CLIENT_SECRET', None)
-        client_version = getattr(settings, 'PHONEPE_CLIENT_VERSION', None)
-        
-        if not client_id or (isinstance(client_id, str) and client_id.strip() == ''):
-            print("ERROR: PhonePe CLIENT_ID is not configured")
-            sys.stdout.flush()
+        # Validate merchant_order_id constraints
+        if len(merchant_order_id) > 63:
             return {
-                'error': 'PhonePe CLIENT_ID is not configured. Please set PHONEPE_CLIENT_ID in Django settings.',
-                'error_code': 'CLIENT_ID_MISSING',
-                'error_message': 'PhonePe CLIENT_ID is required for SDK initialization'
-            }
-        
-        if not client_secret or (isinstance(client_secret, str) and client_secret.strip() == ''):
-            print("ERROR: PhonePe CLIENT_SECRET is not configured")
-            sys.stdout.flush()
-            return {
-                'error': 'PhonePe CLIENT_SECRET is not configured. Please set PHONEPE_CLIENT_SECRET in Django settings.',
-                'error_code': 'CLIENT_SECRET_MISSING',
-                'error_message': 'PhonePe CLIENT_SECRET is required for SDK initialization'
-            }
-        
-        if not client_version or (isinstance(client_version, str) and client_version.strip() == ''):
-            print("ERROR: PhonePe CLIENT_VERSION is not configured")
-            sys.stdout.flush()
-            return {
-                'error': 'PhonePe CLIENT_VERSION is not configured. Please set PHONEPE_CLIENT_VERSION in Django settings.',
-                'error_code': 'CLIENT_VERSION_MISSING',
-                'error_message': 'PhonePe CLIENT_VERSION is required for SDK initialization'
-            }
-        
-        print(f"[INFO] Initializing PhonePe client for merchant: {merchant_id}")
-        sys.stdout.flush()
-        
-        # Get SDK client with error handling
-        try:
-            client = get_phonepe_client()
-            print("[INFO] PhonePe client initialized successfully")
-            sys.stdout.flush()
-        except ValueError as ve:
-            # ValueError from get_phonepe_client means missing settings
-            import traceback
-            error_traceback = traceback.format_exc()
-            print(f"ERROR: PhonePe settings validation failed: {str(ve)}")
-            print(error_traceback)
-            sys.stdout.flush()
-            return {
-                'error': f'PhonePe configuration error: {str(ve)}',
-                'error_code': 'CONFIGURATION_ERROR',
-                'error_message': 'PhonePe SDK settings are not properly configured',
-                'traceback': error_traceback
-            }
-        except PhonePeException as pe:
-            # PhonePe SDK specific exceptions
-            import traceback
-            error_traceback = traceback.format_exc()
-            print(f"ERROR: PhonePe SDK exception during client initialization: {str(pe)}")
-            print(error_traceback)
-            sys.stdout.flush()
-            return {
-                'error': f'PhonePe SDK error: {str(pe)}',
-                'error_code': getattr(pe, 'code', 'SDK_ERROR'),
-                'error_message': getattr(pe, 'message', str(pe)),
-                'traceback': error_traceback
-            }
-        except Exception as client_error:
-            import traceback
-            error_traceback = traceback.format_exc()
-            print(f"ERROR: Failed to initialize PhonePe client: {str(client_error)}")
-            print(error_traceback)
-            sys.stdout.flush()
-            return {
-                'error': f'Failed to initialize PhonePe SDK client: {str(client_error)}',
-                'error_code': 'CLIENT_INIT_ERROR',
-                'error_message': 'Unable to initialize PhonePe SDK. Please check your PhonePe credentials.',
-                'traceback': error_traceback
+                'error': f'merchantOrderId exceeds maximum length of 63 characters. Current length: {len(merchant_order_id)}',
+                'error_code': 'INVALID_MERCHANT_ORDER_ID',
+                'error_message': 'Merchant order ID must be 63 characters or less'
             }
         
         # Convert amount from rupees to paise
         try:
             amount_in_paise = int(float(amount) * 100)
+            if amount_in_paise < 100:
+                return {
+                    'error': f'Amount must be at least ₹1.00 (100 paise). Provided: {amount_in_paise} paise',
+                    'error_code': 'INVALID_AMOUNT',
+                    'error_message': 'Amount must be at least 100 paise (₹1.00)'
+                }
             print(f"[INFO] Converted amount: {amount} rupees = {amount_in_paise} paise")
             sys.stdout.flush()
         except (ValueError, TypeError) as e:
@@ -502,168 +438,133 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
                 'error_message': 'Amount must be a valid number'
             }
         
-        # Use a default redirect URL if not provided (required by API but not used for mobile SDK)
-        if not redirect_url:
-            redirect_url = f"{getattr(settings, 'PHONEPE_BASE_URL', 'https://www.sewabyapar.com')}/api/payments/callback/?merchant_order_id={merchant_order_id}"
+        # Get mobile SDK order API URL based on environment
+        api_url = getattr(settings, 'PHONEPE_MOBILE_SDK_ORDER_API_URL', None)
+        if not api_url:
+            # Fallback: construct URL based on environment
+            env = getattr(settings, 'PHONEPE_ENV', 'PRODUCTION')
+            if env == 'PRODUCTION':
+                api_url = 'https://api.phonepe.com/apis/pg/checkout/v2/sdk/order'
+            else:
+                api_url = 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/sdk/order'
         
-        print(f"[INFO] Building payment request: merchant_order_id={merchant_order_id}, amount={amount_in_paise}")
+        print(f"[INFO] Using mobile SDK API URL: {api_url}")
         sys.stdout.flush()
         
-        # Build payment request
-        try:
-            pay_request = StandardCheckoutPayRequest.build_request(
-                merchant_order_id=merchant_order_id,
-                amount=amount_in_paise,
-                redirect_url=redirect_url
-            )
-            print("[INFO] Payment request built successfully")
-            sys.stdout.flush()
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            print(f"ERROR: Failed to build payment request: {str(e)}")
-            print(error_traceback)
-            sys.stdout.flush()
+        # Get O-Bearer merchant auth token
+        print("[INFO] Getting O-Bearer merchant auth token")
+        sys.stdout.flush()
+        auth_token = get_merchant_auth_token()
+        if not auth_token:
             return {
-                'error': f'Failed to build payment request: {str(e)}',
-                'error_code': 'PAYMENT_REQUEST_ERROR',
-                'error_message': 'Unable to create payment request',
-                'traceback': error_traceback
+                'error': 'Failed to obtain merchant auth token. Please check PhonePe CLIENT_ID and CLIENT_SECRET.',
+                'error_code': 'AUTH_TOKEN_ERROR',
+                'error_message': 'Unable to authenticate with PhonePe API'
             }
         
-        # Initiate payment - this creates the order
-        print("[INFO] Calling PhonePe client.pay()")
-        sys.stdout.flush()
-        try:
-            response = client.pay(pay_request)
-            print("[INFO] PhonePe client.pay() completed successfully")
-            sys.stdout.flush()
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            print(f"ERROR: PhonePe client.pay() failed: {str(e)}")
-            print(error_traceback)
-            sys.stdout.flush()
-            # Re-raise PhonePeException to be caught by outer handler
-            if isinstance(e, PhonePeException):
-                raise
-            return {
-                'error': f'PhonePe payment initiation failed: {str(e)}',
-                'error_code': 'PAYMENT_INIT_ERROR',
-                'error_message': 'Unable to initiate payment with PhonePe',
-                'traceback': error_traceback
-            }
-        
-        # Initialize variables
-        order_id = None
-        token = None
-        redirect_url_from_response = redirect_url
-        
-        print("[INFO] Extracting order details from PhonePe response")
-        sys.stdout.flush()
-        
-        # Extract redirect URL from response (for reference)
-        if hasattr(response, 'redirect_url'):
-            redirect_url_from_response = response.redirect_url
-        elif hasattr(response, 'data') and hasattr(response.data, 'redirect_url'):
-            redirect_url_from_response = response.data.redirect_url
-        elif hasattr(response, 'data') and isinstance(response.data, dict):
-            redirect_url_from_response = response.data.get('redirect_url', redirect_url)
-        
-        # For mobile SDK, PhonePe requires order token
-        # The pay() method creates an order but may not directly return token
-        # We need to extract order_id from the redirect URL or response
-        # and use merchant_order_id as the token (PhonePe mobile SDK accepts this)
-        
-        # Try to extract order_id from redirect URL
-        # PhonePe redirect URLs typically contain order information
-        if redirect_url_from_response:
-            try:
-                from urllib.parse import urlparse, parse_qs
-                parsed = urlparse(redirect_url_from_response)
-                params = parse_qs(parsed.query)
-                
-                # Check for order_id in URL params
-                if 'orderId' in params:
-                    order_id = params['orderId'][0]
-                elif 'order_id' in params:
-                    order_id = params['order_id'][0]
-                
-                # Check for token in URL params
-                if 'token' in params:
-                    token = params['token'][0]
-            except Exception:
-                pass
-        
-        # Try to extract order_id from response object
-        if not order_id:
-            if hasattr(response, 'order_id'):
-                order_id = response.order_id
-            elif hasattr(response, 'data') and hasattr(response.data, 'order_id'):
-                order_id = response.data.order_id
-            elif hasattr(response, 'data') and isinstance(response.data, dict):
-                order_id = response.data.get('order_id')
-        
-        # Try to extract token from response object
-        if not token:
-            if hasattr(response, 'token'):
-                token = response.token
-            elif hasattr(response, 'data') and hasattr(response.data, 'token'):
-                token = response.data.token
-            elif hasattr(response, 'data') and isinstance(response.data, dict):
-                token = response.data.get('token')
-        
-        # Merchant ID was already validated at the start of the function
-        # For PhonePe mobile SDK:
-        # - orderId: Can be the PhonePe order ID or merchant_order_id
-        # - token: Can be extracted from response or use merchant_order_id
-        # According to PhonePe docs, for mobile SDK we can use merchant_order_id as token
-        if not order_id:
-            order_id = merchant_order_id
-            print(f"[INFO] Using merchant_order_id as orderId: {order_id}")
-            sys.stdout.flush()
-        
-        if not token:
-            # Use merchant_order_id as token (PhonePe mobile SDK accepts this)
-            token = merchant_order_id
-            print(f"[INFO] Using merchant_order_id as token: {token}")
-            sys.stdout.flush()
-        
-        print(f"[INFO] Order created successfully: orderId={order_id}, token={token[:20]}...")
-        print(f"[INFO] Configuration: merchantId={merchant_id}, environment=PRODUCTION")
-        sys.stdout.flush()
-        
-        # Note: If mobile SDK returns PR004 "Unauthorized" error, check:
-        # 1. Merchant account is activated for mobile SDK payments
-        # 2. Merchant ID matches the environment (PRODUCTION vs SANDBOX)
-        # 3. CLIENT_ID, CLIENT_SECRET, and MERCHANT_ID are correct
-        # 4. Merchant account has mobile SDK permissions enabled
-        # 5. Contact PhonePe support with merchant ID and error code PR004
-        
-        return {
-            'success': True,
-            'orderId': order_id,
-            'token': token,
-            'merchantId': merchant_id,
+        # Build request payload according to API specification
+        request_payload = {
             'merchantOrderId': merchant_order_id,
             'amount': amount_in_paise,
-            'redirectUrl': redirect_url_from_response
+            'paymentFlow': {
+                'type': 'PG_CHECKOUT'
+            }
         }
-    
-    except PhonePeException as e:
-        import traceback
-        import sys
-        error_traceback = traceback.format_exc()
-        print(f"ERROR: PhonePe SDK error in create_order_for_mobile_sdk: {str(e)}")
-        print(error_traceback)
+        
+        # Optional: Add expireAfter (default is used if not provided)
+        # PhonePe default is typically 15 minutes (900 seconds)
+        # We can optionally set it between 300-3600 seconds
+        # For now, we'll let PhonePe use the default
+        
+        print(f"[INFO] Request payload: merchantOrderId={merchant_order_id}, amount={amount_in_paise}")
         sys.stdout.flush()
         
-        return {
-            'error': f'PhonePe SDK error: {str(e)}',
-            'error_code': getattr(e, 'code', None),
-            'error_message': getattr(e, 'message', str(e)),
-            'traceback': error_traceback
+        # Make HTTP POST request to mobile SDK order endpoint
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'O-Bearer {auth_token}'
         }
+        
+        print(f"[INFO] Making POST request to {api_url}")
+        sys.stdout.flush()
+        
+        try:
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=request_payload,
+                timeout=30
+            )
+            
+            print(f"[INFO] Response status code: {response.status_code}")
+            sys.stdout.flush()
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                print(f"[INFO] Response data: {json.dumps(response_data, indent=2)}")
+                sys.stdout.flush()
+                
+                # Extract response fields
+                order_id = response_data.get('orderId')
+                token = response_data.get('token')
+                state = response_data.get('state')
+                expire_at = response_data.get('expireAt')
+                
+                if not order_id or not token:
+                    return {
+                        'error': 'Invalid response from PhonePe API: missing orderId or token',
+                        'error_code': 'INVALID_RESPONSE',
+                        'error_message': 'PhonePe API response is missing required fields',
+                        'response': response_data
+                    }
+                
+                print(f"[INFO] Order created successfully: orderId={order_id}, token={token[:20] if token else 'None'}..., state={state}")
+                sys.stdout.flush()
+                
+                return {
+                    'success': True,
+                    'orderId': order_id,
+                    'token': token,
+                    'merchantId': merchant_id,
+                    'merchantOrderId': merchant_order_id,
+                    'amount': amount_in_paise,
+                    'state': state,
+                    'expireAt': expire_at
+                }
+            else:
+                # Handle error response
+                error_text = response.text
+                print(f"ERROR: PhonePe API returned error. Status: {response.status_code}, Response: {error_text}")
+                sys.stdout.flush()
+                
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', error_data.get('error', 'Unknown error'))
+                    error_code = error_data.get('code', error_data.get('errorCode', 'API_ERROR'))
+                except:
+                    error_message = error_text
+                    error_code = f'HTTP_{response.status_code}'
+                
+                return {
+                    'error': f'PhonePe API error: {error_message}',
+                    'error_code': error_code,
+                    'error_message': error_message,
+                    'http_status': response.status_code
+                }
+                
+        except requests.exceptions.RequestException as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            print(f"ERROR: Request exception: {str(e)}")
+            print(error_traceback)
+            sys.stdout.flush()
+            return {
+                'error': f'Failed to connect to PhonePe API: {str(e)}',
+                'error_code': 'REQUEST_ERROR',
+                'error_message': 'Unable to reach PhonePe API endpoint',
+                'traceback': error_traceback
+            }
+    
     except Exception as e:
         import traceback
         import sys
@@ -675,8 +576,91 @@ def create_order_for_mobile_sdk(amount, merchant_order_id, redirect_url=None):
         
         return {
             'error': f'Unexpected error: {str(e)}',
+            'error_code': 'UNEXPECTED_ERROR',
+            'error_message': 'An unexpected error occurred',
             'traceback': error_traceback
         }
+
+
+def get_merchant_auth_token():
+    """
+    Get O-Bearer merchant auth token for mobile SDK order API
+    This token is required for the mobile SDK order token endpoint
+    
+    PhonePe OAuth endpoint typically requires form-encoded data, not JSON.
+    The token is obtained from the identity-manager OAuth endpoint.
+    
+    Returns:
+        str: Merchant auth token (O-Bearer token) or None if failed
+    """
+    try:
+        client_id = getattr(settings, 'PHONEPE_CLIENT_ID', None)
+        client_secret = getattr(settings, 'PHONEPE_CLIENT_SECRET', None)
+        env = getattr(settings, 'PHONEPE_ENV', 'PRODUCTION')
+        
+        if not client_id or not client_secret:
+            print("ERROR: PhonePe credentials not configured for auth token")
+            return None
+        
+        # Construct auth URL based on environment
+        if env == 'PRODUCTION':
+            auth_url = 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token'
+        else:
+            auth_url = 'https://api-preprod.phonepe.com/apis/identity-manager/v1/oauth/token'
+        
+        print(f"[INFO] Getting auth token from: {auth_url}")
+        import sys
+        sys.stdout.flush()
+        
+        # PhonePe OAuth endpoint typically requires form-encoded data
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        }
+        
+        # Use form-encoded payload (standard OAuth2 format)
+        payload = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'grant_type': 'client_credentials'
+        }
+        
+        # Try form-encoded first (standard OAuth2)
+        response = requests.post(auth_url, headers=headers, data=payload, timeout=10)
+        
+        # If that fails, try JSON format
+        if response.status_code != 200:
+            print(f"[INFO] Form-encoded auth failed, trying JSON format. Status: {response.status_code}")
+            sys.stdout.flush()
+            headers_json = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            response = requests.post(auth_url, headers=headers_json, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            access_token = data.get('access_token') or data.get('token') or data.get('data', {}).get('access_token')
+            if access_token:
+                print(f"[INFO] Successfully obtained auth token (length: {len(access_token)})")
+                sys.stdout.flush()
+                return access_token
+            else:
+                print(f"ERROR: No access_token in auth response: {data}")
+                sys.stdout.flush()
+                return None
+        else:
+            print(f"ERROR: Failed to get auth token. Status: {response.status_code}, Response: {response.text}")
+            sys.stdout.flush()
+            return None
+            
+    except Exception as e:
+        print(f"ERROR: Exception getting merchant auth token: {str(e)}")
+        import traceback
+        import sys
+        traceback.print_exc()
+        sys.stdout.flush()
+        return None
 
 
 # Backward compatibility - remove get_authorization_token as SDK handles auth internally
