@@ -20,7 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'phone': {'required': True},
             'name': {'required': True},
-            'email': {'required': True}
+            'email': {'required': False}
         }
 
 
@@ -131,6 +131,7 @@ class VerifyOTPSerializer(serializers.Serializer):
     country = serializers.ChoiceField(choices=User.COUNTRY_CHOICES)
     otp = serializers.CharField(max_length=6)
     name = serializers.CharField(max_length=100)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
     password = serializers.CharField(min_length=8)
     password_confirm = serializers.CharField(min_length=8)
     user_type = serializers.ChoiceField(choices=[('customer', 'Customer'), ('merchant', 'Merchant'), ('driver', 'Driver')], default='customer')

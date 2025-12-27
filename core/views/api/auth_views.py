@@ -231,6 +231,7 @@ def verify_otp_and_register(request):
     country = serializer.validated_data['country']
     otp = serializer.validated_data['otp']
     name = serializer.validated_data['name']
+    email = serializer.validated_data.get('email')
     password = serializer.validated_data['password']
     user_type = serializer.validated_data.get('user_type', 'customer')
     
@@ -267,6 +268,7 @@ def verify_otp_and_register(request):
         user = User.objects.create_user(
             phone=phone,
             name=name,
+            email=email,
             password=password,
             country_code=country_code,
             country=country,
