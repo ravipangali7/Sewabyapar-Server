@@ -109,7 +109,8 @@ class AddressForm(forms.ModelForm):
         model = Address
         fields = [
             'user', 'title', 'full_name', 'phone', 'address',
-            'city', 'state', 'zip_code', 'latitude', 'longitude', 'is_default'
+            'city', 'state', 'zip_code', 'building_name', 'flat_no', 'landmark',
+            'latitude', 'longitude', 'is_default'
         ]
         widgets = {
             'user': forms.Select(attrs={'class': 'form-select'}),
@@ -120,6 +121,9 @@ class AddressForm(forms.ModelForm):
             'city': forms.TextInput(attrs={'class': 'form-control'}),
             'state': forms.TextInput(attrs={'class': 'form-control'}),
             'zip_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'building_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'flat_no': forms.TextInput(attrs={'class': 'form-control'}),
+            'landmark': forms.TextInput(attrs={'class': 'form-control'}),
             'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
             'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any'}),
             'is_default': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
