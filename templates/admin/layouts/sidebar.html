@@ -22,6 +22,31 @@
                     <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">KYC Management</span>
                 </a>
             </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:address_list' %}">
+                    <i class="align-middle" data-feather="map-pin"></i> <span class="align-middle">Addresses</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:otp_list' %}">
+                    <i class="align-middle" data-feather="key"></i> <span class="align-middle">OTPs</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:transaction_list' %}">
+                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Transactions</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:supersetting_detail' %}">
+                    <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Super Setting</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
+                    <i class="align-middle" data-feather="truck"></i> <span class="align-middle">Courier Management</span>
+                </a>
+            </li>
 
             <li class="sidebar-header">Merchant KYC</li>
             <li class="sidebar-item">
@@ -54,31 +79,6 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_rejected' %}">
                     <i class="align-middle" data-feather="x-circle"></i> <span class="align-middle">Rejected</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:core:address_list' %}">
-                    <i class="align-middle" data-feather="map-pin"></i> <span class="align-middle">Addresses</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:core:otp_list' %}">
-                    <i class="align-middle" data-feather="key"></i> <span class="align-middle">OTPs</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:core:transaction_list' %}">
-                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Transactions</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:core:supersetting_detail' %}">
-                    <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Super Setting</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
-                    <i class="align-middle" data-feather="truck"></i> <span class="align-middle">Courier Management</span>
                 </a>
             </li>
 
