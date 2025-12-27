@@ -22,49 +22,39 @@
                     <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">KYC Management</span>
                 </a>
             </li>
+
+            <li class="sidebar-header">Merchant KYC</li>
             <li class="sidebar-item">
-                <a class="sidebar-link" data-bs-toggle="collapse" href="#merchantKYC" role="button" aria-expanded="false" aria-controls="merchantKYC">
-                    <i class="align-middle" data-feather="store"></i> <span class="align-middle">Merchant KYC</span>
+                <a class="sidebar-link" href="{% url 'myadmin:core:merchant_kyc_pending' %}">
+                    <i class="align-middle" data-feather="clock"></i> <span class="align-middle">Pending</span>
                 </a>
-                <ul class="sidebar-dropdown list-unstyled collapse" id="merchantKYC">
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="{% url 'myadmin:core:merchant_kyc_pending' %}">
-                            <i class="align-middle" data-feather="clock"></i> <span class="align-middle">Pending</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="{% url 'myadmin:core:merchant_kyc_verified' %}">
-                            <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">Verified</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="{% url 'myadmin:core:merchant_kyc_rejected' %}">
-                            <i class="align-middle" data-feather="x-circle"></i> <span class="align-middle">Reject</span>
-                        </a>
-                    </li>
-                </ul>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" data-bs-toggle="collapse" href="#customerKYC" role="button" aria-expanded="false" aria-controls="customerKYC">
-                    <i class="align-middle" data-feather="user"></i> <span class="align-middle">Customer KYC</span>
+                <a class="sidebar-link" href="{% url 'myadmin:core:merchant_kyc_verified' %}">
+                    <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">Verified</span>
                 </a>
-                <ul class="sidebar-dropdown list-unstyled collapse" id="customerKYC">
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_pending' %}">
-                            <i class="align-middle" data-feather="clock"></i> <span class="align-middle">Pending</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_verified' %}">
-                            <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">Verified</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_rejected' %}">
-                            <i class="align-middle" data-feather="x-circle"></i> <span class="align-middle">Reject</span>
-                        </a>
-                    </li>
-                </ul>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:merchant_kyc_rejected' %}">
+                    <i class="align-middle" data-feather="x-circle"></i> <span class="align-middle">Rejected</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">Customer KYC</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_pending' %}">
+                    <i class="align-middle" data-feather="clock"></i> <span class="align-middle">Pending</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_verified' %}">
+                    <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">Verified</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:customer_kyc_rejected' %}">
+                    <i class="align-middle" data-feather="x-circle"></i> <span class="align-middle">Rejected</span>
+                </a>
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:core:address_list' %}">
