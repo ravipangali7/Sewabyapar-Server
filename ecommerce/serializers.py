@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, Transaction, Withdrawal
+    Review, Wishlist, Coupon, Withdrawal
 )
+from core.models import Transaction
 from core.serializers import UserSerializer, AddressSerializer
 
 
@@ -367,7 +368,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ['id', 'user', 'transaction_type', 'transaction_type_display', 'amount', 
                  'status', 'status_display', 'description', 'related_order', 'related_order_number',
-                 'related_withdrawal', 'utr', 'bank_id', 'vpa', 'created_at', 'updated_at']
+                 'related_withdrawal', 'merchant_order_id', 'utr', 'bank_id', 'vpa', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 

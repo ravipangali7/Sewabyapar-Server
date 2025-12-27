@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.conf import settings
 from ecommerce.models import Cart, Order, OrderItem, Coupon
+from core.models import Transaction
 from core.models import Address, SuperSetting
 from website.models import MySetting, CMSPages
 from collections import defaultdict
@@ -459,23 +460,22 @@ def payment_result_view(request):
     payment_status_data = None
     api_error = None
     
-    # Try to find order in database
+    # Try to find Transaction and Order in database
+    transaction = None
+    order = None
     if merchant_order_id:
         try:
-            order = Order.objects.get(phonepe_merchant_order_id=merchant_order_id, user=request.user)
-            print(f"[INFO] Order found for merchant_order_id: {merchant_order_id}, Order ID: {order.id}")
+            transaction = Transaction.objects.get(merchant_order_id=merchant_order_id, user=request.user)
+            order = transaction.related_order
+            print(f"[INFO] Transaction found for merchant_order_id: {merchant_order_id}, Order ID: {order.id if order else 'None'}")
             sys.stdout.flush()
-        except Order.DoesNotExist:
-            print(f"[WARNING] Order not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
+        except Transaction.DoesNotExist:
+            print(f"[WARNING] Transaction not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
             sys.stdout.flush()
     elif transaction_id:
-        try:
-            order = Order.objects.get(phonepe_transaction_id=transaction_id, user=request.user)
-            print(f"[INFO] Order found for transaction_id: {transaction_id}, Order ID: {order.id}")
-            sys.stdout.flush()
-        except Order.DoesNotExist:
-            print(f"[WARNING] Order not found for transaction_id: {transaction_id}, user: {request.user.id}")
-            sys.stdout.flush()
+        # For transaction_id, we can't directly look up - need merchant_order_id
+        print(f"[WARNING] transaction_id lookup not supported, need merchant_order_id")
+        sys.stdout.flush()
     
     # Always call PhonePe API to verify transaction status when merchant_order_id is present
     # This ensures we get the latest status from PhonePe, even if order exists in DB
@@ -522,6 +522,13 @@ def payment_result_view(request):
                     # PhonePe SDK state values: COMPLETED, FAILED, PENDING (primary)
                     # Also handles: PAYMENT_SUCCESS, PAYMENT_PENDING, PAYMENT_ERROR, etc.
                     if payment_status_value in ['COMPLETED', 'PAYMENT_SUCCESS', 'SUCCESS', 'PAID']:
+                        if transaction:
+                            transaction.status = 'completed'
+                            transaction.utr = payment_details.get('utr') or transaction.utr
+                            transaction.vpa = payment_details.get('vpa') or transaction.vpa
+                            transaction.bank_id = payment_details.get('bankId') or transaction.bank_id
+                            transaction.save()
+                        
                         order.payment_status = 'success'
                         order.status = 'confirmed'
                         print(f"[INFO] Order {order.id} marked as payment success (status: {payment_status_value})")
@@ -533,6 +540,10 @@ def payment_result_view(request):
                             sys.stdout.flush()
                             created_orders = split_order_by_vendor(order)
                             if created_orders:
+                                # Update transaction to point to first created order
+                                if transaction:
+                                    transaction.related_order = created_orders[0]
+                                    transaction.save()
                                 # Update order to the first created order for display
                                 order = created_orders[0]
                                 print(f"[INFO] Order split into {len(created_orders)} vendor orders")
@@ -540,46 +551,35 @@ def payment_result_view(request):
                             else:
                                 print(f"[ERROR] Failed to split order {order.id} by vendor")
                                 sys.stdout.flush()
+                        else:
+                            order.save()
                     elif payment_status_value in ['FAILED', 'PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILURE', 'ERROR']:
+                        if transaction:
+                            transaction.status = 'failed'
+                            transaction.save()
                         order.payment_status = 'failed'
+                        order.save()
                         print(f"[INFO] Order {order.id} marked as payment failed (status: {payment_status_value})")
                         sys.stdout.flush()
                     elif payment_status_value in ['PENDING', 'PAYMENT_PENDING', 'INITIATED', 'AUTHORIZED']:
+                        if transaction:
+                            transaction.status = 'pending'
+                            transaction.save()
                         order.payment_status = 'pending'
+                        order.save()
                         print(f"[INFO] Order {order.id} marked as payment pending (status: {payment_status_value})")
                         sys.stdout.flush()
                     else:
                         # Unknown status - keep as pending but log it
+                        if transaction:
+                            transaction.status = 'pending'
+                            transaction.save()
                         order.payment_status = 'pending'
+                        order.save()
                         print(f"[WARNING] Unknown payment status '{payment_status_value}' for order {order.id}, set to pending")
                         sys.stdout.flush()
                     
-                    # Update transaction ID if available
-                    transaction_id_from_api = payment_details.get('transactionId') or payment_status_data.get('transactionId')
-                    if transaction_id_from_api and not order.phonepe_transaction_id:
-                        order.phonepe_transaction_id = transaction_id_from_api
-                        print(f"[INFO] Updated transaction_id for order {order.id}: {transaction_id_from_api}")
-                        sys.stdout.flush()
-                    
-                    # Save all PhonePe transaction details
-                    order_id_from_api = payment_status_data.get('orderId')
-                    if order_id_from_api and not order.phonepe_order_id:
-                        order.phonepe_order_id = order_id_from_api
-                        print(f"[INFO] Updated order_id for order {order.id}: {order_id_from_api}")
-                        sys.stdout.flush()
-                    
-                    # Save UTR and VPA from payment details
-                    utr_from_api = payment_details.get('utr') or payment_status_data.get('utr')
-                    if utr_from_api and not order.phonepe_utr:
-                        order.phonepe_utr = utr_from_api
-                        print(f"[INFO] Updated UTR for order {order.id}: {utr_from_api}")
-                        sys.stdout.flush()
-                    
-                    vpa_from_api = payment_details.get('vpa') or payment_status_data.get('vpa')
-                    if vpa_from_api and not order.phonepe_vpa:
-                        order.phonepe_vpa = vpa_from_api
-                        print(f"[INFO] Updated VPA for order {order.id}: {vpa_from_api}")
-                        sys.stdout.flush()
+                    # Note: Transaction details (UTR, VPA) are now stored in Transaction model, not Order
                     
                     # Save transaction date
                     transaction_date_str = payment_details.get('transactionDate') or payment_status_data.get('transactionDate')

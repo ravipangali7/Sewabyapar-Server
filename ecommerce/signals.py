@@ -2,7 +2,8 @@ from django.db.models.signals import post_save, pre_save
 from django.db import transaction as db_transaction
 from django.dispatch import receiver
 from decimal import Decimal, ROUND_HALF_UP
-from .models import Order, Transaction
+from .models import Order
+from core.models import Transaction
 from core.models import SuperSetting
 import sys
 import traceback
@@ -64,6 +65,12 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 # Note: Commission transaction is tracked at platform level, not user level
                 # We can create it with a system user or track it separately
                 
+                # Get PhonePe transaction details from Transaction model if available
+                phonepe_transaction = Transaction.objects.filter(
+                    related_order=instance,
+                    transaction_type='phonepe_payment'
+                ).first()
+                
                 # Create transaction record for merchant payout
                 Transaction.objects.create(
                     user=vendor,
@@ -72,24 +79,10 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     status='completed',
                     description=f'Payout from order {instance.order_number}',
                     related_order=instance,
-                    utr=instance.phonepe_utr if instance.phonepe_utr else None,
-                    bank_id=instance.phonepe_bank_id if instance.phonepe_bank_id else None,
-                    vpa=instance.phonepe_vpa if instance.phonepe_vpa else None,
+                    utr=phonepe_transaction.utr if phonepe_transaction and phonepe_transaction.utr else None,
+                    bank_id=phonepe_transaction.bank_id if phonepe_transaction and phonepe_transaction.bank_id else None,
+                    vpa=phonepe_transaction.vpa if phonepe_transaction and phonepe_transaction.vpa else None,
                 )
-                
-                # Create PhonePe payment transaction if it's an online payment
-                if instance.payment_method == 'online' and instance.phonepe_transaction_id:
-                    Transaction.objects.create(
-                        user=instance.user,
-                        transaction_type='phonepe_payment',
-                        amount=instance.total_amount,
-                        status='completed' if instance.payment_status == 'success' else 'failed',
-                        description=f'PhonePe payment for order {instance.order_number}',
-                        related_order=instance,
-                        utr=instance.phonepe_utr if instance.phonepe_utr else None,
-                        bank_id=instance.phonepe_bank_id if instance.phonepe_bank_id else None,
-                        vpa=instance.phonepe_vpa if instance.phonepe_vpa else None,
-                    )
                 
                 # Mark commission as processed (use update to avoid triggering signal again)
                 Order.objects.filter(pk=instance.pk).update(commission_processed=True)

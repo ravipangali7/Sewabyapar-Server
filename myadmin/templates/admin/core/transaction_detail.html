@@ -1,0 +1,148 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Transaction Details</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:transaction_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Transaction Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="200">Transaction ID</th>
+                            <td>{{ transaction.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>User</th>
+                            <td>
+                                <a href="{% url 'myadmin:core:user_detail' transaction.user.pk %}">
+                                    {{ transaction.user.name }} ({{ transaction.user.phone }})
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Transaction Type</th>
+                            <td>
+                                <span class="badge bg-info">{{ transaction.get_transaction_type_display }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Amount</th>
+                            <td><strong>₹{{ transaction.amount|floatformat:2 }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                {% if transaction.status == 'completed' %}
+                                <span class="badge bg-success">{{ transaction.get_status_display }}</span>
+                                {% elif transaction.status == 'failed' %}
+                                <span class="badge bg-danger">{{ transaction.get_status_display }}</span>
+                                {% elif transaction.status == 'pending' %}
+                                <span class="badge bg-warning">{{ transaction.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ transaction.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Description</th>
+                            <td>{{ transaction.description|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Merchant Order ID</th>
+                            <td>
+                                {% if transaction.merchant_order_id %}
+                                <code>{{ transaction.merchant_order_id }}</code>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>UTR</th>
+                            <td>
+                                {% if transaction.utr %}
+                                <code>{{ transaction.utr }}</code>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>VPA</th>
+                            <td>
+                                {% if transaction.vpa %}
+                                <code>{{ transaction.vpa }}</code>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Bank ID</th>
+                            <td>
+                                {% if transaction.bank_id %}
+                                <code>{{ transaction.bank_id }}</code>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Created At</th>
+                            <td>{{ transaction.created_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Updated At</th>
+                            <td>{{ transaction.updated_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            {% if related_order %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Related Order</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Order Number:</strong> 
+                        <a href="{% url 'myadmin:ecommerce:order_detail' related_order.pk %}">
+                            {{ related_order.order_number }}
+                        </a>
+                    </p>
+                    <p><strong>Order Status:</strong> 
+                        <span class="badge bg-info">{{ related_order.get_status_display }}</span>
+                    </p>
+                    <p><strong>Payment Status:</strong> 
+                        {% if related_order.payment_status == 'success' %}
+                        <span class="badge bg-success">{{ related_order.get_payment_status_display }}</span>
+                        {% elif related_order.payment_status == 'failed' %}
+                        <span class="badge bg-danger">{{ related_order.get_payment_status_display }}</span>
+                        {% else %}
+                        <span class="badge bg-warning">{{ related_order.get_payment_status_display }}</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Order Amount:</strong> ₹{{ related_order.total_amount|floatformat:2 }}</p>
+                    <a href="{% url 'myadmin:ecommerce:order_detail' related_order.pk %}" class="btn btn-primary btn-sm">
+                        <i class="align-middle" data-feather="eye"></i> View Order
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

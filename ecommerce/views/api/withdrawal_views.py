@@ -6,7 +6,8 @@ from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from decimal import Decimal, ROUND_HALF_UP
-from ...models import Withdrawal, Transaction
+from ...models import Withdrawal
+from core.models import Transaction
 from ...serializers import WithdrawalSerializer, WithdrawalCreateSerializer
 import sys
 import traceback

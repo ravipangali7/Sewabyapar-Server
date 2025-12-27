@@ -13,7 +13,7 @@ import traceback
 from ...models import Order
 from ...serializers import OrderSerializer, OrderCreateSerializer
 from ...services.phonepe_service import initiate_payment, generate_merchant_order_id
-from core.models import SuperSetting
+from core.models import SuperSetting, Transaction
 
 
 
@@ -103,7 +103,6 @@ def order_list_create(request):
                     payment_method=payment_method,
                     payment_status='pending',
                     status='pending',
-                    phonepe_merchant_order_id=merchant_order_id,
                 )
                 
                 # Store cart item data in order notes for vendor splitting after payment
@@ -114,6 +113,17 @@ def order_list_create(request):
                         cart_data.append(f"{store.id}:{item['product']}:{item['quantity']}:{item.get('price', 0)}")
                 temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
                 temp_order.save()
+                
+                # Create Transaction record for PhonePe payment
+                Transaction.objects.create(
+                    user=request.user,
+                    transaction_type='phonepe_payment',
+                    amount=total_amount,
+                    status='pending',
+                    description=f'PhonePe payment for order {order_number}',
+                    related_order=temp_order,
+                    merchant_order_id=merchant_order_id,
+                )
                 
                 # Build redirect URL for callback
                 redirect_url = f"{settings.PHONEPE_BASE_URL}/api/payments/callback/?merchant_order_id={merchant_order_id}"
@@ -275,7 +285,6 @@ def order_list_create(request):
                     payment_method=payment_method,
                     payment_status='pending',
                     status='pending',
-                    phonepe_merchant_order_id=merchant_order_id,
                 )
                 
                 # Store cart item data in order notes for vendor splitting after payment
@@ -286,6 +295,17 @@ def order_list_create(request):
                         cart_data.append(f"{store.id}:{item['product']}:{item['quantity']}:{item.get('price', 0)}")
                 temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
                 temp_order.save()
+                
+                # Create Transaction record for PhonePe payment
+                Transaction.objects.create(
+                    user=request.user,
+                    transaction_type='phonepe_payment',
+                    amount=total_amount,
+                    status='pending',
+                    description=f'PhonePe payment for order {order_number}',
+                    related_order=temp_order,
+                    merchant_order_id=merchant_order_id,
+                )
                 
                 # Return order creation response (frontend will call create-order-token endpoint)
                 return Response({

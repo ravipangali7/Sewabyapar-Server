@@ -230,3 +230,47 @@ class SuperSetting(models.Model):
     
     def __str__(self):
         return "Super Setting"
+
+
+class Transaction(models.Model):
+    """Transaction model to track all financial transactions"""
+    TRANSACTION_TYPE_CHOICES = [
+        ('commission', 'Commission'),
+        ('withdrawal', 'Withdrawal Request'),
+        ('withdrawal_processed', 'Withdrawal Processed'),
+        ('phonepe_payment', 'PhonePe Payment'),
+        ('payout', 'Merchant Payout'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    description = models.TextField(blank=True, help_text='Transaction description')
+    related_order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe transactions')
+    related_withdrawal = models.ForeignKey('ecommerce.Withdrawal', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related withdrawal for withdrawal transactions')
+    # PhonePe transaction fields
+    merchant_order_id = models.CharField(max_length=100, blank=True, null=True, help_text='Merchant Order ID for PhonePe payment callbacks', db_index=True)
+    utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference (UTR) for PhonePe transactions')
+    bank_id = models.CharField(max_length=20, blank=True, null=True, help_text='Bank ID for PhonePe transactions')
+    vpa = models.CharField(max_length=100, blank=True, null=True, help_text='Virtual Payment Address (VPA) for PhonePe transactions')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.name} - {self.get_transaction_type_display()} - ₹{self.amount} ({self.get_status_display()})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['transaction_type', '-created_at']),
+            models.Index(fields=['merchant_order_id']),
+        ]

@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from ...models import Order
+from core.models import Transaction
 from ...serializers import OrderSerializer
 from ...services.phonepe_service import (
     initiate_payment,
@@ -238,18 +239,18 @@ def payment_status(request):
         # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
         if merchant_order_id:
             status_response = check_payment_status_by_order_id(merchant_order_id)
-            # Try to find order by merchant_order_id
+            # Try to find Transaction by merchant_order_id
             try:
-                order = Order.objects.get(phonepe_merchant_order_id=merchant_order_id, user=request.user)
-            except Order.DoesNotExist:
+                transaction = Transaction.objects.get(merchant_order_id=merchant_order_id, user=request.user)
+                order = transaction.related_order
+            except Transaction.DoesNotExist:
+                transaction = None
                 order = None
         else:
+            # For transaction_id, we can't directly look up - need merchant_order_id
             status_response = check_payment_status_by_transaction_id(transaction_id)
-            # Try to find order by transaction_id
-            try:
-                order = Order.objects.get(phonepe_transaction_id=transaction_id, user=request.user)
-            except Order.DoesNotExist:
-                order = None
+            transaction = None
+            order = None
         
         if 'error' in status_response:
             return Response(
@@ -257,8 +258,8 @@ def payment_status(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Update order payment status if order found
-        if order:
+        # Update Transaction and Order payment status if found
+        if transaction and order:
             payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
             # Check both 'status' and 'state' fields (PhonePe uses 'state' as primary)
             payment_status_value = payment_data.get('status', '').upper()
@@ -269,57 +270,37 @@ def payment_status(request):
             
             # Map PhonePe state values: COMPLETED, FAILED, PENDING
             if status_to_check in ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID']:
+                transaction.status = 'completed'
+                transaction.utr = payment_data.get('utr') or transaction.utr
+                transaction.vpa = payment_data.get('vpa') or transaction.vpa
+                transaction.bank_id = payment_data.get('bankId') or transaction.bank_id
+                transaction.save()
+                
                 order.payment_status = 'success'
                 order.status = 'confirmed'
-                if payment_data.get('transactionId'):
-                    order.phonepe_transaction_id = payment_data.get('transactionId')
                 
                 # If this is a temporary order with CART_DATA, split it by vendor
                 if order.notes and order.notes.startswith('CART_DATA:'):
                     from website.views.ecommerce.checkout_views import split_order_by_vendor
                     created_orders = split_order_by_vendor(order)
                     if created_orders:
+                        # Update transaction to point to first created order
+                        transaction.related_order = created_orders[0]
+                        transaction.save()
                         # Return the first created order
                         order = created_orders[0]
+                else:
+                    order.save()
             elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
+                transaction.status = 'failed'
+                transaction.save()
                 order.payment_status = 'failed'
+                order.save()
             elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
+                transaction.status = 'pending'
+                transaction.save()
                 order.payment_status = 'pending'
-            
-            # Save all PhonePe transaction details
-            order_data = status_response.get('data', {})
-            if order_data.get('orderId') and not order.phonepe_order_id:
-                order.phonepe_order_id = order_data.get('orderId')
-            
-            # Save transaction details from payment_details
-            if payment_data.get('utr') and not order.phonepe_utr:
-                order.phonepe_utr = payment_data.get('utr')
-            if payment_data.get('vpa') and not order.phonepe_vpa:
-                order.phonepe_vpa = payment_data.get('vpa')
-            if payment_data.get('transactionDate'):
-                try:
-                    from datetime import datetime
-                    transaction_date = datetime.fromisoformat(payment_data.get('transactionDate'))
-                    if not order.phonepe_transaction_date:
-                        order.phonepe_transaction_date = transaction_date
-                except (ValueError, TypeError):
-                    pass
-            if payment_data.get('processingMechanism') and not order.phonepe_processing_mechanism:
-                order.phonepe_processing_mechanism = payment_data.get('processingMechanism')
-            if payment_data.get('productType') and not order.phonepe_product_type:
-                order.phonepe_product_type = payment_data.get('productType')
-            if payment_data.get('instrumentType') and not order.phonepe_instrument_type:
-                order.phonepe_instrument_type = payment_data.get('instrumentType')
-            if payment_data.get('paymentMode') and not order.phonepe_payment_mode:
-                order.phonepe_payment_mode = payment_data.get('paymentMode')
-            if payment_data.get('bankId') and not order.phonepe_bank_id:
-                order.phonepe_bank_id = payment_data.get('bankId')
-            if payment_data.get('cardNetwork') and not order.phonepe_card_network:
-                order.phonepe_card_network = payment_data.get('cardNetwork')
-            if payment_data.get('transactionNote') and not order.phonepe_transaction_note:
-                order.phonepe_transaction_note = payment_data.get('transactionNote')
-            
-            order.save()
+                order.save()
             
             # Return order data with payment status
             order_serializer = OrderSerializer(order)
@@ -615,23 +596,33 @@ def payment_callback(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Try to find order
+        # Try to find Transaction by merchant_order_id
+        transaction = None
+        order = None
         try:
             if merchant_order_id:
-                order = Order.objects.get(phonepe_merchant_order_id=merchant_order_id)
+                transaction = Transaction.objects.get(merchant_order_id=merchant_order_id)
+                order = transaction.related_order
             else:
-                order = Order.objects.get(phonepe_transaction_id=transaction_id)
-        except Order.DoesNotExist:
+                # For transaction_id, we can't directly look up - need merchant_order_id
+                return Response(
+                    {'error': 'merchant_order_id is required for callback'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Transaction.DoesNotExist:
             return Response(
-                {'error': 'Order not found'},
+                {'error': 'Transaction not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if not order:
+            return Response(
+                {'error': 'Order not found for transaction'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
         # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
-        if merchant_order_id:
-            status_response = check_payment_status_by_order_id(merchant_order_id)
-        else:
-            status_response = check_payment_status_by_transaction_id(transaction_id)
+        status_response = check_payment_status_by_order_id(merchant_order_id)
         
         if 'error' in status_response:
             return Response(
@@ -639,7 +630,7 @@ def payment_callback(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Update order payment status
+        # Update Transaction and Order payment status
         payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
         # Check both 'status' and 'state' fields (PhonePe uses 'state' as primary)
         payment_status_value = payment_data.get('status', '').upper()
@@ -650,57 +641,37 @@ def payment_callback(request):
         
         # Map PhonePe state values: COMPLETED, FAILED, PENDING
         if status_to_check in ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID']:
+            transaction.status = 'completed'
+            transaction.utr = payment_data.get('utr') or transaction.utr
+            transaction.vpa = payment_data.get('vpa') or transaction.vpa
+            transaction.bank_id = payment_data.get('bankId') or transaction.bank_id
+            transaction.save()
+            
             order.payment_status = 'success'
             order.status = 'confirmed'
-            if payment_data.get('transactionId'):
-                order.phonepe_transaction_id = payment_data.get('transactionId')
             
             # If this is a temporary order with CART_DATA, split it by vendor
             if order.notes and order.notes.startswith('CART_DATA:'):
                 from website.views.ecommerce.checkout_views import split_order_by_vendor
                 created_orders = split_order_by_vendor(order)
                 if created_orders:
+                    # Update transaction to point to first created order
+                    transaction.related_order = created_orders[0]
+                    transaction.save()
                     # Return the first created order
                     order = created_orders[0]
+            else:
+                order.save()
         elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
+            transaction.status = 'failed'
+            transaction.save()
             order.payment_status = 'failed'
+            order.save()
         elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
+            transaction.status = 'pending'
+            transaction.save()
             order.payment_status = 'pending'
-        
-        # Save all PhonePe transaction details
-        order_data = status_response.get('data', {})
-        if order_data.get('orderId') and not order.phonepe_order_id:
-            order.phonepe_order_id = order_data.get('orderId')
-        
-        # Save transaction details from payment_details
-        if payment_data.get('utr') and not order.phonepe_utr:
-            order.phonepe_utr = payment_data.get('utr')
-        if payment_data.get('vpa') and not order.phonepe_vpa:
-            order.phonepe_vpa = payment_data.get('vpa')
-        if payment_data.get('transactionDate'):
-            try:
-                from datetime import datetime
-                transaction_date = datetime.fromisoformat(payment_data.get('transactionDate'))
-                if not order.phonepe_transaction_date:
-                    order.phonepe_transaction_date = transaction_date
-            except (ValueError, TypeError):
-                pass
-        if payment_data.get('processingMechanism') and not order.phonepe_processing_mechanism:
-            order.phonepe_processing_mechanism = payment_data.get('processingMechanism')
-        if payment_data.get('productType') and not order.phonepe_product_type:
-            order.phonepe_product_type = payment_data.get('productType')
-        if payment_data.get('instrumentType') and not order.phonepe_instrument_type:
-            order.phonepe_instrument_type = payment_data.get('instrumentType')
-        if payment_data.get('paymentMode') and not order.phonepe_payment_mode:
-            order.phonepe_payment_mode = payment_data.get('paymentMode')
-        if payment_data.get('bankId') and not order.phonepe_bank_id:
-            order.phonepe_bank_id = payment_data.get('bankId')
-        if payment_data.get('cardNetwork') and not order.phonepe_card_network:
-            order.phonepe_card_network = payment_data.get('cardNetwork')
-        if payment_data.get('transactionNote') and not order.phonepe_transaction_note:
-            order.phonepe_transaction_note = payment_data.get('transactionNote')
-        
-        order.save()
+            order.save()
         
         # Return order data with payment status
         order_serializer = OrderSerializer(order)

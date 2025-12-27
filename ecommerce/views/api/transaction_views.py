@@ -5,7 +5,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Sum
 from django.utils import timezone
 from datetime import timedelta
-from ...models import Transaction
+from core.models import Transaction
 from ...serializers import TransactionSerializer
 import sys
 

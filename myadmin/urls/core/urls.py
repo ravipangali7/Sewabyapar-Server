@@ -1,6 +1,6 @@
 """Core app URLs"""
 from django.urls import path
-from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views
+from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views, transaction_views
 
 app_name = 'core'
 
@@ -42,5 +42,9 @@ urlpatterns = [
     # SuperSetting URLs (singleton - update only)
     path('supersetting/', supersetting_views.SuperSettingDetailView.as_view(), name='supersetting_detail'),
     path('supersetting/update/', supersetting_views.SuperSettingUpdateView.as_view(), name='supersetting_update'),
+    
+    # Transaction URLs
+    path('transactions/', transaction_views.TransactionListView.as_view(), name='transaction_list'),
+    path('transactions/<int:pk>/', transaction_views.TransactionDetailView.as_view(), name='transaction_detail'),
 ]
 

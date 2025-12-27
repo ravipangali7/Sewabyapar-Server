@@ -9,7 +9,8 @@ from datetime import timedelta, datetime
 import json
 import sys
 import traceback
-from ...models import Product, Store, Order, OrderItem, Category, ProductImage, Transaction, Withdrawal
+from ...models import Product, Store, Order, OrderItem, Category, ProductImage, Withdrawal
+from core.models import Transaction
 from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer, TransactionSerializer
 from core.models import User
 from decimal import Decimal
