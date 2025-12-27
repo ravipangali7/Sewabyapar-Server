@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, Withdrawal
+    Review, Wishlist, Coupon, Withdrawal, Banner, Popup
 )
 from core.models import Transaction
 from core.serializers import UserSerializer, AddressSerializer
@@ -397,4 +397,38 @@ class WithdrawalCreateSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Withdrawal amount must be greater than 0")
         return value
+
+
+class BannerSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Banner
+        fields = ['id', 'image', 'title', 'url', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_image(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
+
+class PopupSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Popup
+        fields = ['id', 'image', 'title', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_image(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 

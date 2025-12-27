@@ -363,3 +363,34 @@ class Withdrawal(models.Model):
             models.Index(fields=['merchant', '-created_at']),
             models.Index(fields=['status', '-created_at']),
         ]
+
+
+class Banner(models.Model):
+    """Banner model for promotional banners"""
+    image = models.ImageField(upload_to='banners/', help_text='Banner image')
+    title = models.CharField(max_length=200, help_text='Banner title')
+    url = models.URLField(blank=True, null=True, help_text='URL to navigate when banner is clicked')
+    is_active = models.BooleanField(default=True, help_text='Whether this banner is active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.title} - {'Active' if self.is_active else 'Inactive'}"
+    
+    class Meta:
+        ordering = ['-created_at']
+
+
+class Popup(models.Model):
+    """Popup model for app startup popups"""
+    image = models.ImageField(upload_to='popups/', help_text='Popup image')
+    title = models.CharField(max_length=200, help_text='Popup title')
+    is_active = models.BooleanField(default=True, help_text='Whether this popup is active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.title} - {'Active' if self.is_active else 'Inactive'}"
+    
+    class Meta:
+        ordering = ['-created_at']
