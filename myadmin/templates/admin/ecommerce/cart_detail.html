@@ -4,70 +4,109 @@
 {% block content %}
 <div class="container-fluid p-0">
     <div class="mb-3">
-        <h1 class="h3 d-inline align-middle">Cart Details</h1>
-        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:cart_delete' cart.pk %}">
-            <i class="align-middle" data-feather="trash-2"></i> Delete
-        </a>
+        <h1 class="h3 d-inline align-middle">Cart Details - {{ user.name }}</h1>
         <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:cart_list' %}">
             <i class="align-middle" data-feather="arrow-left"></i> Back to List
         </a>
     </div>
 
     <div class="row">
-        <div class="col-md-8">
+        <!-- User Information -->
+        <div class="col-md-4">
             <div class="card mb-3">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
-                        <i class="align-middle" data-feather="shopping-cart"></i> Cart Information
+                        <i class="align-middle" data-feather="user"></i> User Information
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
-                        <div class="col-sm-8">
-                            <a href="{% url 'myadmin:core:user_detail' cart.user.pk %}" class="text-decoration-none">{{ cart.user.name }}</a>
+                    <div class="mb-3">
+                        <strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Name:</strong>
+                        <div>
+                            <a href="{% url 'myadmin:core:user_detail' user.pk %}" class="text-decoration-none">{{ user.name }}</a>
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Product:</strong></div>
-                        <div class="col-sm-8">
-                            <a href="{% url 'myadmin:ecommerce:product_detail' cart.product.pk %}" class="text-decoration-none">{{ cart.product.name }}</a>
-                        </div>
+                    <div class="mb-3">
+                        <strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong>
+                        <div>{{ user.phone }}</div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Quantity:</strong></div>
-                        <div class="col-sm-8">
-                            <span class="badge bg-secondary fs-6">{{ cart.quantity }}</span>
-                        </div>
+                    {% if user.email %}
+                    <div class="mb-3">
+                        <strong><i class="align-middle" data-feather="mail" style="width: 16px; height: 16px;"></i> Email:</strong>
+                        <div>{{ user.email }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <strong><i class="align-middle" data-feather="package" style="width: 16px; height: 16px;"></i> Total Items:</strong>
+                        <div><span class="badge bg-info">{{ cart_items|length }}</span></div>
+                    </div>
+                    <div class="mb-3">
+                        <strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Total Quantity:</strong>
+                        <div><span class="badge bg-success">{{ total_quantity }}</span></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <!-- Cart Items -->
+        <div class="col-md-8">
             <div class="card mb-3">
-                <div class="card-header">
+                <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">
-                        <i class="align-middle" data-feather="clock"></i> Timestamps
+                        <i class="align-middle" data-feather="shopping-cart"></i> Cart Items
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
-                        <div class="col-12 mt-1">
-                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
-                            {{ cart.created_at|date:"F d, Y" }}<br>
-                            <small class="text-muted">{{ cart.created_at|date:"g:i A" }}</small>
-                        </div>
+                    {% if cart_items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>S.N</th>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:product_detail' item.cart_item.product.pk %}" class="text-decoration-none">
+                                            {{ item.cart_item.product.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ item.cart_item.quantity }}</span>
+                                    </td>
+                                    <td>₹{{ item.unit_price|floatformat:2 }}</td>
+                                    <td><strong>₹{{ item.total|floatformat:2 }}</strong></td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:cart_delete' item.cart_item.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to remove this item from cart?')">
+                                            <i class="align-middle" data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <td colspan="4" class="text-end"><strong>Grand Total:</strong></td>
+                                    <td><strong>₹{{ total_amount|floatformat:2 }}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-12"><strong><i class="align-middle" data-feather="edit" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
-                        <div class="col-12 mt-1">
-                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
-                            {{ cart.updated_at|date:"F d, Y" }}<br>
-                            <small class="text-muted">{{ cart.updated_at|date:"g:i A" }}</small>
-                        </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="align-middle" data-feather="shopping-cart" style="width: 48px; height: 48px; color: #ccc;"></i>
+                        <p class="text-muted mt-2">No items in cart</p>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

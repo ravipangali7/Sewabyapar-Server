@@ -66,6 +66,17 @@ class UserListView(StaffRequiredMixin, ListView):
         context['search'] = self.request.GET.get('search', '')
         context['kyc_status'] = self.request.GET.get('kyc_status', 'all')
         context['role'] = self.request.GET.get('role', 'all')
+        
+        # Calculate stats
+        all_users = User.objects.all()
+        context['total_users'] = all_users.count()
+        context['merchant_users'] = all_users.filter(is_merchant=True).count()
+        context['customer_users'] = all_users.filter(is_merchant=False, is_driver=False).count()
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        
         return context
     
     def get(self, request, *args, **kwargs):

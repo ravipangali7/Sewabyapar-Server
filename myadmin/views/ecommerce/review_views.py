@@ -27,6 +27,17 @@ class ReviewListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
+        
+        # Calculate stats
+        all_reviews = Review.objects.all()
+        context['total_reviews'] = all_reviews.count()
+        from django.db.models import Avg
+        context['avg_rating'] = all_reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        
         return context
 
 

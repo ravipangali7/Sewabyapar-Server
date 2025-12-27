@@ -59,7 +59,18 @@ class TransactionListView(StaffRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['transaction_types'] = Transaction.TRANSACTION_TYPE_CHOICES
         context['status_choices'] = Transaction.STATUS_CHOICES
-        context['total_amount'] = self.get_queryset().aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Calculate stats
+        all_transactions = Transaction.objects.all()
+        context['total_transactions'] = all_transactions.count()
+        context['successful_transactions'] = all_transactions.filter(status='success').count()
+        context['total_amount'] = all_transactions.filter(status='success').aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        context['filtered_amount'] = filtered.filter(status='success').aggregate(total=Sum('amount'))['total'] or 0
+        
         return context
 
 

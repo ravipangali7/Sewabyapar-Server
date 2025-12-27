@@ -12,14 +12,84 @@
             <i class="align-middle" data-feather="arrow-left"></i> Back
         </a>
     </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary text-white rounded p-3">
+                                <i class="align-middle" data-feather="dollar-sign" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Transactions</div>
+                            <div class="h5 mb-0">{{ total_transactions }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success text-white rounded p-3">
+                                <i class="align-middle" data-feather="check-circle" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Successful</div>
+                            <div class="h5 mb-0">{{ successful_transactions }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info text-white rounded p-3">
+                                <i class="align-middle" data-feather="trending-up" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Amount</div>
+                            <div class="h5 mb-0">₹{{ total_amount|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning text-white rounded p-3">
+                                <i class="align-middle" data-feather="filter" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Filtered</div>
+                            <div class="h5 mb-0">{{ filtered_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">All Transactions</h5>
-                    {% if total_amount %}
-                    <p class="text-muted mb-0">Total Amount: ₹{{ total_amount|floatformat:2 }}</p>
-                    {% endif %}
                 </div>
                 <div class="card-body">
                     <form method="get" class="mb-3">
@@ -58,7 +128,7 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>S.N</th>
                                     <th>User</th>
                                     <th>Type</th>
                                     <th>Amount</th>
@@ -73,7 +143,13 @@
                             <tbody>
                                 {% for transaction in transactions %}
                                 <tr>
-                                    <td>{{ transaction.id }}</td>
+                                    <td>
+                                        {% if page_obj %}
+                                            {{ page_obj.start_index|add:forloop.counter0 }}
+                                        {% else %}
+                                            {{ forloop.counter }}
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <a href="{% url 'myadmin:core:user_detail' transaction.user.pk %}">
                                             {{ transaction.user.name }}<br>
@@ -163,5 +239,11 @@
         </div>
     </div>
 </div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
 {% endblock %}
 

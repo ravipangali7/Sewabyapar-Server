@@ -12,6 +12,79 @@
             <i class="align-middle" data-feather="download"></i> Export CSV
         </a>
     </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary text-white rounded p-3">
+                                <i class="align-middle" data-feather="users" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Users</div>
+                            <div class="h5 mb-0">{{ total_users }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success text-white rounded p-3">
+                                <i class="align-middle" data-feather="store" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Merchants</div>
+                            <div class="h5 mb-0">{{ merchant_users }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info text-white rounded p-3">
+                                <i class="align-middle" data-feather="user" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Customers</div>
+                            <div class="h5 mb-0">{{ customer_users }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning text-white rounded p-3">
+                                <i class="align-middle" data-feather="filter" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Filtered</div>
+                            <div class="h5 mb-0">{{ filtered_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -62,6 +135,7 @@
                         <thead>
                             <tr>
                                 <th width="40"><input type="checkbox" id="select-all-checkbox" onclick="toggleAll()"></th>
+                                <th>S.N</th>
                                 <th>Name</th>
                                 <th>Phone</th>
                                 <th>Email</th>
@@ -76,6 +150,13 @@
                             {% for user in users %}
                             <tr>
                                 <td><input type="checkbox" name="selected_items" value="{{ user.pk }}" class="item-checkbox"></td>
+                                <td>
+                                    {% if page_obj %}
+                                        {{ page_obj.start_index|add:forloop.counter0 }}
+                                    {% else %}
+                                        {{ forloop.counter }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ user.name }}</td>
                                 <td>{{ user.phone }}</td>
                                 <td>{{ user.email|default:"-" }}</td>
@@ -131,7 +212,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="9" class="text-center">No users found</td>
+                                <td colspan="10" class="text-center">No users found</td>
                             </tr>
                             {% endfor %}
                         </tbody>

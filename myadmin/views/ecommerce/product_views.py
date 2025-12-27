@@ -38,6 +38,20 @@ class ProductListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
+        
+        # Calculate stats
+        all_products = Product.objects.all()
+        context['total_products'] = all_products.count()
+        context['active_products'] = all_products.filter(is_active=True).count()
+        context['approved_products'] = all_products.filter(is_approved=True).count()
+        
+        # Get filtered stats if search is applied
+        if context['search']:
+            filtered = self.get_queryset()
+            context['filtered_count'] = filtered.count()
+        else:
+            context['filtered_count'] = context['total_products']
+        
         return context
     
     def get(self, request, *args, **kwargs):

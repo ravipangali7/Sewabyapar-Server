@@ -24,6 +24,16 @@ class CouponListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
+        
+        # Calculate stats
+        all_coupons = Coupon.objects.all()
+        context['total_coupons'] = all_coupons.count()
+        context['active_coupons'] = all_coupons.filter(is_active=True).count()
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        
         return context
 
 

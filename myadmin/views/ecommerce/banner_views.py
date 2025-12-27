@@ -32,6 +32,16 @@ class BannerListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
+        
+        # Calculate stats
+        all_banners = Banner.objects.all()
+        context['total_banners'] = all_banners.count()
+        context['active_banners'] = all_banners.filter(is_active=True).count()
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        
         return context
 
 

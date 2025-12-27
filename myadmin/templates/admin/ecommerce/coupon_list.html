@@ -1,14 +1,132 @@
 {% extends 'admin/layouts/base.html' %}
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Coupons</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:coupon_create' %}"><i class="align-middle" data-feather="plus"></i> Add Coupon</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Coupons</h5></div><div class="card-body">
-        <form method="get" class="mb-3"><div class="input-group"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"><button class="btn btn-primary" type="submit">Search</button></div></form>
-        <table class="table table-hover"><thead><tr><th>Code</th><th>Discount Type</th><th>Discount Value</th><th>Usage</th><th>Status</th><th>Valid Until</th><th>Actions</th></tr></thead><tbody>
-            {% for coupon in coupons %}<tr><td>{{ coupon.code }}</td><td>{{ coupon.get_discount_type_display }}</td><td>{{ coupon.discount_value }}</td><td>{{ coupon.used_count }}{% if coupon.usage_limit %}/{{ coupon.usage_limit }}{% endif %}</td><td>{% if coupon.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td><td>{{ coupon.valid_until|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:ecommerce:coupon_detail' coupon.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:ecommerce:coupon_update' coupon.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="7" class="text-center">No coupons found</td></tr>{% endfor %}
-        </tbody></table>
-        {% include 'admin/includes/pagination.html' %}
-    </div></div></div></div>
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Coupons</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:coupon_create' %}">
+            <i class="align-middle" data-feather="plus"></i> Add Coupon
+        </a>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary text-white rounded p-3">
+                                <i class="align-middle" data-feather="tag" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Coupons</div>
+                            <div class="h5 mb-0">{{ total_coupons }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success text-white rounded p-3">
+                                <i class="align-middle" data-feather="check-circle" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Active</div>
+                            <div class="h5 mb-0">{{ active_coupons }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning text-white rounded p-3">
+                                <i class="align-middle" data-feather="filter" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Filtered</div>
+                            <div class="h5 mb-0">{{ filtered_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Coupons</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                    </form>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>S.N</th>
+                                <th>Code</th>
+                                <th>Discount Type</th>
+                                <th>Discount Value</th>
+                                <th>Usage</th>
+                                <th>Status</th>
+                                <th>Valid Until</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coupon in coupons %}
+                            <tr>
+                                <td>
+                                    {% if page_obj %}
+                                        {{ page_obj.start_index|add:forloop.counter0 }}
+                                    {% else %}
+                                        {{ forloop.counter }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ coupon.code }}</td>
+                                <td>{{ coupon.get_discount_type_display }}</td>
+                                <td>{{ coupon.discount_value }}</td>
+                                <td>{{ coupon.used_count }}{% if coupon.usage_limit %}/{{ coupon.usage_limit }}{% endif %}</td>
+                                <td>{% if coupon.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td>
+                                <td>{{ coupon.valid_until|date:"M d, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'myadmin:ecommerce:coupon_detail' coupon.pk %}" class="btn btn-sm btn-info">View</a>
+                                    <a href="{% url 'myadmin:ecommerce:coupon_update' coupon.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">No coupons found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% include 'admin/includes/pagination.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %}
 
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

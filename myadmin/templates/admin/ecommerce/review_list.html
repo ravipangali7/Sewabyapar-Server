@@ -1,14 +1,130 @@
 {% extends 'admin/layouts/base.html' %}
 {% block content %}
 <div class="container-fluid p-0">
-    <div class="mb-3"><h1 class="h3 d-inline align-middle">Reviews</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:review_create' %}"><i class="align-middle" data-feather="plus"></i> Add Review</a></div>
-    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Reviews</h5></div><div class="card-body">
-        <form method="get" class="mb-3"><div class="input-group"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"><button class="btn btn-primary" type="submit">Search</button></div></form>
-        <table class="table table-hover"><thead><tr><th>User</th><th>Product</th><th>Rating</th><th>Title</th><th>Created</th><th>Actions</th></tr></thead><tbody>
-            {% for review in reviews %}<tr><td>{{ review.user.name }}</td><td>{{ review.product.name }}</td><td>{% for i in "12345"|make_list %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}</td><td>{{ review.title|default:"-" }}</td><td>{{ review.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:ecommerce:review_detail' review.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:ecommerce:review_update' review.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="6" class="text-center">No reviews found</td></tr>{% endfor %}
-        </tbody></table>
-        {% include 'admin/includes/pagination.html' %}
-    </div></div></div></div>
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Reviews</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:review_create' %}">
+            <i class="align-middle" data-feather="plus"></i> Add Review
+        </a>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary text-white rounded p-3">
+                                <i class="align-middle" data-feather="message-square" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Reviews</div>
+                            <div class="h5 mb-0">{{ total_reviews }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info text-white rounded p-3">
+                                <i class="align-middle" data-feather="star" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Avg Rating</div>
+                            <div class="h5 mb-0">{{ avg_rating|floatformat:1 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning text-white rounded p-3">
+                                <i class="align-middle" data-feather="filter" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Filtered</div>
+                            <div class="h5 mb-0">{{ filtered_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Reviews</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                    </form>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>S.N</th>
+                                <th>User</th>
+                                <th>Product</th>
+                                <th>Rating</th>
+                                <th>Title</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for review in reviews %}
+                            <tr>
+                                <td>
+                                    {% if page_obj %}
+                                        {{ page_obj.start_index|add:forloop.counter0 }}
+                                    {% else %}
+                                        {{ forloop.counter }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ review.user.name }}</td>
+                                <td>{{ review.product.name }}</td>
+                                <td>{% for i in "12345"|make_list %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}</td>
+                                <td>{{ review.title|default:"-" }}</td>
+                                <td>{{ review.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'myadmin:ecommerce:review_detail' review.pk %}" class="btn btn-sm btn-info">View</a>
+                                    <a href="{% url 'myadmin:ecommerce:review_update' review.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No reviews found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% include 'admin/includes/pagination.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %}
 
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

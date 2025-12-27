@@ -57,6 +57,18 @@ class OrderListView(StaffRequiredMixin, ListView):
         context['status_choices'] = Order.STATUS_CHOICES
         context['payment_status_choices'] = Order.PAYMENT_STATUS_CHOICES
         context['merchants'] = Store.objects.all().order_by('name')
+        
+        # Calculate stats
+        all_orders = Order.objects.all()
+        context['total_orders'] = all_orders.count()
+        context['pending_orders'] = all_orders.filter(status='pending').count()
+        context['delivered_orders'] = all_orders.filter(status='delivered').count()
+        context['total_revenue'] = all_orders.filter(status__in=['delivered', 'shipped', 'accepted']).aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        
         return context
     
     def get(self, request, *args, **kwargs):

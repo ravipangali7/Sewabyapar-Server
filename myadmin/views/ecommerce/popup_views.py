@@ -31,6 +31,16 @@ class PopupListView(StaffRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search'] = self.request.GET.get('search', '')
+        
+        # Calculate stats
+        all_popups = Popup.objects.all()
+        context['total_popups'] = all_popups.count()
+        context['active_popups'] = all_popups.filter(is_active=True).count()
+        
+        # Get filtered stats
+        filtered = self.get_queryset()
+        context['filtered_count'] = filtered.count()
+        
         return context
 
 
