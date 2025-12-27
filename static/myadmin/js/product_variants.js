@@ -80,7 +80,22 @@
     function updateVariantSectionVisibility() {
         const variantSection = document.getElementById('product-variants-section');
         if (variantSection) {
-            variantSection.style.display = variantState.enabled ? 'block' : 'none';
+            if (variantState.enabled) {
+                variantSection.style.display = 'block';
+                // Remove disabled attribute from inputs when visible
+                const inputs = variantSection.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.disabled = false;
+                });
+            } else {
+                variantSection.style.display = 'none';
+                // Disable inputs when hidden to prevent validation
+                const inputs = variantSection.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.disabled = true;
+                    input.removeAttribute('required');
+                });
+            }
         }
     }
 
@@ -112,14 +127,16 @@
                 <div class="col-md-4">
                     <label class="form-label">Variant Name *</label>
                     <input type="text" class="form-control variant-name" 
+                           name="variant_name_${index}"
                            value="${escapeHtml(name)}" 
-                           placeholder="e.g., Color" required>
+                           placeholder="e.g., Color">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Variant Values *</label>
                     <input type="text" class="form-control variant-values" 
+                           name="variant_values_${index}"
                            value="${escapeHtml(values.join(', '))}" 
-                           placeholder="Enter values separated by commas" required>
+                           placeholder="Enter values separated by commas">
                     <small class="form-text text-muted">Enter values separated by commas.</small>
                     <div class="variant-values-display mt-2">${valuesDisplay}</div>
                 </div>
@@ -144,6 +161,10 @@
         const nameInput = variantDiv.querySelector('.variant-name');
         const valuesInput = variantDiv.querySelector('.variant-values');
         const removeBtn = variantDiv.querySelector('.remove-variant');
+
+        // Set disabled state based on variant enabled status
+        nameInput.disabled = !variantState.enabled;
+        valuesInput.disabled = !variantState.enabled;
 
         nameInput.addEventListener('input', function() {
             updateVariantFromUI(index);
@@ -374,6 +395,42 @@
     }
 
     function handleFormSubmit(e) {
+        // If variants are enabled, validate variant inputs
+        if (variantState.enabled) {
+            const containers = document.querySelectorAll('.variant-type-item');
+            let isValid = true;
+            
+            containers.forEach((container, index) => {
+                const nameInput = container.querySelector('.variant-name');
+                const valuesInput = container.querySelector('.variant-values');
+                
+                // Remove previous validation styling
+                nameInput.classList.remove('is-invalid');
+                valuesInput.classList.remove('is-invalid');
+                
+                const name = nameInput.value.trim();
+                const valuesStr = valuesInput.value.trim();
+                const values = parseVariantValues(valuesStr);
+                
+                // Validate
+                if (!name) {
+                    nameInput.classList.add('is-invalid');
+                    isValid = false;
+                }
+                
+                if (!valuesStr || values.length === 0) {
+                    valuesInput.classList.add('is-invalid');
+                    isValid = false;
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required variant fields.');
+                return false;
+            }
+        }
+        
         // Update variant state from UI before submission
         updateAllVariantsFromUI();
         updateAllCombinationsFromUI();
