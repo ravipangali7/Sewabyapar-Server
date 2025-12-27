@@ -160,3 +160,200 @@ class KYCBulkVerifyView(StaffRequiredMixin, View):
         
         return redirect('myadmin:core:kyc_list')
 
+
+# Merchant KYC Views
+class MerchantKYCPendingView(StaffRequiredMixin, ListView):
+    """List pending KYC requests for merchants"""
+    model = User
+    template_name = 'admin/core/kyc_list.html'
+    context_object_name = 'kyc_users'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(is_merchant=True).exclude(
+            Q(national_id__isnull=True) & Q(national_id_document_front__isnull=True) & Q(national_id_document_back__isnull=True) &
+            Q(pan_no__isnull=True) & Q(pan_document__isnull=True)
+        ).exclude(
+            Q(national_id='') & Q(pan_no='')
+        ).filter(is_kyc_verified=False, kyc_rejected_at__isnull=True).order_by('-kyc_submitted_at', '-created_at')
+        
+        # Search
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(email__icontains=search) |
+                Q(national_id__icontains=search) |
+                Q(pan_no__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'pending'
+        context['user_type'] = 'merchant'
+        context['search'] = self.request.GET.get('search', '')
+        return context
+
+
+class MerchantKYCVerifiedView(StaffRequiredMixin, ListView):
+    """List verified KYC requests for merchants"""
+    model = User
+    template_name = 'admin/core/kyc_list.html'
+    context_object_name = 'kyc_users'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(is_merchant=True, is_kyc_verified=True).order_by('-kyc_verified_at', '-created_at')
+        
+        # Search
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(email__icontains=search) |
+                Q(national_id__icontains=search) |
+                Q(pan_no__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'verified'
+        context['user_type'] = 'merchant'
+        context['search'] = self.request.GET.get('search', '')
+        return context
+
+
+class MerchantKYCRejectedView(StaffRequiredMixin, ListView):
+    """List rejected KYC requests for merchants"""
+    model = User
+    template_name = 'admin/core/kyc_list.html'
+    context_object_name = 'kyc_users'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(is_merchant=True, kyc_rejected_at__isnull=False).order_by('-kyc_rejected_at', '-created_at')
+        
+        # Search
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(email__icontains=search) |
+                Q(national_id__icontains=search) |
+                Q(pan_no__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'rejected'
+        context['user_type'] = 'merchant'
+        context['search'] = self.request.GET.get('search', '')
+        return context
+
+
+# Customer KYC Views
+class CustomerKYCPendingView(StaffRequiredMixin, ListView):
+    """List pending KYC requests for customers"""
+    model = User
+    template_name = 'admin/core/kyc_list.html'
+    context_object_name = 'kyc_users'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(is_merchant=False, is_driver=False).exclude(
+            Q(national_id__isnull=True) & Q(national_id_document_front__isnull=True) & Q(national_id_document_back__isnull=True) &
+            Q(pan_no__isnull=True) & Q(pan_document__isnull=True)
+        ).exclude(
+            Q(national_id='') & Q(pan_no='')
+        ).filter(is_kyc_verified=False, kyc_rejected_at__isnull=True).order_by('-kyc_submitted_at', '-created_at')
+        
+        # Search
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(email__icontains=search) |
+                Q(national_id__icontains=search) |
+                Q(pan_no__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'pending'
+        context['user_type'] = 'customer'
+        context['search'] = self.request.GET.get('search', '')
+        return context
+
+
+class CustomerKYCVerifiedView(StaffRequiredMixin, ListView):
+    """List verified KYC requests for customers"""
+    model = User
+    template_name = 'admin/core/kyc_list.html'
+    context_object_name = 'kyc_users'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(is_merchant=False, is_driver=False, is_kyc_verified=True).order_by('-kyc_verified_at', '-created_at')
+        
+        # Search
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(email__icontains=search) |
+                Q(national_id__icontains=search) |
+                Q(pan_no__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'verified'
+        context['user_type'] = 'customer'
+        context['search'] = self.request.GET.get('search', '')
+        return context
+
+
+class CustomerKYCRejectedView(StaffRequiredMixin, ListView):
+    """List rejected KYC requests for customers"""
+    model = User
+    template_name = 'admin/core/kyc_list.html'
+    context_object_name = 'kyc_users'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(is_merchant=False, is_driver=False, kyc_rejected_at__isnull=False).order_by('-kyc_rejected_at', '-created_at')
+        
+        # Search
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(email__icontains=search) |
+                Q(national_id__icontains=search) |
+                Q(pan_no__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'rejected'
+        context['user_type'] = 'customer'
+        context['search'] = self.request.GET.get('search', '')
+        return context

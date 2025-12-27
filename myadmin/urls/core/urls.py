@@ -21,6 +21,16 @@ urlpatterns = [
     path('kyc/<int:user_id>/reject/', kyc_views.KYCRejectView.as_view(), name='kyc_reject'),
     path('kyc/bulk-verify/', kyc_views.KYCBulkVerifyView.as_view(), name='kyc_bulk_verify'),
     
+    # Merchant KYC URLs
+    path('merchant-kyc/pending/', kyc_views.MerchantKYCPendingView.as_view(), name='merchant_kyc_pending'),
+    path('merchant-kyc/verified/', kyc_views.MerchantKYCVerifiedView.as_view(), name='merchant_kyc_verified'),
+    path('merchant-kyc/rejected/', kyc_views.MerchantKYCRejectedView.as_view(), name='merchant_kyc_rejected'),
+    
+    # Customer KYC URLs
+    path('customer-kyc/pending/', kyc_views.CustomerKYCPendingView.as_view(), name='customer_kyc_pending'),
+    path('customer-kyc/verified/', kyc_views.CustomerKYCVerifiedView.as_view(), name='customer_kyc_verified'),
+    path('customer-kyc/rejected/', kyc_views.CustomerKYCRejectedView.as_view(), name='customer_kyc_rejected'),
+    
     # Address URLs
     path('addresses/', address_views.AddressListView.as_view(), name='address_list'),
     path('addresses/<int:pk>/', address_views.AddressDetailView.as_view(), name='address_detail'),
