@@ -38,6 +38,11 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:transaction_list' %}">
+                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Transactions</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:core:supersetting_detail' %}">
                     <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Super Setting</span>
                 </a>
@@ -87,6 +92,16 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:coupon_list' %}">
                     <i class="align-middle" data-feather="tag"></i> <span class="align-middle">Coupons</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:banner_list' %}">
+                    <i class="align-middle" data-feather="image"></i> <span class="align-middle">Banners</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:popup_list' %}">
+                    <i class="align-middle" data-feather="maximize-2"></i> <span class="align-middle">Popups</span>
                 </a>
             </li>
 
