@@ -2,7 +2,7 @@
 Forms for core models
 """
 from django import forms
-from core.models import User, Address, Notification, SuperSetting
+from core.models import User, Address, Notification, SuperSetting, Transaction
 
 
 class UserForm(forms.ModelForm):
@@ -176,4 +176,49 @@ class SuperSettingForm(forms.ModelForm):
         if balance is not None and balance < 0:
             raise forms.ValidationError('Balance must be greater than or equal to 0.')
         return balance
+
+
+class TransactionForm(forms.ModelForm):
+    """Form for transaction - allows editing status and description"""
+    class Meta:
+        model = Transaction
+        fields = [
+            'user', 'transaction_type', 'amount', 'status', 'description',
+            'related_order', 'related_withdrawal', 'merchant_order_id',
+            'utr', 'bank_id', 'vpa'
+        ]
+        widgets = {
+            'user': forms.Select(attrs={'class': 'form-select'}),
+            'transaction_type': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'related_order': forms.Select(attrs={'class': 'form-select'}),
+            'related_withdrawal': forms.Select(attrs={'class': 'form-select'}),
+            'merchant_order_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'utr': forms.TextInput(attrs={'class': 'form-control'}),
+            'bank_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'vpa': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        help_texts = {
+            'user': 'User associated with this transaction',
+            'transaction_type': 'Type of transaction',
+            'amount': 'Transaction amount',
+            'status': 'Current status of the transaction',
+            'description': 'Additional description or notes',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make most fields read-only for existing transactions (except status and description)
+        if self.instance and self.instance.pk:
+            # Keep status and description editable
+            self.fields['status'].required = False
+            self.fields['description'].required = False
+            # Make other fields read-only
+            for field_name in ['user', 'transaction_type', 'amount', 'related_order', 
+                             'related_withdrawal', 'merchant_order_id', 'utr', 'bank_id', 'vpa']:
+                if field_name in self.fields:
+                    self.fields[field_name].widget.attrs['readonly'] = True
+                    self.fields[field_name].widget.attrs['disabled'] = True
 

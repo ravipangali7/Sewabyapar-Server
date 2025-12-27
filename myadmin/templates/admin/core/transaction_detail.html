@@ -5,6 +5,12 @@
 <div class="container-fluid p-0">
     <div class="mb-3">
         <h1 class="h3 d-inline align-middle">Transaction Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:transaction_update' transaction.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:transaction_delete' transaction.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
         <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:transaction_list' %}">
             <i class="align-middle" data-feather="arrow-left"></i> Back to List
         </a>

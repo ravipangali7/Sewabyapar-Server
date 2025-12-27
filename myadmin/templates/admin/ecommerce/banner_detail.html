@@ -1,0 +1,89 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Banner Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:banner_update' banner.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:banner_delete' banner.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:banner_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="image"></i> Banner Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Title:</strong></div>
+                        <div class="col-sm-8"><h5 class="mb-0">{{ banner.title }}</h5></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>URL:</strong></div>
+                        <div class="col-sm-8">
+                            {% if banner.url %}
+                                <a href="{{ banner.url }}" target="_blank">{{ banner.url }}</a>
+                            {% else %}
+                                <span class="text-muted">No URL set</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Status:</strong></div>
+                        <div class="col-sm-8">
+                            {% if banner.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Created:</strong></div>
+                        <div class="col-sm-8">{{ banner.created_at|date:"F d, Y g:i A" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Updated:</strong></div>
+                        <div class="col-sm-8">{{ banner.updated_at|date:"F d, Y g:i A" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="image"></i> Banner Image
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if banner.image %}
+                        <img src="{{ banner.image.url }}" alt="{{ banner.title }}" class="img-fluid rounded" style="max-height: 400px;">
+                    {% else %}
+                        <p class="text-muted">No image uploaded</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

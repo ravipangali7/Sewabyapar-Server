@@ -5,7 +5,7 @@ import sys
 import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.views import View
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -14,6 +14,7 @@ from django.db import IntegrityError
 from myadmin.mixins import StaffRequiredMixin
 from core.models import Transaction
 from ecommerce.models import Order
+from myadmin.forms.core_forms import TransactionForm
 
 
 class TransactionListView(StaffRequiredMixin, ListView):
@@ -73,4 +74,58 @@ class TransactionDetailView(StaffRequiredMixin, DetailView):
         transaction = self.get_object()
         context['related_order'] = transaction.related_order
         return context
+
+
+class TransactionCreateView(StaffRequiredMixin, CreateView):
+    """Create new transaction"""
+    model = Transaction
+    form_class = TransactionForm
+    template_name = 'admin/core/transaction_form.html'
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Transaction created successfully.')
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('myadmin:core:transaction_detail', kwargs={'pk': self.object.pk})
+
+
+class TransactionUpdateView(StaffRequiredMixin, UpdateView):
+    """Update transaction"""
+    model = Transaction
+    form_class = TransactionForm
+    template_name = 'admin/core/transaction_form.html'
+    
+    def form_valid(self, form):
+        # For disabled fields, we need to get values from the instance, not form
+        instance = form.save(commit=False)
+        # Preserve original values for disabled fields
+        original_instance = self.get_object()
+        instance.user = original_instance.user
+        instance.transaction_type = original_instance.transaction_type
+        instance.amount = original_instance.amount
+        instance.related_order = original_instance.related_order
+        instance.related_withdrawal = original_instance.related_withdrawal
+        instance.merchant_order_id = original_instance.merchant_order_id
+        instance.utr = original_instance.utr
+        instance.bank_id = original_instance.bank_id
+        instance.vpa = original_instance.vpa
+        # Only status and description are updated from form
+        instance.save()
+        messages.success(self.request, 'Transaction updated successfully.')
+        return redirect(self.get_success_url())
+    
+    def get_success_url(self):
+        return reverse_lazy('myadmin:core:transaction_detail', kwargs={'pk': self.object.pk})
+
+
+class TransactionDeleteView(StaffRequiredMixin, DeleteView):
+    """Delete transaction"""
+    model = Transaction
+    template_name = 'admin/core/transaction_confirm_delete.html'
+    success_url = reverse_lazy('myadmin:core:transaction_list')
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Transaction deleted successfully.')
+        return super().delete(request, *args, **kwargs)
 

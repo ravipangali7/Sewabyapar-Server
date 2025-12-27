@@ -1,0 +1,43 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Transaction</h1>
+        <a class="btn btn-secondary ms-2" href="{% if object %}{% url 'myadmin:core:transaction_detail' object.pk %}{% else %}{% url 'myadmin:core:transaction_list' %}{% endif %}">Back</a>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Transaction Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% include 'admin/includes/form_fields.html' with form=form %}
+                        
+                        {% if object %}
+                        <div class="alert alert-info">
+                            <i class="align-middle" data-feather="info"></i>
+                            <strong>Note:</strong> Most fields are read-only for existing transactions. Only status and description can be edited.
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <a href="{% if object %}{% url 'myadmin:core:transaction_detail' object.pk %}{% else %}{% url 'myadmin:core:transaction_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+

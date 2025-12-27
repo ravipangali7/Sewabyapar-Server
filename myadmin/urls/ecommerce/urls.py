@@ -3,7 +3,7 @@ from django.urls import path
 from myadmin.views.ecommerce import (
     product_views, category_views, store_views, order_views,
     review_views, cart_views, wishlist_views, coupon_views,
-    product_image_views, order_item_views
+    product_image_views, order_item_views, banner_views, popup_views
 )
 
 app_name = 'ecommerce'
@@ -79,5 +79,19 @@ urlpatterns = [
     path('product-images/create/', product_image_views.ProductImageCreateView.as_view(), name='product_image_create'),
     path('product-images/<int:pk>/update/', product_image_views.ProductImageUpdateView.as_view(), name='product_image_update'),
     path('product-images/<int:pk>/delete/', product_image_views.ProductImageDeleteView.as_view(), name='product_image_delete'),
+    
+    # Banner URLs
+    path('banners/', banner_views.BannerListView.as_view(), name='banner_list'),
+    path('banners/<int:pk>/', banner_views.BannerDetailView.as_view(), name='banner_detail'),
+    path('banners/create/', banner_views.BannerCreateView.as_view(), name='banner_create'),
+    path('banners/<int:pk>/update/', banner_views.BannerUpdateView.as_view(), name='banner_update'),
+    path('banners/<int:pk>/delete/', banner_views.BannerDeleteView.as_view(), name='banner_delete'),
+    
+    # Popup URLs
+    path('popups/', popup_views.PopupListView.as_view(), name='popup_list'),
+    path('popups/<int:pk>/', popup_views.PopupDetailView.as_view(), name='popup_detail'),
+    path('popups/create/', popup_views.PopupCreateView.as_view(), name='popup_create'),
+    path('popups/<int:pk>/update/', popup_views.PopupUpdateView.as_view(), name='popup_update'),
+    path('popups/<int:pk>/delete/', popup_views.PopupDeleteView.as_view(), name='popup_delete'),
 ]
 

@@ -1,7 +1,7 @@
 """Forms for ecommerce models"""
 from django import forms
 from django.forms.models import inlineformset_factory
-from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem
+from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem, Banner, Popup
 from core.models import Address
 
 
@@ -205,4 +205,30 @@ OrderItemFormSet = inlineformset_factory(
     extra=0,
     can_delete=True,
 )
+
+
+class BannerForm(forms.ModelForm):
+    class Meta:
+        model = Banner
+        fields = ['image', 'title', 'url', 'is_active']
+        widgets = {
+            'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com or /internal-route'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        help_texts = {
+            'url': 'Enter a full URL (https://...) or an internal route (starting with /)',
+        }
+
+
+class PopupForm(forms.ModelForm):
+    class Meta:
+        model = Popup
+        fields = ['image', 'title', 'is_active']
+        widgets = {
+            'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
