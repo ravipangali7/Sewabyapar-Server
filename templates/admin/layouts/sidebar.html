@@ -67,11 +67,6 @@
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:core:notification_list' %}">
-                    <i class="align-middle" data-feather="bell"></i> <span class="align-middle">Notifications</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:core:transaction_list' %}">
                     <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Transactions</span>
                 </a>
@@ -128,6 +123,8 @@
                     <i class="align-middle" data-feather="tag"></i> <span class="align-middle">Coupons</span>
                 </a>
             </li>
+
+            <li class="sidebar-header">General</li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:banner_list' %}">
                     <i class="align-middle" data-feather="image"></i> <span class="align-middle">Banners</span>
@@ -136,6 +133,11 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:popup_list' %}">
                     <i class="align-middle" data-feather="maximize-2"></i> <span class="align-middle">Popups</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:notification_list' %}">
+                    <i class="align-middle" data-feather="bell"></i> <span class="align-middle">Notifications</span>
                 </a>
             </li>
 
