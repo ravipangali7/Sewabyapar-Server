@@ -72,7 +72,7 @@ class User(AbstractUser):
     # Merchant-specific KYC fields
     company_register_id = models.CharField(max_length=50, blank=True, null=True, help_text='Company registration ID (for merchants only)')
     company_register_document = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='Company registration document (for merchants only)')
-    merchant_agreement = models.ImageField(upload_to='kyc_documents/', blank=True, null=True, help_text='Signed merchant agreement document (for merchants only)')
+    merchant_agreement = models.FileField(upload_to='kyc_documents/', blank=True, null=True, help_text='Signed merchant agreement PDF document (for merchants only)')
     is_kyc_verified = models.BooleanField(default=False, help_text='Whether KYC has been verified by admin')
     kyc_submitted_at = models.DateTimeField(blank=True, null=True, help_text='When user submitted KYC information')
     kyc_verified_at = models.DateTimeField(blank=True, null=True, help_text='When KYC was verified by admin')

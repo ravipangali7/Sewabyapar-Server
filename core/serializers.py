@@ -6,7 +6,7 @@ class UserSerializer(serializers.ModelSerializer):
     national_id_document_front = serializers.ImageField(read_only=True)
     national_id_document_back = serializers.ImageField(read_only=True)
     company_register_document = serializers.ImageField(read_only=True)
-    merchant_agreement = serializers.ImageField(read_only=True)
+    merchant_agreement = serializers.FileField(read_only=True)
     
     class Meta:
         model = User
@@ -253,7 +253,7 @@ class KYCSubmitSerializer(serializers.Serializer):
     pan_document = serializers.ImageField(required=False, allow_null=True)
     company_register_id = serializers.CharField(max_length=50, required=False, allow_blank=True)
     company_register_document = serializers.ImageField(required=False, allow_null=True)
-    merchant_agreement = serializers.ImageField(required=False, allow_null=True)
+    merchant_agreement = serializers.FileField(required=False, allow_null=True)
     
     def validate(self, attrs):
         """Validate that at least some KYC information is provided"""
@@ -274,7 +274,7 @@ class KYCStatusSerializer(serializers.ModelSerializer):
     national_id_document_back = serializers.ImageField(read_only=True)
     pan_document = serializers.ImageField(read_only=True)
     company_register_document = serializers.ImageField(read_only=True)
-    merchant_agreement = serializers.ImageField(read_only=True)
+    merchant_agreement = serializers.FileField(read_only=True)
     
     class Meta:
         model = User

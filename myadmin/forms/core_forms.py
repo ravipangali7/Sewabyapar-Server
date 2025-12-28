@@ -32,7 +32,7 @@ class UserForm(forms.ModelForm):
             'pan_document': forms.FileInput(attrs={'class': 'form-control'}),
             'company_register_id': forms.TextInput(attrs={'class': 'form-control'}),
             'company_register_document': forms.FileInput(attrs={'class': 'form-control'}),
-            'merchant_agreement': forms.FileInput(attrs={'class': 'form-control'}),
+            'merchant_agreement': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}),
             'is_merchant': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_merchant'}),
             'is_driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_driver'}),
             'is_kyc_verified': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
