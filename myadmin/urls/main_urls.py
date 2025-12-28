@@ -19,5 +19,6 @@ urlpatterns = [
     path('shared/', include('myadmin.urls.shared.urls')),
     path('website/', include('myadmin.urls.website.urls')),
     path('shipdaak/', include('myadmin.urls.shipdaak.urls')),
+    path('reports/', include('myadmin.urls.report_urls')),
 ]
 

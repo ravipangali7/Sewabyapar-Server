@@ -144,6 +144,23 @@
                 </a>
             </li>
 
+            <li class="sidebar-header">Reports</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:reports:finance_report' %}">
+                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Finance Report</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:reports:merchant_report' %}">
+                    <i class="align-middle" data-feather="shopping-bag"></i> <span class="align-middle">Merchant Report</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:reports:customer_report' %}">
+                    <i class="align-middle" data-feather="users"></i> <span class="align-middle">Customer Report</span>
+                </a>
+            </li>
+
             <li class="sidebar-header">General</li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:banner_list' %}">

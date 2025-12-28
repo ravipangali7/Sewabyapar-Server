@@ -1,0 +1,266 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Finance Report</h1>
+        <a class="btn btn-success ms-2" href="?{% for key, value in request.GET.items %}{% if key != 'export' %}{{ key }}={{ value }}&{% endif %}{% endfor %}export=csv">
+            <i class="align-middle" data-feather="download"></i> Export CSV
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:dashboard' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back
+        </a>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary text-white rounded p-3">
+                                <i class="align-middle" data-feather="dollar-sign" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Revenue</div>
+                            <div class="h5 mb-0">₹{{ total_revenue|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info text-white rounded p-3">
+                                <i class="align-middle" data-feather="percent" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Commissions</div>
+                            <div class="h5 mb-0">₹{{ total_commissions|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning text-white rounded p-3">
+                                <i class="align-middle" data-feather="arrow-down" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Total Withdrawals</div>
+                            <div class="h5 mb-0">₹{{ total_withdrawals|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success text-white rounded p-3">
+                                <i class="align-middle" data-feather="filter" style="width: 24px; height: 24px;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">Filtered Transactions</div>
+                            <div class="h5 mb-0">{{ filtered_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Filtered Revenue</h5>
+                </div>
+                <div class="card-body">
+                    <div class="h3 mb-0">₹{{ filtered_revenue|floatformat:0 }}</div>
+                    <small class="text-muted">Based on current filters</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Filtered Commissions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="h3 mb-0">₹{{ filtered_commissions|floatformat:0 }}</div>
+                    <small class="text-muted">Based on current filters</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Financial Transactions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}">
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" name="transaction_type">
+                                    <option value="">All Types</option>
+                                    {% for value, label in transaction_types %}
+                                    <option value="{{ value }}" {% if selected_transaction_type == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" name="status">
+                                    <option value="">All Status</option>
+                                    {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>S.N</th>
+                                    <th>Date</th>
+                                    <th>User</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>UTR</th>
+                                    <th>Order</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>
+                                        {% if page_obj %}
+                                            {{ page_obj.start_index|add:forloop.counter0 }}
+                                        {% else %}
+                                            {{ forloop.counter }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'myadmin:core:user_detail' transaction.user.pk %}">
+                                            {{ transaction.user.name }}<br>
+                                            <small class="text-muted">{{ transaction.user.phone }}</small>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ transaction.get_transaction_type_display }}</span>
+                                    </td>
+                                    <td>₹{{ transaction.amount|floatformat:2 }}</td>
+                                    <td>
+                                        {% if transaction.status == 'completed' or transaction.status == 'success' %}
+                                        <span class="badge bg-success">{{ transaction.get_status_display }}</span>
+                                        {% elif transaction.status == 'failed' %}
+                                        <span class="badge bg-danger">{{ transaction.get_status_display }}</span>
+                                        {% elif transaction.status == 'pending' %}
+                                        <span class="badge bg-warning">{{ transaction.get_status_display }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ transaction.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.utr %}
+                                        <code>{{ transaction.utr }}</code>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.related_order %}
+                                        <a href="{% url 'myadmin:ecommerce:order_detail' transaction.related_order.pk %}">
+                                            {{ transaction.related_order.order_number }}
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:core:transaction_detail' transaction.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="align-middle" data-feather="eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center">No transactions found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if is_paginated %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if selected_transaction_type %}&transaction_type={{ selected_transaction_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_transaction_type %}&transaction_type={{ selected_transaction_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">Previous</a>
+                            </li>
+                            {% endif %}
+                            <li class="page-item active">
+                                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                            </li>
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_transaction_type %}&transaction_type={{ selected_transaction_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if selected_transaction_type %}&transaction_type={{ selected_transaction_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">Last</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
+
