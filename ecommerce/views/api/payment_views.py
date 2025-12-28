@@ -316,8 +316,24 @@ def payment_status(request):
             elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
                 transaction.status = 'pending'
                 transaction.save()
-                order.payment_status = 'pending'
-                order.save()
+                
+                # Delete temporary order if payment is pending (user requirement: don't save pending orders)
+                if order.notes and order.notes.startswith('CART_DATA:'):
+                    order_id = order.id
+                    order_number = order.order_number
+                    order.delete()
+                    print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment pending (status: {status_to_check})")
+                    sys.stdout.flush()
+                    # Return response without order data since order was deleted
+                    return Response({
+                        'success': True,
+                        'message': 'Payment pending - order not created',
+                        'paymentDetails': payment_data,
+                        'order': None
+                    }, status=status.HTTP_200_OK)
+                else:
+                    order.payment_status = 'pending'
+                    order.save()
             
             # Return order data with payment status
             order_serializer = OrderSerializer(order)
@@ -703,8 +719,24 @@ def payment_callback(request):
         elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
             transaction.status = 'pending'
             transaction.save()
-            order.payment_status = 'pending'
-            order.save()
+            
+            # Delete temporary order if payment is pending (user requirement: don't save pending orders)
+            if order.notes and order.notes.startswith('CART_DATA:'):
+                order_id = order.id
+                order_number = order.order_number
+                order.delete()
+                print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment pending (status: {status_to_check})")
+                sys.stdout.flush()
+                # Return response without order data since order was deleted
+                return Response({
+                    'success': True,
+                    'message': 'Payment pending - order not created',
+                    'paymentDetails': payment_data,
+                    'order': None
+                }, status=status.HTTP_200_OK)
+            else:
+                order.payment_status = 'pending'
+                order.save()
         
         # Return order data with payment status
         order_serializer = OrderSerializer(order)

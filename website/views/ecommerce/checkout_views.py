@@ -577,10 +577,21 @@ def payment_result_view(request):
                         if transaction:
                             transaction.status = 'pending'
                             transaction.save()
-                        order.payment_status = 'pending'
-                        order.save()
-                        print(f"[INFO] Order {order.id} marked as payment pending (status: {payment_status_value})")
-                        sys.stdout.flush()
+                        
+                        # Delete temporary order if payment is pending (user requirement: don't save pending orders)
+                        if order.notes and order.notes.startswith('CART_DATA:'):
+                            order_id = order.id
+                            order_number = order.order_number
+                            order.delete()
+                            print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment pending (status: {payment_status_value})")
+                            sys.stdout.flush()
+                            # Set order to None so it won't be displayed
+                            order = None
+                        else:
+                            order.payment_status = 'pending'
+                            order.save()
+                            print(f"[INFO] Order {order.id} marked as payment pending (status: {payment_status_value})")
+                            sys.stdout.flush()
                     else:
                         # Unknown status - keep as pending but log it
                         if transaction:
@@ -717,8 +728,17 @@ def payment_result_view(request):
                             order.payment_status = 'failed'
                             order.save()
                     elif payment_status_value in ['PAYMENT_PENDING', 'PENDING', 'INITIATED']:
-                        order.payment_status = 'pending'
-                        order.save()
+                        # Delete temporary order if payment is pending (user requirement: don't save pending orders)
+                        if order.notes and order.notes.startswith('CART_DATA:'):
+                            order_id = order.id
+                            order_number = order.order_number
+                            order.delete()
+                            print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment pending (status: {payment_status_value})")
+                            sys.stdout.flush()
+                            order = None
+                        else:
+                            order.payment_status = 'pending'
+                            order.save()
             else:
                 api_error = status_response.get('error', 'Unknown error')
                 print(f"[ERROR] PhonePe API error for transaction_id {transaction_id}: {api_error}")
