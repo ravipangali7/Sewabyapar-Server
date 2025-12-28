@@ -170,6 +170,27 @@
                 </div>
             </div>
         </div>
+        {% if user.is_merchant and user.merchant_code %}
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Merchant Code</h6>
+                            <h4 class="mb-0">
+                                <span class="badge bg-success fs-6">{{ user.merchant_code }}</span>
+                            </h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="hash"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Main Information -->

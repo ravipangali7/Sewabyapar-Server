@@ -107,6 +107,27 @@
                 </div>
             </div>
         </div>
+        {% if product.item_code %}
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Item Code</h6>
+                            <h4 class="mb-0">
+                                <span class="badge bg-info fs-6">{{ product.item_code }}</span>
+                            </h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="hash"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <div class="row">
