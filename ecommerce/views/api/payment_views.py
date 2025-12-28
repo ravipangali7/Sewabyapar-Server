@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+import sys
 from ...models import Order
 from core.models import Transaction
 from ...serializers import OrderSerializer
@@ -294,8 +295,24 @@ def payment_status(request):
             elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
                 transaction.status = 'failed'
                 transaction.save()
-                order.payment_status = 'failed'
-                order.save()
+                
+                # Delete temporary order if payment failed (only if it's a temporary order with CART_DATA)
+                if order.notes and order.notes.startswith('CART_DATA:'):
+                    order_id = order.id
+                    order_number = order.order_number
+                    order.delete()
+                    print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment failure (status: {status_to_check})")
+                    sys.stdout.flush()
+                    # Return response without order data since order was deleted
+                    return Response({
+                        'success': True,
+                        'message': 'Payment failed - order not created',
+                        'paymentDetails': payment_data,
+                        'order': None
+                    }, status=status.HTTP_200_OK)
+                else:
+                    order.payment_status = 'failed'
+                    order.save()
             elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
                 transaction.status = 'pending'
                 transaction.save()
@@ -665,8 +682,24 @@ def payment_callback(request):
         elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
             transaction.status = 'failed'
             transaction.save()
-            order.payment_status = 'failed'
-            order.save()
+            
+            # Delete temporary order if payment failed (only if it's a temporary order with CART_DATA)
+            if order.notes and order.notes.startswith('CART_DATA:'):
+                order_id = order.id
+                order_number = order.order_number
+                order.delete()
+                print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment failure (status: {status_to_check})")
+                sys.stdout.flush()
+                # Return response without order data since order was deleted
+                return Response({
+                    'success': True,
+                    'message': 'Payment failed - order not created',
+                    'paymentDetails': payment_data,
+                    'order': None
+                }, status=status.HTTP_200_OK)
+            else:
+                order.payment_status = 'failed'
+                order.save()
         elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
             transaction.status = 'pending'
             transaction.save()
@@ -847,6 +880,24 @@ def sabpaisa_payment_callback(request):
         
         # Parse status code and update order
         payment_status, order_status = parse_sabpaisa_status_code(status_code)
+        
+        # If payment failed, delete temporary order (only if it's a temporary order with CART_DATA)
+        if payment_status == 'failed' and order.notes and order.notes.startswith('CART_DATA:'):
+            order_id = order.id
+            order_number = order.order_number
+            order.delete()
+            print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to SabPaisa payment failure (status_code: {status_code})")
+            sys.stdout.flush()
+            return Response({
+                'success': True,
+                'message': 'Payment failed - order not created',
+                'payment_status': payment_status,
+                'status_code': status_code,
+                'order_id': None,
+                'order_number': None
+            }, status=status.HTTP_200_OK)
+        
+        # If payment successful, proceed with order processing
         order.payment_status = payment_status
         order.status = order_status
         
@@ -858,16 +909,17 @@ def sabpaisa_payment_callback(request):
         if bank_name:
             order.phonepe_bank_id = bank_name
         
-        # Store additional details in notes if needed
-        sabpaisa_details = f"SabPaisa Message: {sabpaisa_message}"
-        if response_data.get('bankMessage'):
-            sabpaisa_details += f"\nBank Message: {response_data.get('bankMessage')}"
-        if response_data.get('bankErrorCode'):
-            sabpaisa_details += f"\nBank Error Code: {response_data.get('bankErrorCode')}"
-        if order.notes:
-            order.notes += f"\n\n{sabpaisa_details}"
-        else:
-            order.notes = sabpaisa_details
+        # Store additional details in notes if needed (only if not CART_DATA)
+        if not order.notes or not order.notes.startswith('CART_DATA:'):
+            sabpaisa_details = f"SabPaisa Message: {sabpaisa_message}"
+            if response_data.get('bankMessage'):
+                sabpaisa_details += f"\nBank Message: {response_data.get('bankMessage')}"
+            if response_data.get('bankErrorCode'):
+                sabpaisa_details += f"\nBank Error Code: {response_data.get('bankErrorCode')}"
+            if order.notes:
+                order.notes += f"\n\n{sabpaisa_details}"
+            else:
+                order.notes = sabpaisa_details
         
         order.save()
         

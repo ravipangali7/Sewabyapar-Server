@@ -557,10 +557,22 @@ def payment_result_view(request):
                         if transaction:
                             transaction.status = 'failed'
                             transaction.save()
-                        order.payment_status = 'failed'
-                        order.save()
-                        print(f"[INFO] Order {order.id} marked as payment failed (status: {payment_status_value})")
-                        sys.stdout.flush()
+                        
+                        # Delete temporary order if payment failed (only if it's a temporary order with CART_DATA)
+                        if order.notes and order.notes.startswith('CART_DATA:'):
+                            order_id = order.id
+                            order_number = order.order_number
+                            order.delete()
+                            print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment failure (status: {payment_status_value})")
+                            sys.stdout.flush()
+                            # Set order to None so it won't be displayed
+                            order = None
+                        else:
+                            # For non-temporary orders, just mark as failed
+                            order.payment_status = 'failed'
+                            order.save()
+                            print(f"[INFO] Order {order.id} marked as payment failed (status: {payment_status_value})")
+                            sys.stdout.flush()
                     elif payment_status_value in ['PENDING', 'PAYMENT_PENDING', 'INITIATED', 'AUTHORIZED']:
                         if transaction:
                             transaction.status = 'pending'
@@ -691,12 +703,22 @@ def payment_result_view(request):
                     if payment_status_value in ['PAYMENT_SUCCESS', 'SUCCESS', 'COMPLETED', 'PAID']:
                         order.payment_status = 'success'
                         order.status = 'confirmed'
+                        order.save()
                     elif payment_status_value in ['PAYMENT_ERROR', 'PAYMENT_FAILED', 'FAILED', 'FAILURE']:
-                        order.payment_status = 'failed'
+                        # Delete temporary order if payment failed (only if it's a temporary order with CART_DATA)
+                        if order.notes and order.notes.startswith('CART_DATA:'):
+                            order_id = order.id
+                            order_number = order.order_number
+                            order.delete()
+                            print(f"[INFO] Temporary order {order_id} (order_number: {order_number}) deleted due to payment failure (status: {payment_status_value})")
+                            sys.stdout.flush()
+                            order = None
+                        else:
+                            order.payment_status = 'failed'
+                            order.save()
                     elif payment_status_value in ['PAYMENT_PENDING', 'PENDING', 'INITIATED']:
                         order.payment_status = 'pending'
-                    
-                    order.save()
+                        order.save()
             else:
                 api_error = status_response.get('error', 'Unknown error')
                 print(f"[ERROR] PhonePe API error for transaction_id {transaction_id}: {api_error}")
