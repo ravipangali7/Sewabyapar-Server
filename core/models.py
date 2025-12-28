@@ -91,6 +91,9 @@ class User(AbstractUser):
     # Freeze field
     is_freeze = models.BooleanField(default=False, help_text='Whether user account is frozen')
     
+    # Merchant code field
+    merchant_code = models.CharField(max_length=50, null=True, blank=True, unique=True, help_text='Auto-generated merchant code (e.g., MSB1, MSB2) - only for merchants')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -129,6 +132,20 @@ class User(AbstractUser):
             self.country = 'Nepal'
         elif self.country_code == '+91' and not self.country:
             self.country = 'India'
+        
+        # Generate merchant_code if user is a merchant and code is not set
+        if self.is_merchant and not self.merchant_code:
+            count = User.objects.filter(is_merchant=True).count()
+            code = f"MSB{count + 1}"
+            # Ensure uniqueness
+            while User.objects.filter(merchant_code=code).exists():
+                count += 1
+                code = f"MSB{count + 1}"
+            self.merchant_code = code
+        elif not self.is_merchant:
+            # Clear merchant_code if user is not a merchant
+            self.merchant_code = None
+        
         super().save(*args, **kwargs)
     
     def __str__(self):

@@ -34,9 +34,28 @@ def product_list_create(request):
         if store:
             queryset = queryset.filter(store__id=store)
         if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | Q(description__icontains=search)
-            )
+            # Check for exact match on item_code first
+            item_code_match = Product.objects.filter(
+                item_code__iexact=search,
+                is_active=True,
+                is_approved=True
+            ).first()
+            if item_code_match:
+                queryset = Product.objects.filter(id=item_code_match.id)
+            else:
+                # Check for exact match on merchant_code
+                from core.models import User
+                merchant = User.objects.filter(merchant_code__iexact=search, is_merchant=True).first()
+                if merchant:
+                    # Get all products from this merchant
+                    from ...models import Store
+                    stores = Store.objects.filter(owner=merchant, is_active=True)
+                    queryset = queryset.filter(store__in=stores)
+                else:
+                    # Fall back to name/description search
+                    queryset = queryset.filter(
+                        Q(name__icontains=search) | Q(description__icontains=search)
+                    )
         if featured:
             queryset = queryset.filter(is_featured=True)
         
@@ -97,9 +116,29 @@ def search_products(request):
     queryset = Product.objects.filter(is_active=True, is_approved=True)
     
     if query:
-        queryset = queryset.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
+        # Check for exact match on item_code first
+        item_code_match = Product.objects.filter(
+            item_code__iexact=query,
+            is_active=True,
+            is_approved=True
+        ).first()
+        if item_code_match:
+            serializer = ProductSerializer([item_code_match], many=True, context={'request': request})
+            return Response(serializer.data)
+        
+        # Check for exact match on merchant_code
+        from core.models import User
+        merchant = User.objects.filter(merchant_code__iexact=query, is_merchant=True).first()
+        if merchant:
+            # Get all products from this merchant
+            from ...models import Store
+            stores = Store.objects.filter(owner=merchant, is_active=True)
+            queryset = queryset.filter(store__in=stores)
+        else:
+            # Fall back to name/description search
+            queryset = queryset.filter(
+                Q(name__icontains=query) | Q(description__icontains=query)
+            )
     
     if category:
         queryset = queryset.filter(category__id=category)

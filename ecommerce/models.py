@@ -63,6 +63,7 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False, help_text='Product must be approved by admin before it appears in app/web')
     variants = models.JSONField(default=dict, blank=True, help_text='Product variant data with enabled, variants, and combinations')
+    item_code = models.CharField(max_length=50, null=True, blank=True, unique=True, help_text='Auto-generated product code (e.g., PSB1, PSB2)')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -98,7 +99,17 @@ class Product(models.Model):
         return self.stock_quantity
     
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate stock and set price from primary combination when variants are enabled"""
+        """Override save to auto-calculate stock, set price from primary combination when variants are enabled, and generate item_code"""
+        # Generate item_code if not set
+        if not self.item_code:
+            count = Product.objects.count()
+            code = f"PSB{count + 1}"
+            # Ensure uniqueness
+            while Product.objects.filter(item_code=code).exists():
+                count += 1
+                code = f"PSB{count + 1}"
+            self.item_code = code
+        
         if self.is_variants_enabled():
             variants_data = self.get_variants_data()
             combinations = variants_data.get("combinations", {})

@@ -84,8 +84,8 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
                  'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants', 'images', 
-                 'average_rating', 'review_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+                 'average_rating', 'review_count', 'item_code', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'item_code', 'created_at', 'updated_at']
     
     def to_representation(self, instance):
         # Pass the request context to nested serializers
@@ -126,7 +126,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
-                 'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants']
+                 'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants', 'item_code']
+        read_only_fields = ['item_code']
     
     def validate(self, data):
         """
