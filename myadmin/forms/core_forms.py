@@ -15,7 +15,7 @@ class UserForm(forms.ModelForm):
             'national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document',
             'company_register_id', 'company_register_document',
             'is_merchant', 'is_driver',
-            'is_kyc_verified', 'is_active', 'is_staff', 'is_superuser'
+            'is_kyc_verified', 'is_active', 'is_staff', 'is_superuser', 'is_freeze'
         ]
         widgets = {
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
@@ -38,6 +38,7 @@ class UserForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_freeze': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def clean(self):
@@ -63,7 +64,7 @@ class UserCreateForm(forms.ModelForm):
         model = User
         fields = [
             'phone', 'name', 'email', 'country_code', 'country',
-            'password', 'is_merchant', 'is_driver', 'is_active', 'is_staff'
+            'password', 'is_merchant', 'is_driver', 'is_active', 'is_staff', 'is_freeze'
         ]
         widgets = {
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
@@ -75,6 +76,7 @@ class UserCreateForm(forms.ModelForm):
             'is_driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_driver'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_freeze': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def clean(self):

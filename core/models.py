@@ -87,6 +87,9 @@ class User(AbstractUser):
                                   validators=[MinValueValidator(0)],
                                   help_text='User balance')
     
+    # Freeze field
+    is_freeze = models.BooleanField(default=False, help_text='Whether user account is frozen')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

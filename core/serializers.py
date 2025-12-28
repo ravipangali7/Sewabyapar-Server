@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
                   'national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document',
                   'company_register_id', 'company_register_document',
                   'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at', 'kyc_rejected_at', 'kyc_rejection_reason',
-                  'is_merchant', 'is_driver', 'created_at', 'updated_at']
+                  'is_merchant', 'is_driver', 'is_freeze', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'is_kyc_verified', 'kyc_verified_at', 
                            'kyc_rejected_at', 'kyc_rejection_reason', 'is_merchant', 'is_driver',
                            'national_id_document_front', 'national_id_document_back', 'pan_document', 'company_register_document']

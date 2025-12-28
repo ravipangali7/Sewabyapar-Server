@@ -142,6 +142,7 @@
                                 <th>Role</th>
                                 <th>KYC Status</th>
                                 <th>Status</th>
+                                <th>Freeze Status</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
@@ -193,6 +194,17 @@
                                         <span class="badge bg-success">Active</span>
                                     {% else %}
                                         <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_freeze %}
+                                        <span class="badge bg-danger">
+                                            <i class="align-middle" data-feather="lock" style="width: 14px; height: 14px;"></i> Frozen
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="align-middle" data-feather="unlock" style="width: 14px; height: 14px;"></i> Normal
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td>{{ user.created_at|date:"M d, Y" }}</td>

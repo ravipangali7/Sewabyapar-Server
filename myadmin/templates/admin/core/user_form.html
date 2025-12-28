@@ -82,7 +82,7 @@
                         <div class="mb-4">
                             <h5 class="mb-3"><i class="align-middle" data-feather="shield"></i> Permissions & Status</h5>
                             {% for field in form %}
-                                {% if field.name == 'is_kyc_verified' or field.name == 'is_active' or field.name == 'is_staff' or field.name == 'is_superuser' %}
+                                {% if field.name == 'is_kyc_verified' or field.name == 'is_active' or field.name == 'is_staff' or field.name == 'is_superuser' or field.name == 'is_freeze' %}
                                     <div class="form-check form-switch mb-3">
                                         {{ field }}
                                         <label class="form-check-label" for="{{ field.id_for_label }}">

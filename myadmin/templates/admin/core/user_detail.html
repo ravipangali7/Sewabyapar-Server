@@ -133,6 +133,31 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col">
+                            <h6 class="text-muted mb-2">Freeze Status</h6>
+                            {% if user.is_freeze %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="align-middle" data-feather="lock" style="width: 16px; height: 16px;"></i> Frozen
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="align-middle" data-feather="unlock" style="width: 16px; height: 16px;"></i> Normal
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if user.is_freeze %}lock{% else %}unlock{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
                             <h6 class="text-muted mb-2">Member Since</h6>
                             <div class="fs-6">{{ user.created_at|date:"M Y" }}</div>
                         </div>
@@ -213,6 +238,20 @@
                                 <span class="badge bg-success">Active</span>
                             {% else %}
                                 <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="{% if user.is_freeze %}lock{% else %}unlock{% endif %}" style="width: 16px; height: 16px;"></i> Freeze Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            {% if user.is_freeze %}
+                                <span class="badge bg-danger">
+                                    <i class="align-middle" data-feather="lock" style="width: 14px; height: 14px;"></i> Frozen
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="align-middle" data-feather="unlock" style="width: 14px; height: 14px;"></i> Normal
+                                </span>
                             {% endif %}
                         </div>
                     </div>

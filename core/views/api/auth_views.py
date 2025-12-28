@@ -80,6 +80,12 @@ def user_login(request):
             'error': 'Your account has been deleted. Please contact administration to recover your account.'
         }, status=status.HTTP_403_FORBIDDEN)
 
+    # Check if account is frozen
+    if user.is_freeze:
+        return Response({
+            'error': 'Account is freeze please contact administration'
+        }, status=status.HTTP_403_FORBIDDEN)
+
     # Check if the provided country_code matches the user's registered country_code
     if user.country_code != country_code:
         return Response({

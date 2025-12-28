@@ -6,8 +6,8 @@ from .models import User, Address, Notification, SuperSetting
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """Custom User admin"""
-    list_display = ['phone', 'name', 'email', 'is_merchant', 'is_driver', 'is_kyc_verified', 'balance', 'is_active', 'is_staff', 'created_at']
-    list_filter = ['is_active', 'is_staff', 'is_superuser', 'is_merchant', 'is_driver', 'is_kyc_verified', 'created_at']
+    list_display = ['phone', 'name', 'email', 'is_merchant', 'is_driver', 'is_kyc_verified', 'balance', 'is_active', 'is_freeze', 'is_staff', 'created_at']
+    list_filter = ['is_active', 'is_staff', 'is_superuser', 'is_merchant', 'is_driver', 'is_kyc_verified', 'is_freeze', 'created_at']
     search_fields = ['phone', 'name', 'email', 'national_id', 'pan_no']
     ordering = ['-created_at']
     
@@ -20,7 +20,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document', 'company_register_id', 'company_register_document', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at'),
             'classes': ('collapse',)
         }),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Permissions', {'fields': ('is_active', 'is_freeze', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined', 'created_at', 'updated_at')}),
     )
     
