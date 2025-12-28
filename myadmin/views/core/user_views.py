@@ -52,7 +52,9 @@ class UserListView(StaffRequiredMixin, ListView):
         
         # Filter by role
         role = self.request.GET.get('role', 'all')
-        if role == 'merchant':
+        if role == 'admin':
+            queryset = queryset.filter(is_staff=True)
+        elif role == 'merchant':
             queryset = queryset.filter(is_merchant=True)
         elif role == 'driver':
             queryset = queryset.filter(is_driver=True)

@@ -18,6 +18,26 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:user_list' %}?role=admin">
+                    <i class="align-middle" data-feather="user-check"></i> <span class="align-middle">Admin</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:user_list' %}?role=merchant">
+                    <i class="align-middle" data-feather="store"></i> <span class="align-middle">Merchant</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:user_list' %}?role=driver">
+                    <i class="align-middle" data-feather="truck"></i> <span class="align-middle">Driver</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:user_list' %}?role=customer">
+                    <i class="align-middle" data-feather="user"></i> <span class="align-middle">Customer</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:core:kyc_list' %}">
                     <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">KYC Management</span>
                 </a>

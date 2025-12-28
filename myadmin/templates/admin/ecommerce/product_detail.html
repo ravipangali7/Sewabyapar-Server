@@ -123,6 +123,14 @@
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Name:</strong></div>
                         <div class="col-sm-8"><h5 class="mb-0">{{ product.name }}</h5></div>
                     </div>
+                    {% if product.item_code %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Item Code:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info fs-6">{{ product.item_code }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="shopping-bag" style="width: 16px; height: 16px;"></i> Store:</strong></div>
                         <div class="col-sm-8">

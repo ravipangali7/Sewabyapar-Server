@@ -116,6 +116,14 @@
                             <a href="{% url 'myadmin:core:user_detail' store.owner.pk %}" class="text-decoration-none">{{ store.owner.name }}</a>
                         </div>
                     </div>
+                    {% if store.owner.is_merchant and store.owner.merchant_code %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Merchant Code:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-success fs-6">{{ store.owner.merchant_code }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
                         <div class="col-sm-8">{{ store.phone }}</div>
