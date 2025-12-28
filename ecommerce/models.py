@@ -411,6 +411,8 @@ class Popup(models.Model):
     """Popup model for app startup popups"""
     image = models.ImageField(upload_to='popups/', help_text='Popup image')
     title = models.CharField(max_length=200, help_text='Popup title')
+    url = models.URLField(blank=True, null=True, help_text='URL to navigate when popup is clicked (ignored if product is selected)')
+    product = models.ForeignKey('Product', on_delete=models.SET_NULL, null=True, blank=True, related_name='popups', help_text='Product to navigate to when popup is clicked (takes priority over URL)')
     is_active = models.BooleanField(default=True, help_text='Whether this popup is active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

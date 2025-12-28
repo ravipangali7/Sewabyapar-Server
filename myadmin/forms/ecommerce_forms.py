@@ -240,12 +240,33 @@ class BannerForm(forms.ModelForm):
 
 
 class PopupForm(forms.ModelForm):
+    product = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        empty_label='-- Select a Product (Optional) --',
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_product'}),
+        help_text='If a product is selected, clicking the popup will navigate to that product. This takes priority over URL.',
+    )
+    
     class Meta:
         model = Popup
-        fields = ['image', 'title', 'is_active']
+        fields = ['image', 'title', 'url', 'product', 'is_active']
         widgets = {
             'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com or /internal-route', 'id': 'id_url'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+        help_texts = {
+            'url': 'Enter a full URL (https://...) or an internal route (starting with /). This will be ignored if a product is selected.',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset for product field - only show active and approved products
+        from ecommerce.models import Product
+        self.fields['product'].queryset = Product.objects.filter(
+            is_active=True,
+            is_approved=True
+        ).select_related('store', 'category').order_by('name')
 
