@@ -61,15 +61,15 @@
     <!-- KYC Documents -->
     <div class="row">
         <!-- National ID Section -->
-        <div class="col-md-6 mb-3">
-            <div class="card h-100">
+        <div class="col-md-12 mb-3">
+            <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
                         <i class="align-middle" data-feather="id-card"></i> National ID
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if user.national_id or user.national_id_document %}
+                    {% if user.national_id or user.national_id_document_front or user.national_id_document_back %}
                         <div class="mb-3">
                             <strong>National ID Number:</strong><br>
                             {% if user.national_id %}
@@ -79,28 +79,55 @@
                             {% endif %}
                         </div>
                         
-                        {% if user.national_id_document %}
-                        <div class="mb-3">
-                            <strong>Document:</strong><br>
-                            <div class="document-preview-container">
-                                <a href="{{ user.national_id_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.national_id_document.url }}" data-title="National ID Document">
-                                    <img src="{{ user.national_id_document.url }}" alt="National ID Document" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
-                                </a>
+                        <div class="row">
+                            <!-- National ID Front -->
+                            <div class="col-md-6 mb-3">
+                                <strong>Front Side:</strong><br>
+                                {% if user.national_id_document_front %}
+                                <div class="document-preview-container mt-2">
+                                    <a href="{{ user.national_id_document_front.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-url="{{ user.national_id_document_front.url }}" data-type="image" data-title="National ID Document (Front)">
+                                        <img src="{{ user.national_id_document_front.url }}" alt="National ID Front" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
+                                    </a>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{{ user.national_id_document_front.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="align-middle" data-feather="download"></i> Download
+                                    </a>
+                                    <a href="{{ user.national_id_document_front.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="align-middle" data-feather="external-link"></i> Open in New Tab
+                                    </a>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning mt-2">
+                                    <i class="align-middle" data-feather="alert-circle"></i> Front side not uploaded
+                                </div>
+                                {% endif %}
                             </div>
-                            <div class="mt-2">
-                                <a href="{{ user.national_id_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="align-middle" data-feather="download"></i> Download
-                                </a>
-                                <a href="{{ user.national_id_document.url }}" target="_blank" class="btn btn-sm btn-outline-info">
-                                    <i class="align-middle" data-feather="external-link"></i> Open in New Tab
-                                </a>
+                            
+                            <!-- National ID Back -->
+                            <div class="col-md-6 mb-3">
+                                <strong>Back Side:</strong><br>
+                                {% if user.national_id_document_back %}
+                                <div class="document-preview-container mt-2">
+                                    <a href="{{ user.national_id_document_back.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-url="{{ user.national_id_document_back.url }}" data-type="image" data-title="National ID Document (Back)">
+                                        <img src="{{ user.national_id_document_back.url }}" alt="National ID Back" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
+                                    </a>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{{ user.national_id_document_back.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="align-middle" data-feather="download"></i> Download
+                                    </a>
+                                    <a href="{{ user.national_id_document_back.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="align-middle" data-feather="external-link"></i> Open in New Tab
+                                    </a>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning mt-2">
+                                    <i class="align-middle" data-feather="alert-circle"></i> Back side not uploaded
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                        {% else %}
-                        <div class="alert alert-warning">
-                            <i class="align-middle" data-feather="alert-circle"></i> Document not uploaded
-                        </div>
-                        {% endif %}
                     {% else %}
                         <div class="alert alert-secondary">
                             <i class="align-middle" data-feather="info"></i> No National ID information provided
@@ -133,7 +160,7 @@
                         <div class="mb-3">
                             <strong>Document:</strong><br>
                             <div class="document-preview-container">
-                                <a href="{{ user.pan_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-image="{{ user.pan_document.url }}" data-title="PAN Document">
+                                <a href="{{ user.pan_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-url="{{ user.pan_document.url }}" data-type="image" data-title="PAN Document">
                                     <img src="{{ user.pan_document.url }}" alt="PAN Document" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
                                 </a>
                             </div>
@@ -160,6 +187,102 @@
             </div>
         </div>
     </div>
+
+    <!-- Merchant-Specific Documents -->
+    {% if user.is_merchant %}
+    <div class="row">
+        <!-- Company Registration Section -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="briefcase"></i> Company Registration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user.company_register_id or user.company_register_document %}
+                        <div class="mb-3">
+                            <strong>Registration ID:</strong><br>
+                            {% if user.company_register_id %}
+                                <span class="badge bg-info fs-6">{{ user.company_register_id }}</span>
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if user.company_register_document %}
+                        <div class="mb-3">
+                            <strong>Document:</strong><br>
+                            <div class="document-preview-container">
+                                <a href="{{ user.company_register_document.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-url="{{ user.company_register_document.url }}" data-type="image" data-title="Company Registration Document">
+                                    <img src="{{ user.company_register_document.url }}" alt="Company Registration Document" class="img-fluid rounded border" style="max-height: 300px; cursor: pointer;">
+                                </a>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{{ user.company_register_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="align-middle" data-feather="download"></i> Download
+                                </a>
+                                <a href="{{ user.company_register_document.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                    <i class="align-middle" data-feather="external-link"></i> Open in New Tab
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="align-middle" data-feather="alert-circle"></i> Document not uploaded
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-secondary">
+                            <i class="align-middle" data-feather="info"></i> No Company Registration information provided
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Merchant Agreement Section -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="file-text"></i> Signed Merchant Agreement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user.merchant_agreement %}
+                        <div class="mb-3">
+                            <strong>Agreement Document:</strong><br>
+                            <div class="document-preview-container mt-2">
+                                <div class="pdf-preview-container">
+                                    <a href="{{ user.merchant_agreement.url }}" target="_blank" class="document-preview-link" data-bs-toggle="modal" data-bs-target="#documentModal" data-url="{{ user.merchant_agreement.url }}" data-type="pdf" data-title="Signed Merchant Agreement">
+                                        <div class="pdf-preview-box">
+                                            <i class="align-middle" data-feather="file-text" style="width: 64px; height: 64px; color: #dc3545;"></i>
+                                            <p class="mt-2 mb-0">PDF Document</p>
+                                            <small class="text-muted">Click to view</small>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{{ user.merchant_agreement.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="align-middle" data-feather="download"></i> Download
+                                </a>
+                                <a href="{{ user.merchant_agreement.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                    <i class="align-middle" data-feather="external-link"></i> Open in New Tab
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="align-middle" data-feather="alert-circle"></i> Signed agreement not uploaded
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- KYC Timeline -->
     <div class="row mb-3">
@@ -304,12 +427,22 @@
                 <h5 class="modal-title" id="documentModalLabel">Document</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <img id="modalDocumentImage" src="" alt="Document" class="img-fluid" style="max-height: 80vh;">
+            <div class="modal-body text-center" style="min-height: 400px;">
+                <!-- Image Viewer -->
+                <div id="modalImageContainer">
+                    <img id="modalDocumentImage" src="" alt="Document" class="img-fluid" style="max-height: 80vh;">
+                </div>
+                <!-- PDF Viewer -->
+                <div id="modalPdfContainer" style="display: none;">
+                    <iframe id="modalDocumentPdf" src="" style="width: 100%; height: 80vh; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
+                    <div class="mt-2">
+                        <small class="text-muted">If PDF doesn't load, use the download button below</small>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <a id="modalDocumentLink" href="" target="_blank" class="btn btn-primary">
-                    <i class="align-middle" data-feather="download"></i> Open Full Size
+                    <i class="align-middle" data-feather="download"></i> Download / Open Full Size
                 </a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
@@ -359,12 +492,43 @@ document.addEventListener('DOMContentLoaded', function() {
     if (documentModal) {
         documentModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
-            const imageUrl = button.getAttribute('data-image');
-            const title = button.getAttribute('data-title');
+            const documentUrl = button.getAttribute('data-url') || button.getAttribute('data-image');
+            const documentType = button.getAttribute('data-type') || 'image';
+            const title = button.getAttribute('data-title') || 'Document';
             
-            document.getElementById('modalDocumentImage').src = imageUrl;
-            document.getElementById('modalDocumentLink').href = imageUrl;
-            document.getElementById('documentModalLabel').textContent = title;
+            const imageContainer = document.getElementById('modalImageContainer');
+            const pdfContainer = document.getElementById('modalPdfContainer');
+            const modalImage = document.getElementById('modalDocumentImage');
+            const modalPdf = document.getElementById('modalDocumentPdf');
+            const modalLink = document.getElementById('modalDocumentLink');
+            const modalTitle = document.getElementById('documentModalLabel');
+            
+            // Set title and link
+            modalTitle.textContent = title;
+            modalLink.href = documentUrl;
+            
+            // Determine file type
+            const isPdf = documentType === 'pdf' || documentUrl.toLowerCase().endsWith('.pdf');
+            
+            if (isPdf) {
+                // Show PDF viewer, hide image viewer
+                imageContainer.style.display = 'none';
+                pdfContainer.style.display = 'block';
+                modalPdf.src = documentUrl;
+            } else {
+                // Show image viewer, hide PDF viewer
+                imageContainer.style.display = 'block';
+                pdfContainer.style.display = 'none';
+                modalImage.src = documentUrl;
+            }
+        });
+        
+        // Clean up when modal is hidden
+        documentModal.addEventListener('hidden.bs.modal', function() {
+            const modalPdf = document.getElementById('modalDocumentPdf');
+            if (modalPdf) {
+                modalPdf.src = ''; // Clear PDF iframe to stop loading
+            }
         });
     }
     
@@ -384,6 +548,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .document-preview-container {
     text-align: center;
+}
+
+.pdf-preview-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.pdf-preview-box {
+    display: inline-block;
+    padding: 30px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pdf-preview-box:hover {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+    transform: scale(1.05);
+}
+
+#modalPdfContainer {
+    width: 100%;
 }
 </style>
 {% endblock %}
