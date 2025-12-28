@@ -47,6 +47,14 @@ class UserForm(forms.ModelForm):
         is_merchant = cleaned_data.get('is_merchant', False)
         is_driver = cleaned_data.get('is_driver', False)
         
+        # Ensure boolean checkbox fields are explicitly set
+        # If checkbox is unchecked, it won't be in POST data, so set to False
+        # Check if 'is_freeze' is in the raw POST data (unchecked checkboxes don't send data)
+        if hasattr(self, 'data'):
+            # Use .get() to safely check QueryDict
+            if not self.data.get('is_freeze'):
+                cleaned_data['is_freeze'] = False
+        
         if is_merchant and is_driver:
             raise forms.ValidationError({
                 'is_merchant': 'User cannot be both merchant and driver at the same time.',
@@ -86,6 +94,14 @@ class UserCreateForm(forms.ModelForm):
         password_confirm = cleaned_data.get('password_confirm')
         is_merchant = cleaned_data.get('is_merchant', False)
         is_driver = cleaned_data.get('is_driver', False)
+        
+        # Ensure boolean checkbox fields are explicitly set
+        # If checkbox is unchecked, it won't be in POST data, so set to False
+        # Check if 'is_freeze' is in the raw POST data (unchecked checkboxes don't send data)
+        if hasattr(self, 'data'):
+            # Use .get() to safely check QueryDict
+            if not self.data.get('is_freeze'):
+                cleaned_data['is_freeze'] = False
         
         if password and password_confirm and password != password_confirm:
             raise forms.ValidationError("Passwords don't match")
