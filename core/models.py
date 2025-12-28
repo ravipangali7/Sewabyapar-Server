@@ -135,12 +135,26 @@ class User(AbstractUser):
         
         # Generate merchant_code if user is a merchant and code is not set
         if self.is_merchant and not self.merchant_code:
-            count = User.objects.filter(is_merchant=True).count()
-            code = f"MSB{count + 1}"
+            # Find the highest existing code number
+            max_code_number = 0
+            existing_merchants = User.objects.filter(is_merchant=True).exclude(merchant_code__isnull=True).filter(merchant_code__startswith='MSB')
+            for merchant in existing_merchants:
+                if merchant.merchant_code and merchant.merchant_code.startswith('MSB'):
+                    try:
+                        # Extract number after "MSB" prefix (3 characters)
+                        num = int(merchant.merchant_code[3:])
+                        if num > max_code_number:
+                            max_code_number = num
+                    except ValueError:
+                        pass  # Ignore codes that don't match the pattern
+            
+            # Generate new code with zero-padding
+            new_number = max_code_number + 1
+            code = f"MSB{new_number:02d}"
             # Ensure uniqueness
             while User.objects.filter(merchant_code=code).exists():
-                count += 1
-                code = f"MSB{count + 1}"
+                new_number += 1
+                code = f"MSB{new_number:02d}"
             self.merchant_code = code
         elif not self.is_merchant:
             # Clear merchant_code if user is not a merchant

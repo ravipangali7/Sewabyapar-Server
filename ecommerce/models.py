@@ -102,12 +102,26 @@ class Product(models.Model):
         """Override save to auto-calculate stock, set price from primary combination when variants are enabled, and generate item_code"""
         # Generate item_code if not set
         if not self.item_code:
-            count = Product.objects.count()
-            code = f"PSB{count + 1}"
+            # Find the highest existing code number
+            max_code_number = 0
+            existing_products = Product.objects.exclude(item_code__isnull=True).filter(item_code__startswith='PSB')
+            for product in existing_products:
+                if product.item_code and product.item_code.startswith('PSB'):
+                    try:
+                        # Extract number after "PSB" prefix (3 characters)
+                        num = int(product.item_code[3:])
+                        if num > max_code_number:
+                            max_code_number = num
+                    except ValueError:
+                        pass  # Ignore codes that don't match the pattern
+            
+            # Generate new code with zero-padding
+            new_number = max_code_number + 1
+            code = f"PSB{new_number:02d}"
             # Ensure uniqueness
             while Product.objects.filter(item_code=code).exists():
-                count += 1
-                code = f"PSB{count + 1}"
+                new_number += 1
+                code = f"PSB{new_number:02d}"
             self.item_code = code
         
         if self.is_variants_enabled():
