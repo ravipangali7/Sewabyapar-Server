@@ -13,7 +13,7 @@ class UserForm(forms.ModelForm):
             'phone', 'name', 'email', 'country_code', 'country',
             'fcm_token', 'profile_picture',
             'national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document',
-            'company_register_id', 'company_register_document',
+            'company_register_id', 'company_register_document', 'merchant_agreement',
             'is_merchant', 'is_driver',
             'is_kyc_verified', 'is_active', 'is_staff', 'is_superuser', 'is_freeze'
         ]
@@ -32,6 +32,7 @@ class UserForm(forms.ModelForm):
             'pan_document': forms.FileInput(attrs={'class': 'form-control'}),
             'company_register_id': forms.TextInput(attrs={'class': 'form-control'}),
             'company_register_document': forms.FileInput(attrs={'class': 'form-control'}),
+            'merchant_agreement': forms.FileInput(attrs={'class': 'form-control'}),
             'is_merchant': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_merchant'}),
             'is_driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_driver'}),
             'is_kyc_verified': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -150,11 +151,12 @@ class SuperSettingForm(forms.ModelForm):
     """Form for SuperSetting"""
     class Meta:
         model = SuperSetting
-        fields = ['sales_commission', 'basic_shipping_charge', 'balance']
+        fields = ['sales_commission', 'basic_shipping_charge', 'balance', 'merchant_agreement_file']
         widgets = {
             'sales_commission': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
             'basic_shipping_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'balance': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'merchant_agreement_file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
         }
     
     def clean_sales_commission(self):

@@ -6,17 +6,18 @@ class UserSerializer(serializers.ModelSerializer):
     national_id_document_front = serializers.ImageField(read_only=True)
     national_id_document_back = serializers.ImageField(read_only=True)
     company_register_document = serializers.ImageField(read_only=True)
+    merchant_agreement = serializers.ImageField(read_only=True)
     
     class Meta:
         model = User
         fields = ['id', 'phone', 'name', 'email', 'country_code', 'country', 'fcm_token', 'profile_picture', 
                   'national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document',
-                  'company_register_id', 'company_register_document',
+                  'company_register_id', 'company_register_document', 'merchant_agreement',
                   'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at', 'kyc_rejected_at', 'kyc_rejection_reason',
                   'is_merchant', 'is_driver', 'is_freeze', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'is_kyc_verified', 'kyc_verified_at', 
                            'kyc_rejected_at', 'kyc_rejection_reason', 'is_merchant', 'is_driver',
-                           'national_id_document_front', 'national_id_document_back', 'pan_document', 'company_register_document']
+                           'national_id_document_front', 'national_id_document_back', 'pan_document', 'company_register_document', 'merchant_agreement']
         extra_kwargs = {
             'phone': {'required': True},
             'name': {'required': True},
@@ -252,6 +253,7 @@ class KYCSubmitSerializer(serializers.Serializer):
     pan_document = serializers.ImageField(required=False, allow_null=True)
     company_register_id = serializers.CharField(max_length=50, required=False, allow_blank=True)
     company_register_document = serializers.ImageField(required=False, allow_null=True)
+    merchant_agreement = serializers.ImageField(required=False, allow_null=True)
     
     def validate(self, attrs):
         """Validate that at least some KYC information is provided"""
@@ -272,6 +274,7 @@ class KYCStatusSerializer(serializers.ModelSerializer):
     national_id_document_back = serializers.ImageField(read_only=True)
     pan_document = serializers.ImageField(read_only=True)
     company_register_document = serializers.ImageField(read_only=True)
+    merchant_agreement = serializers.ImageField(read_only=True)
     
     class Meta:
         model = User
@@ -279,6 +282,7 @@ class KYCStatusSerializer(serializers.ModelSerializer):
             'national_id', 'national_id_document_front', 'national_id_document_back',
             'pan_no', 'pan_document',
             'company_register_id', 'company_register_document',
+            'merchant_agreement',
             'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at',
             'kyc_rejected_at', 'kyc_rejection_reason'
         ]
@@ -286,5 +290,5 @@ class KYCStatusSerializer(serializers.ModelSerializer):
             'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at',
             'kyc_rejected_at', 'kyc_rejection_reason',
             'national_id_document_front', 'national_id_document_back',
-            'pan_document', 'company_register_document'
+            'pan_document', 'company_register_document', 'merchant_agreement'
         ]

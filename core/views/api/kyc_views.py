@@ -55,6 +55,8 @@ def kyc_submit(request):
             user.company_register_id = validated_data['company_register_id']
         if validated_data.get('company_register_document'):
             user.company_register_document = validated_data['company_register_document']
+        if validated_data.get('merchant_agreement'):
+            user.merchant_agreement = validated_data['merchant_agreement']
     
     # Set submission timestamp and reset verification status
     user.kyc_submitted_at = timezone.now()

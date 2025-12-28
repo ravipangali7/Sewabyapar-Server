@@ -16,10 +16,16 @@ def super_setting(request):
             # Create default if doesn't exist
             setting = SuperSetting.objects.create()
         
+        # Build merchant agreement file URL if it exists
+        merchant_agreement_file_url = None
+        if setting.merchant_agreement_file:
+            merchant_agreement_file_url = request.build_absolute_uri(setting.merchant_agreement_file.url)
+        
         return Response({
             'sales_commission': float(setting.sales_commission),
             'basic_shipping_charge': float(setting.basic_shipping_charge),
             'balance': float(setting.balance),
+            'merchant_agreement_file': merchant_agreement_file_url,
         }, status=status.HTTP_200_OK)
     except Exception as e:
         print(f"[ERROR] Error getting SuperSetting: {str(e)}")
