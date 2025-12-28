@@ -21,7 +21,7 @@
                         <div class="mb-4">
                             <h5 class="mb-3"><i class="align-middle" data-feather="user"></i> Personal Information</h5>
                             {% for field in form %}
-                                {% if field.name != 'is_merchant' and field.name != 'is_driver' and field.name != 'is_kyc_verified' and field.name != 'is_active' and field.name != 'is_staff' and field.name != 'is_superuser' %}
+                                {% if field.name != 'is_merchant' and field.name != 'is_driver' and field.name != 'is_kyc_verified' and field.name != 'is_active' and field.name != 'is_staff' and field.name != 'is_superuser' and field.name != 'is_freeze' %}
                                     <div class="mb-3">
                                         <label class="form-label" for="{{ field.id_for_label }}">
                                             {{ field.label }}
