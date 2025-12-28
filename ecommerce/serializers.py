@@ -402,10 +402,11 @@ class WithdrawalCreateSerializer(serializers.ModelSerializer):
 
 class BannerSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    product_id = serializers.IntegerField(source='product.id', read_only=True, allow_null=True)
     
     class Meta:
         model = Banner
-        fields = ['id', 'image', 'title', 'url', 'is_active', 'created_at', 'updated_at']
+        fields = ['id', 'image', 'title', 'url', 'product_id', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_image(self, obj):

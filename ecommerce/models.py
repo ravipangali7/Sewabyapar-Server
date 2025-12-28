@@ -394,7 +394,8 @@ class Banner(models.Model):
     """Banner model for promotional banners"""
     image = models.ImageField(upload_to='banners/', help_text='Banner image')
     title = models.CharField(max_length=200, help_text='Banner title')
-    url = models.URLField(blank=True, null=True, help_text='URL to navigate when banner is clicked')
+    url = models.URLField(blank=True, null=True, help_text='URL to navigate when banner is clicked (ignored if product is selected)')
+    product = models.ForeignKey('Product', on_delete=models.SET_NULL, null=True, blank=True, related_name='banners', help_text='Product to navigate to when banner is clicked (takes priority over URL)')
     is_active = models.BooleanField(default=True, help_text='Whether this banner is active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
