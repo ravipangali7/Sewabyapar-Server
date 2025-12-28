@@ -113,6 +113,24 @@
                             <small class="text-muted">Total platform balance from all transactions</small>
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Merchant Agreement File:</strong></div>
+                        <div class="col-sm-8">
+                            {% if supersetting.merchant_agreement_file %}
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="align-middle" data-feather="file" style="width: 16px; height: 16px;"></i>
+                                    <a href="{{ supersetting.merchant_agreement_file.url }}" target="_blank" class="text-decoration-none">
+                                        {{ supersetting.merchant_agreement_file.name|default:"View Agreement File" }}
+                                    </a>
+                                    <span class="badge bg-success">Uploaded</span>
+                                </div>
+                                <small class="text-muted d-block mt-1">Merchants can download this file during KYC submission</small>
+                            {% else %}
+                                <span class="text-muted">No agreement file uploaded</span>
+                                <small class="text-muted d-block mt-1">Upload an agreement file that merchants will sign during KYC</small>
+                            {% endif %}
+                        </div>
+                    </div>
                     <hr>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
