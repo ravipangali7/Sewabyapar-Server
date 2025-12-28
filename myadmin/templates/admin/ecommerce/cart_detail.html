@@ -85,7 +85,7 @@
                                     <td>₹{{ item.unit_price|floatformat:2 }}</td>
                                     <td><strong>₹{{ item.total|floatformat:2 }}</strong></td>
                                     <td>
-                                        <a href="{% url 'myadmin:ecommerce:cart_delete' item.cart_item.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to remove this item from cart?')">
+                                        <a href="{% url 'myadmin:ecommerce:cart_delete' item.cart_item.pk %}" class="btn btn-sm btn-danger" onclick="event.preventDefault(); const url = this.getAttribute('href'); confirmDelete('Remove Item', 'Are you sure you want to remove this item from cart?').then(() => window.location.href = url).catch(() => {});">
                                             <i class="align-middle" data-feather="trash-2" style="width: 14px; height: 14px;"></i>
                                         </a>
                                     </td>

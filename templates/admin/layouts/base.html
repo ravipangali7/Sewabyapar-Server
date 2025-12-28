@@ -17,6 +17,8 @@
 
     <link href="{% static 'myadmin/css/app.css' %}" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
     <style>
       /* Alert Message Styles */
       .text-white *{
@@ -211,6 +213,8 @@
 
     <script src="{% static 'myadmin/js/app.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
       // Initialize Feather icons
       document.addEventListener('DOMContentLoaded', function() {
@@ -232,7 +236,101 @@
           });
         });
       });
+
+      // SweetAlert2 Helper Functions
+      /**
+       * Confirm an action with SweetAlert2
+       * @param {string} title - The title of the confirmation dialog
+       * @param {string} text - The text content of the confirmation dialog
+       * @param {string} icon - The icon type (warning, question, info, success, error)
+       * @param {string} confirmButtonText - Text for confirm button
+       * @param {string} cancelButtonText - Text for cancel button
+       * @returns {Promise} Promise that resolves if confirmed, rejects if cancelled
+       */
+      function confirmAction(title, text, icon = 'question', confirmButtonText = 'Yes, proceed', cancelButtonText = 'Cancel') {
+        return Swal.fire({
+          title: title,
+          text: text,
+          icon: icon,
+          showCancelButton: true,
+          confirmButtonColor: '#206bc4',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: confirmButtonText,
+          cancelButtonText: cancelButtonText,
+          reverseButtons: true,
+          customClass: {
+            popup: 'swal2-popup-admin',
+            confirmButton: 'swal2-confirm-admin',
+            cancelButton: 'swal2-cancel-admin'
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            return Promise.resolve();
+          } else {
+            return Promise.reject();
+          }
+        });
+      }
+
+      /**
+       * Show a warning confirmation (for delete/destructive actions)
+       */
+      function confirmDelete(title, text) {
+        return confirmAction(title, text, 'warning', 'Yes, delete it!', 'Cancel');
+      }
+
+      /**
+       * Show a question confirmation (for general confirmations)
+       */
+      function confirmQuestion(title, text) {
+        return confirmAction(title, text, 'question', 'Yes, proceed', 'Cancel');
+      }
+
+      /**
+       * Show a success message
+       */
+      function showSuccess(title, text = '') {
+        return Swal.fire({
+          title: title,
+          text: text,
+          icon: 'success',
+          confirmButtonColor: '#206bc4',
+          customClass: {
+            popup: 'swal2-popup-admin'
+          }
+        });
+      }
+
+      /**
+       * Show an error message
+       */
+      function showError(title, text = '') {
+        return Swal.fire({
+          title: title,
+          text: text,
+          icon: 'error',
+          confirmButtonColor: '#dc3545',
+          customClass: {
+            popup: 'swal2-popup-admin'
+          }
+        });
+      }
     </script>
+    <style>
+      /* SweetAlert2 Custom Styles for Admin Panel */
+      .swal2-popup-admin {
+        font-family: 'Inter', sans-serif;
+        border-radius: 0.5rem;
+      }
+      .swal2-confirm-admin {
+        border-radius: 0.375rem;
+        font-weight: 500;
+      }
+      .swal2-cancel-admin {
+        border-radius: 0.375rem;
+        font-weight: 500;
+      }
+    </style>
     {% block extra_js %}{% endblock %}
   </body>
 </html>

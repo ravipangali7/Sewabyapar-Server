@@ -46,7 +46,7 @@
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()">Deselect All</button>
                             </div>
                             <div>
-                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Are you sure you want to verify selected KYC requests?')">
+                                <button type="submit" class="btn btn-sm btn-success" onclick="event.preventDefault(); const form = this.closest('form'); if (form) { confirmQuestion('Verify KYC Requests', 'Are you sure you want to verify selected KYC requests?').then(() => form.submit()).catch(() => {}); }">
                                     <i class="align-middle" data-feather="check-circle"></i> Verify Selected
                                 </button>
                             </div>
@@ -148,7 +148,7 @@
                                         {% if not user.is_kyc_verified %}
                                         <form method="post" action="{% url 'myadmin:core:kyc_verify' user_id=user.pk %}" class="d-inline">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Verify KYC for {{ user.name }}?')">
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="event.preventDefault(); const form = this.closest('form'); if (form) { confirmQuestion('Verify KYC', 'Verify KYC for {{ user.name }}?').then(() => form.submit()).catch(() => {}); }">
                                                 <i class="align-middle" data-feather="check"></i> Verify
                                             </button>
                                         </form>
