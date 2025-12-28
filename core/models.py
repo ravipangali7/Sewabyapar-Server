@@ -301,6 +301,7 @@ class Transaction(models.Model):
     utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference (UTR) for PhonePe transactions')
     bank_id = models.CharField(max_length=20, blank=True, null=True, help_text='Bank ID for PhonePe transactions')
     vpa = models.CharField(max_length=100, blank=True, null=True, help_text='Virtual Payment Address (VPA) for PhonePe transactions')
+    payer_name = models.CharField(max_length=200, blank=True, null=True, help_text='Name of the payer/account holder for this transaction')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

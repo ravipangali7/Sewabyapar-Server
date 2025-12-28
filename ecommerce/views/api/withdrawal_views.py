@@ -80,7 +80,8 @@ def create_withdrawal(request):
                 amount=amount,
                 status='pending',
                 description=f'Withdrawal request #{withdrawal.id}',
-                related_withdrawal=withdrawal
+                related_withdrawal=withdrawal,
+                payer_name=withdrawal.account_holder_name
             )
         
         response_serializer = WithdrawalSerializer(withdrawal, context={'request': request})

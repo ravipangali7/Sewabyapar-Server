@@ -114,6 +114,13 @@ def order_list_create(request):
                 temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
                 temp_order.save()
                 
+                # Extract payer name from shipping address or user
+                payer_name = None
+                if shipping_address and shipping_address.full_name:
+                    payer_name = shipping_address.full_name
+                elif request.user.name:
+                    payer_name = request.user.name
+                
                 # Create Transaction record for PhonePe payment
                 Transaction.objects.create(
                     user=request.user,
@@ -123,6 +130,7 @@ def order_list_create(request):
                     description=f'PhonePe payment for order {order_number}',
                     related_order=temp_order,
                     merchant_order_id=merchant_order_id,
+                    payer_name=payer_name,
                 )
                 
                 # Build redirect URL for callback
@@ -296,6 +304,13 @@ def order_list_create(request):
                 temp_order.notes = f"CART_DATA:{'|'.join(cart_data)}"
                 temp_order.save()
                 
+                # Extract payer name from shipping address or user
+                payer_name = None
+                if shipping_address and shipping_address.full_name:
+                    payer_name = shipping_address.full_name
+                elif request.user.name:
+                    payer_name = request.user.name
+                
                 # Create Transaction record for PhonePe payment
                 Transaction.objects.create(
                     user=request.user,
@@ -305,6 +320,7 @@ def order_list_create(request):
                     description=f'PhonePe payment for order {order_number}',
                     related_order=temp_order,
                     merchant_order_id=merchant_order_id,
+                    payer_name=payer_name,
                 )
                 
                 # Return order creation response (frontend will call create-order-token endpoint)

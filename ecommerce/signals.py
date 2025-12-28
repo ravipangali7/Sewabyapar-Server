@@ -82,6 +82,7 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     utr=phonepe_transaction.utr if phonepe_transaction and phonepe_transaction.utr else None,
                     bank_id=phonepe_transaction.bank_id if phonepe_transaction and phonepe_transaction.bank_id else None,
                     vpa=phonepe_transaction.vpa if phonepe_transaction and phonepe_transaction.vpa else None,
+                    payer_name=vendor.name if vendor.name else None,
                 )
                 
                 # Mark commission as processed (use update to avoid triggering signal again)
