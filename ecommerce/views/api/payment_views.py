@@ -290,6 +290,15 @@ def payment_status(request):
                         transaction.save()
                         # Return the first created order
                         order = created_orders[0]
+                    else:
+                        # Split failed - log error and return error response
+                        print(f"[ERROR] Failed to split order {order.id} by vendor after payment success")
+                        sys.stdout.flush()
+                        return Response({
+                            'success': False,
+                            'error': 'Failed to create vendor orders after payment success. Please contact support.',
+                            'paymentDetails': payment_data
+                        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                     order.save()
             elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
@@ -693,6 +702,15 @@ def payment_callback(request):
                     transaction.save()
                     # Return the first created order
                     order = created_orders[0]
+                else:
+                    # Split failed - log error and return error response
+                    print(f"[ERROR] Failed to split order {order.id} by vendor after payment success")
+                    sys.stdout.flush()
+                    return Response({
+                        'success': False,
+                        'error': 'Failed to create vendor orders after payment success. Please contact support.',
+                        'paymentDetails': payment_data
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 order.save()
         elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
@@ -961,6 +979,16 @@ def sabpaisa_payment_callback(request):
             created_orders = split_order_by_vendor(order)
             if created_orders:
                 order = created_orders[0]
+            else:
+                # Split failed - log error and return error response
+                print(f"[ERROR] Failed to split order {order.id} by vendor after SabPaisa payment success")
+                sys.stdout.flush()
+                return Response({
+                    'success': False,
+                    'error': 'Failed to create vendor orders after payment success. Please contact support.',
+                    'payment_status': payment_status,
+                    'status_code': status_code
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response({
             'success': True,

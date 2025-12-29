@@ -106,10 +106,6 @@ def split_order_by_vendor(temp_order):
                 payment_method=temp_order.payment_method,
                 payment_status='success',  # Payment already succeeded
                 status='pending',  # Waiting for merchant acceptance
-                phonepe_transaction_id=temp_order.phonepe_transaction_id,
-                phonepe_order_id=temp_order.phonepe_order_id,
-                phonepe_merchant_order_id=temp_order.phonepe_merchant_order_id,
-                phonepe_transaction_date=temp_order.phonepe_transaction_date,
             )
             
             # Create order items for this vendor
