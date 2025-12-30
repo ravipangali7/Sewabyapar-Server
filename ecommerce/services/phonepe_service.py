@@ -95,11 +95,20 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
         dict: Payment status details or error
     """
     try:
+        import sys
+        print(f"[PHONEPE_STATUS] Checking payment status for merchant_order_id: {merchant_order_id}")
+        sys.stdout.flush()
+        
         # Get SDK client
         client = get_phonepe_client()
         
         # Get order status using SDK
         response = client.get_order_status(merchant_order_id=merchant_order_id)
+        
+        # Log raw response for debugging
+        print(f"[PHONEPE_STATUS] Raw response type: {type(response)}")
+        print(f"[PHONEPE_STATUS] Raw response attributes: {dir(response)}")
+        sys.stdout.flush()
         
         # PhonePe SDK OrderStatusResponse has attributes directly accessible:
         # - state: Order state (COMPLETED, FAILED, PENDING)
@@ -113,6 +122,11 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
         order_id = getattr(response, 'order_id', None)
         amount = getattr(response, 'amount', None)
         payment_details_list = getattr(response, 'payment_details', [])
+        
+        # Log extracted values
+        print(f"[PHONEPE_STATUS] Extracted state: {state}, order_id: {order_id}, amount: {amount}")
+        print(f"[PHONEPE_STATUS] Payment details list length: {len(payment_details_list) if payment_details_list else 0}")
+        sys.stdout.flush()
         
         # Extract transaction details from payment_details if available
         transaction_id = None
@@ -131,10 +145,32 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
         # payment_details is a list, get the latest payment attempt
         if payment_details_list and len(payment_details_list) > 0:
             latest_payment = payment_details_list[-1]  # Get the most recent payment attempt
+            
+            # Log latest payment details
+            print(f"[PHONEPE_STATUS] Latest payment attributes: {dir(latest_payment)}")
+            sys.stdout.flush()
+            
             transaction_id = getattr(latest_payment, 'transaction_id', None)
             payment_method = getattr(latest_payment, 'payment_method', None)
-            # Payment details might have its own status
-            payment_status = getattr(latest_payment, 'status', state) or state
+            
+            # Check multiple possible status fields
+            payment_status_from_details = getattr(latest_payment, 'status', None)
+            payment_state_from_details = getattr(latest_payment, 'state', None)
+            
+            # Use payment_details status if available, otherwise fall back to order state
+            if payment_status_from_details:
+                payment_status = payment_status_from_details
+            elif payment_state_from_details:
+                payment_status = payment_state_from_details
+            else:
+                payment_status = state
+            
+            # Log status extraction
+            print(f"[PHONEPE_STATUS] Payment status from details: {payment_status_from_details}")
+            print(f"[PHONEPE_STATUS] Payment state from details: {payment_state_from_details}")
+            print(f"[PHONEPE_STATUS] Final payment_status: {payment_status}")
+            print(f"[PHONEPE_STATUS] Order state: {state}")
+            sys.stdout.flush()
             
             # Extract transaction timestamp and convert to datetime
             timestamp = getattr(latest_payment, 'timestamp', None)
@@ -171,17 +207,38 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
             
             # Transaction note if available
             transaction_note = getattr(latest_payment, 'note', None) or getattr(latest_payment, 'transaction_note', None)
+            
+            # Log all extracted payment details
+            print(f"[PHONEPE_STATUS] Transaction ID: {transaction_id}")
+            print(f"[PHONEPE_STATUS] Payment Method: {payment_method}")
+            print(f"[PHONEPE_STATUS] UTR: {utr}, VPA: {vpa}")
+            print(f"[PHONEPE_STATUS] Bank ID: {bank_id}")
+            sys.stdout.flush()
+        
+        # Ensure state and payment_status are strings and handle None/empty cases
+        if state is None:
+            state = ''
+        if payment_status is None:
+            payment_status = state or ''
+        
+        # Convert to string and uppercase for consistent comparison
+        state_str = str(state).upper() if state else ''
+        payment_status_str = str(payment_status).upper() if payment_status else ''
+        
+        print(f"[PHONEPE_STATUS] Final state (string, uppercase): {state_str}")
+        print(f"[PHONEPE_STATUS] Final payment_status (string, uppercase): {payment_status_str}")
+        sys.stdout.flush()
         
         return {
             'success': True,
             'data': {
                 'merchantOrderId': merchant_order_id,
                 'orderId': order_id,
-                'state': state,
+                'state': state_str,  # Return uppercase string
                 'amount': amount,
                 'paymentDetails': {
-                    'status': payment_status,
-                    'state': state,
+                    'status': payment_status_str,  # Return uppercase string
+                    'state': state_str,  # Return uppercase string
                     'amount': amount,
                     'transactionId': transaction_id,
                     'paymentMethod': payment_method,

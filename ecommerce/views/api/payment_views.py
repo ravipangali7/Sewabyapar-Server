@@ -227,6 +227,8 @@ def payment_status(request):
     
     GET /api/payments/status/?merchant_order_id=xxx or ?transaction_id=xxx
     """
+    import time
+    
     try:
         merchant_order_id = request.query_params.get('merchant_order_id')
         transaction_id = request.query_params.get('transaction_id')
@@ -237,21 +239,59 @@ def payment_status(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
+        # Try to find Transaction by merchant_order_id first (needed for retry logic)
+        transaction = None
+        order = None
         if merchant_order_id:
-            status_response = check_payment_status_by_order_id(merchant_order_id)
-            # Try to find Transaction by merchant_order_id
             try:
                 transaction = Transaction.objects.get(merchant_order_id=merchant_order_id, user=request.user)
                 order = transaction.related_order
             except Transaction.DoesNotExist:
                 transaction = None
                 order = None
-        else:
-            # For transaction_id, we can't directly look up - need merchant_order_id
-            status_response = check_payment_status_by_transaction_id(transaction_id)
-            transaction = None
-            order = None
+        
+        # Retry logic for PENDING/INITIATED statuses (handles timing issues)
+        max_retries = 3
+        retry_delays = [1, 2, 4]  # Exponential backoff in seconds
+        status_response = None
+        
+        for attempt in range(max_retries):
+            # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
+            if merchant_order_id:
+                status_response = check_payment_status_by_order_id(merchant_order_id)
+            else:
+                # For transaction_id, we can't directly look up - need merchant_order_id
+                status_response = check_payment_status_by_transaction_id(transaction_id)
+            
+            if 'error' in status_response:
+                # If error on first attempt, return immediately
+                if attempt == 0:
+                    return Response(
+                        {'error': status_response['error']},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                # If error on retry, break and use last successful response
+                break
+            
+            # Extract status to check if we need to retry
+            payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
+            payment_status_value = str(payment_data.get('status', '')).upper() if payment_data.get('status') else ''
+            payment_state = str(status_response.get('data', {}).get('state', '')).upper() if status_response.get('data', {}).get('state') else ''
+            status_to_check = payment_state or payment_status_value
+            
+            print(f"[PAYMENT_STATUS] Attempt {attempt + 1}/{max_retries}: status_to_check='{status_to_check}', payment_state='{payment_state}', payment_status_value='{payment_status_value}'")
+            sys.stdout.flush()
+            
+            # If status is PENDING or INITIATED and we have retries left, wait and retry
+            if status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING', ''] and attempt < max_retries - 1:
+                delay = retry_delays[attempt]
+                print(f"[PAYMENT_STATUS] Status is {status_to_check}, retrying in {delay} seconds...")
+                sys.stdout.flush()
+                time.sleep(delay)
+                continue
+            else:
+                # Status is final (COMPLETED, FAILED, or we've exhausted retries)
+                break
         
         if 'error' in status_response:
             return Response(
@@ -262,15 +302,28 @@ def payment_status(request):
         # Update Transaction and Order payment status if found
         if transaction and order:
             payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
+            
             # Check both 'status' and 'state' fields (PhonePe uses 'state' as primary)
-            payment_status_value = payment_data.get('status', '').upper()
-            payment_state = status_response.get('data', {}).get('state', '').upper()
+            # Handle None/empty values gracefully
+            payment_status_value = str(payment_data.get('status', '')).upper() if payment_data.get('status') else ''
+            payment_state = str(status_response.get('data', {}).get('state', '')).upper() if status_response.get('data', {}).get('state') else ''
             
             # Use state if available, otherwise use status
             status_to_check = payment_state or payment_status_value
             
+            # Log status values for debugging
+            print(f"[PAYMENT_STATUS] Final status check - status_to_check='{status_to_check}', payment_state='{payment_state}', payment_status_value='{payment_status_value}'")
+            print(f"[PAYMENT_STATUS] Payment data keys: {list(payment_data.keys()) if payment_data else 'None'}")
+            print(f"[PAYMENT_STATUS] Status response data keys: {list(status_response.get('data', {}).keys())}")
+            sys.stdout.flush()
+            
+            # Expanded success status list to handle all PhonePe success states
+            success_statuses = ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID', 'SUCCESSFUL', 'COMPLETE']
+            
             # Map PhonePe state values: COMPLETED, FAILED, PENDING
-            if status_to_check in ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID']:
+            if status_to_check in success_statuses:
+                print(f"[PAYMENT_STATUS] Status is SUCCESS: {status_to_check}")
+                sys.stdout.flush()
                 transaction.status = 'completed'
                 transaction.utr = payment_data.get('utr') or transaction.utr
                 transaction.vpa = payment_data.get('vpa') or transaction.vpa
@@ -302,6 +355,8 @@ def payment_status(request):
                 else:
                     order.save()
             elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
+                print(f"[PAYMENT_STATUS] Status is FAILED: {status_to_check}")
+                sys.stdout.flush()
                 transaction.status = 'failed'
                 transaction.save()
                 
@@ -323,6 +378,8 @@ def payment_status(request):
                     order.payment_status = 'failed'
                     order.save()
             elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
+                print(f"[PAYMENT_STATUS] Status is PENDING: {status_to_check}")
+                sys.stdout.flush()
                 transaction.status = 'pending'
                 transaction.save()
                 
@@ -343,6 +400,16 @@ def payment_status(request):
                 else:
                     order.payment_status = 'pending'
                     order.save()
+            else:
+                # Unknown status - log it and treat as pending
+                print(f"[PAYMENT_STATUS] WARNING: Unknown status '{status_to_check}', treating as pending")
+                print(f"[PAYMENT_STATUS] Full payment_data: {payment_data}")
+                print(f"[PAYMENT_STATUS] Full status_response data: {status_response.get('data', {})}")
+                sys.stdout.flush()
+                transaction.status = 'pending'
+                transaction.save()
+                order.payment_status = 'pending'
+                order.save()
             
             # Return order data with payment status
             order_serializer = OrderSerializer(order)
@@ -628,9 +695,14 @@ def payment_callback(request):
     
     GET /api/payments/callback/?merchant_order_id=xxx
     """
+    import time
+    
     try:
         merchant_order_id = request.query_params.get('merchant_order_id')
         transaction_id = request.query_params.get('transaction_id')
+        
+        print(f"[PAYMENT_CALLBACK] Received callback - merchant_order_id: {merchant_order_id}, transaction_id: {transaction_id}")
+        sys.stdout.flush()
         
         if not merchant_order_id and not transaction_id:
             return Response(
@@ -645,6 +717,8 @@ def payment_callback(request):
             if merchant_order_id:
                 transaction = Transaction.objects.get(merchant_order_id=merchant_order_id)
                 order = transaction.related_order
+                print(f"[PAYMENT_CALLBACK] Found transaction: {transaction.id}, order: {order.id if order else 'None'}")
+                sys.stdout.flush()
             else:
                 # For transaction_id, we can't directly look up - need merchant_order_id
                 return Response(
@@ -652,19 +726,61 @@ def payment_callback(request):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         except Transaction.DoesNotExist:
+            print(f"[PAYMENT_CALLBACK] Transaction not found for merchant_order_id: {merchant_order_id}")
+            sys.stdout.flush()
             return Response(
                 {'error': 'Transaction not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
         if not order:
+            print(f"[PAYMENT_CALLBACK] Order not found for transaction: {transaction.id}")
+            sys.stdout.flush()
             return Response(
                 {'error': 'Order not found for transaction'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
-        status_response = check_payment_status_by_order_id(merchant_order_id)
+        # Retry logic for PENDING/INITIATED statuses (handles timing issues)
+        max_retries = 3
+        retry_delays = [1, 2, 4]  # Exponential backoff in seconds
+        status_response = None
+        
+        for attempt in range(max_retries):
+            # Check payment status using SDK (no auth_token needed - SDK handles auth internally)
+            status_response = check_payment_status_by_order_id(merchant_order_id)
+            
+            if 'error' in status_response:
+                # If error on first attempt, return immediately
+                if attempt == 0:
+                    print(f"[PAYMENT_CALLBACK] Error checking status: {status_response['error']}")
+                    sys.stdout.flush()
+                    return Response(
+                        {'error': status_response['error']},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                # If error on retry, break and use last successful response
+                break
+            
+            # Extract status to check if we need to retry
+            payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
+            payment_status_value = str(payment_data.get('status', '')).upper() if payment_data.get('status') else ''
+            payment_state = str(status_response.get('data', {}).get('state', '')).upper() if status_response.get('data', {}).get('state') else ''
+            status_to_check = payment_state or payment_status_value
+            
+            print(f"[PAYMENT_CALLBACK] Attempt {attempt + 1}/{max_retries}: status_to_check='{status_to_check}', payment_state='{payment_state}', payment_status_value='{payment_status_value}'")
+            sys.stdout.flush()
+            
+            # If status is PENDING or INITIATED and we have retries left, wait and retry
+            if status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING', ''] and attempt < max_retries - 1:
+                delay = retry_delays[attempt]
+                print(f"[PAYMENT_CALLBACK] Status is {status_to_check}, retrying in {delay} seconds...")
+                sys.stdout.flush()
+                time.sleep(delay)
+                continue
+            else:
+                # Status is final (COMPLETED, FAILED, or we've exhausted retries)
+                break
         
         if 'error' in status_response:
             return Response(
@@ -674,15 +790,28 @@ def payment_callback(request):
         
         # Update Transaction and Order payment status
         payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
+        
         # Check both 'status' and 'state' fields (PhonePe uses 'state' as primary)
-        payment_status_value = payment_data.get('status', '').upper()
-        payment_state = status_response.get('data', {}).get('state', '').upper()
+        # Handle None/empty values gracefully
+        payment_status_value = str(payment_data.get('status', '')).upper() if payment_data.get('status') else ''
+        payment_state = str(status_response.get('data', {}).get('state', '')).upper() if status_response.get('data', {}).get('state') else ''
         
         # Use state if available, otherwise use status
         status_to_check = payment_state or payment_status_value
         
+        # Log status values for debugging
+        print(f"[PAYMENT_CALLBACK] Final status check - status_to_check='{status_to_check}', payment_state='{payment_state}', payment_status_value='{payment_status_value}'")
+        print(f"[PAYMENT_CALLBACK] Payment data keys: {list(payment_data.keys()) if payment_data else 'None'}")
+        print(f"[PAYMENT_CALLBACK] Status response data keys: {list(status_response.get('data', {}).keys())}")
+        sys.stdout.flush()
+        
+        # Expanded success status list to handle all PhonePe success states
+        success_statuses = ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID', 'SUCCESSFUL', 'COMPLETE']
+        
         # Map PhonePe state values: COMPLETED, FAILED, PENDING
-        if status_to_check in ['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID']:
+        if status_to_check in success_statuses:
+            print(f"[PAYMENT_CALLBACK] Status is SUCCESS: {status_to_check}")
+            sys.stdout.flush()
             transaction.status = 'completed'
             transaction.utr = payment_data.get('utr') or transaction.utr
             transaction.vpa = payment_data.get('vpa') or transaction.vpa
@@ -714,6 +843,8 @@ def payment_callback(request):
             else:
                 order.save()
         elif status_to_check in ['FAILED', 'PAYMENT_FAILED', 'FAILURE', 'ERROR', 'PAYMENT_ERROR']:
+            print(f"[PAYMENT_CALLBACK] Status is FAILED: {status_to_check}")
+            sys.stdout.flush()
             transaction.status = 'failed'
             transaction.save()
             
@@ -735,6 +866,8 @@ def payment_callback(request):
                 order.payment_status = 'failed'
                 order.save()
         elif status_to_check in ['PENDING', 'INITIATED', 'AUTHORIZED', 'PAYMENT_PENDING']:
+            print(f"[PAYMENT_CALLBACK] Status is PENDING: {status_to_check}")
+            sys.stdout.flush()
             transaction.status = 'pending'
             transaction.save()
             
@@ -755,6 +888,16 @@ def payment_callback(request):
             else:
                 order.payment_status = 'pending'
                 order.save()
+        else:
+            # Unknown status - log it and treat as pending
+            print(f"[PAYMENT_CALLBACK] WARNING: Unknown status '{status_to_check}', treating as pending")
+            print(f"[PAYMENT_CALLBACK] Full payment_data: {payment_data}")
+            print(f"[PAYMENT_CALLBACK] Full status_response data: {status_response.get('data', {})}")
+            sys.stdout.flush()
+            transaction.status = 'pending'
+            transaction.save()
+            order.payment_status = 'pending'
+            order.save()
         
         # Return order data with payment status
         order_serializer = OrderSerializer(order)
