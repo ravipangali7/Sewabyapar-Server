@@ -71,21 +71,28 @@ def split_order_by_vendor(temp_order):
             return None
         
         # Get SuperSetting
+        from decimal import Decimal
         try:
             super_setting = SuperSetting.objects.first()
             if not super_setting:
                 super_setting = SuperSetting.objects.create()
             basic_shipping_charge = super_setting.basic_shipping_charge
+            # Ensure it's a Decimal
+            if not isinstance(basic_shipping_charge, Decimal):
+                basic_shipping_charge = Decimal(str(basic_shipping_charge))
         except Exception as e:
             print(f"[ERROR] Error getting SuperSetting: {str(e)}")
             sys.stdout.flush()
-            basic_shipping_charge = 0
+            basic_shipping_charge = Decimal('0')
         
         # Create separate order for each vendor
         created_orders = []
         for store, items in vendor_items.items():
-            # Calculate subtotal for this vendor
-            vendor_subtotal = sum(item['price'] * item['quantity'] for item in items)
+            # Calculate subtotal for this vendor - convert to Decimal to avoid type mismatch
+            vendor_subtotal = Decimal('0')
+            for item in items:
+                item_total = Decimal(str(item['price'])) * Decimal(str(item['quantity']))
+                vendor_subtotal += item_total
             vendor_total = vendor_subtotal + basic_shipping_charge
             
             # Generate order number
@@ -110,13 +117,18 @@ def split_order_by_vendor(temp_order):
             
             # Create order items for this vendor
             for item in items:
+                # Convert to Decimal to match model field types
+                item_price = Decimal(str(item['price']))
+                item_quantity = item['quantity']
+                item_total = item_price * Decimal(str(item_quantity))
+                
                 OrderItem.objects.create(
                     order=order,
                     product=item['product'],
                     store=store,
-                    quantity=item['quantity'],
-                    price=item['price'],
-                    total=item['price'] * item['quantity'],
+                    quantity=item_quantity,
+                    price=item_price,
+                    total=item_total,
                 )
             
             created_orders.append(order)
