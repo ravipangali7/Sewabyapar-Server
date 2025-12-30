@@ -244,15 +244,27 @@ def payment_status(request):
         order = None
         if merchant_order_id:
             try:
+                # First try with user filter (more secure)
                 transaction = Transaction.objects.get(merchant_order_id=merchant_order_id, user=request.user)
                 order = transaction.related_order
                 print(f"[PAYMENT_STATUS] Found transaction: {transaction.id}, order: {order.id if order else 'None'}, transaction.status: {transaction.status}")
                 sys.stdout.flush()
             except Transaction.DoesNotExist:
-                transaction = None
-                order = None
-                print(f"[PAYMENT_STATUS] Transaction not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
-                sys.stdout.flush()
+                # Fallback: try without user filter (in case of callback from PhonePe or edge cases)
+                try:
+                    transaction = Transaction.objects.get(merchant_order_id=merchant_order_id)
+                    order = transaction.related_order
+                    print(f"[PAYMENT_STATUS] Found transaction (without user filter): {transaction.id}, order: {order.id if order else 'None'}, user: {transaction.user.id}")
+                    sys.stdout.flush()
+                    # Verify the user matches (security check)
+                    if transaction.user != request.user:
+                        print(f"[PAYMENT_STATUS] WARNING: Transaction user {transaction.user.id} doesn't match request user {request.user.id}")
+                        sys.stdout.flush()
+                except Transaction.DoesNotExist:
+                    transaction = None
+                    order = None
+                    print(f"[PAYMENT_STATUS] Transaction not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
+                    sys.stdout.flush()
         
         # Retry logic for PENDING/INITIATED statuses (handles timing issues)
         max_retries = 3
@@ -521,6 +533,45 @@ def create_order_token_for_mobile(request, order_id):
         # Note: We always use a fresh ID for each payment attempt to avoid INVALID_TRANSACTION_ID error
         order.phonepe_merchant_order_id = merchant_order_id
         order.save()
+        
+        # CRITICAL: Update the Transaction's merchant_order_id to match the order
+        # This is essential because payment status checks use this ID to find the transaction
+        # Without this update, the Transaction will have the old merchant_order_id and won't be found
+        try:
+            transaction = Transaction.objects.filter(
+                related_order=order,
+                transaction_type='phonepe_payment',
+                user=request.user
+            ).first()
+            
+            if transaction:
+                old_merchant_order_id = transaction.merchant_order_id
+                transaction.merchant_order_id = merchant_order_id
+                transaction.save()
+                print(f"[CREATE_ORDER_TOKEN] Updated Transaction {transaction.id} merchant_order_id from {old_merchant_order_id} to {merchant_order_id}")
+                sys.stdout.flush()
+            else:
+                print(f"[CREATE_ORDER_TOKEN] WARNING: No Transaction found for order {order.id}, creating new one")
+                sys.stdout.flush()
+                # Create Transaction if it doesn't exist (shouldn't happen, but handle it)
+                Transaction.objects.create(
+                    user=request.user,
+                    transaction_type='phonepe_payment',
+                    amount=order.total_amount,
+                    status='pending',
+                    description=f'PhonePe payment for order {order.order_number}',
+                    related_order=order,
+                    merchant_order_id=merchant_order_id,
+                    payer_name=request.user.name if request.user.name else None,
+                )
+                print(f"[CREATE_ORDER_TOKEN] Created new Transaction with merchant_order_id: {merchant_order_id}")
+                sys.stdout.flush()
+        except Exception as e:
+            print(f"[CREATE_ORDER_TOKEN] ERROR updating Transaction: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            sys.stdout.flush()
+            # Don't fail the request, but log the error
         
         # Validate order total amount
         if order.total_amount is None:
