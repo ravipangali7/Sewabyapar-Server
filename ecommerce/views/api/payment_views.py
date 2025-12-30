@@ -261,10 +261,49 @@ def payment_status(request):
                         print(f"[PAYMENT_STATUS] WARNING: Transaction user {transaction.user.id} doesn't match request user {request.user.id}")
                         sys.stdout.flush()
                 except Transaction.DoesNotExist:
-                    transaction = None
-                    order = None
-                    print(f"[PAYMENT_STATUS] Transaction not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
-                    sys.stdout.flush()
+                    # Final fallback: Find Transaction through user's recent orders
+                    # This handles cases where Transaction wasn't updated with the new merchant_order_id
+                    try:
+                        # Find all pending Transactions for this user with phonepe_payment type
+                        # Check if any of their related orders might match
+                        recent_transactions = Transaction.objects.filter(
+                            user=request.user,
+                            transaction_type='phonepe_payment',
+                            status='pending'
+                        ).select_related('related_order').order_by('-id')[:10]  # Check last 10 pending transactions
+                        
+                        print(f"[PAYMENT_STATUS] Checking {len(recent_transactions)} recent pending transactions for user {request.user.id}")
+                        sys.stdout.flush()
+                        
+                        for txn in recent_transactions:
+                            if txn.related_order:
+                                # Check if this transaction's order might be the one we're looking for
+                                # by checking if the order was created recently and matches payment method
+                                if (txn.related_order.payment_method == 'phonepe' and 
+                                    txn.related_order.payment_status == 'pending'):
+                                    # This could be our order - update the transaction's merchant_order_id
+                                    print(f"[PAYMENT_STATUS] Found potential transaction {txn.id} for order {txn.related_order.id}, updating merchant_order_id")
+                                    sys.stdout.flush()
+                                    transaction = txn
+                                    transaction.merchant_order_id = merchant_order_id
+                                    transaction.save()
+                                    order = transaction.related_order
+                                    print(f"[PAYMENT_STATUS] Updated and using transaction {transaction.id} for order {order.id}")
+                                    sys.stdout.flush()
+                                    break
+                        
+                        if not transaction or not order:
+                            transaction = None
+                            order = None
+                            print(f"[PAYMENT_STATUS] Transaction not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
+                            sys.stdout.flush()
+                    except Exception as e:
+                        print(f"[PAYMENT_STATUS] Error in fallback lookup: {str(e)}")
+                        import traceback
+                        print(traceback.format_exc())
+                        sys.stdout.flush()
+                        transaction = None
+                        order = None
         
         # Retry logic for PENDING/INITIATED statuses (handles timing issues)
         max_retries = 3
@@ -538,23 +577,42 @@ def create_order_token_for_mobile(request, order_id):
         # This is essential because payment status checks use this ID to find the transaction
         # Without this update, the Transaction will have the old merchant_order_id and won't be found
         try:
+            # First try: Find Transaction by related_order
             transaction = Transaction.objects.filter(
                 related_order=order,
                 transaction_type='phonepe_payment',
                 user=request.user
             ).first()
             
+            if not transaction:
+                # Fallback: Find any pending phonepe_payment Transaction for this user without merchant_order_id
+                # or with a different merchant_order_id (might be from order creation)
+                from django.db import models as django_models
+                print(f"[CREATE_ORDER_TOKEN] Transaction not found by related_order, trying fallback lookup")
+                sys.stdout.flush()
+                transaction = Transaction.objects.filter(
+                    user=request.user,
+                    transaction_type='phonepe_payment',
+                    status='pending'
+                ).filter(
+                    django_models.Q(merchant_order_id__isnull=True) | 
+                    django_models.Q(related_order=order)
+                ).order_by('-id').first()
+            
             if transaction:
                 old_merchant_order_id = transaction.merchant_order_id
+                # Update both merchant_order_id and related_order (in case related_order wasn't set)
                 transaction.merchant_order_id = merchant_order_id
+                if not transaction.related_order:
+                    transaction.related_order = order
                 transaction.save()
-                print(f"[CREATE_ORDER_TOKEN] Updated Transaction {transaction.id} merchant_order_id from {old_merchant_order_id} to {merchant_order_id}")
+                print(f"[CREATE_ORDER_TOKEN] Updated Transaction {transaction.id} merchant_order_id from {old_merchant_order_id} to {merchant_order_id}, related_order: {transaction.related_order.id if transaction.related_order else 'None'}")
                 sys.stdout.flush()
             else:
                 print(f"[CREATE_ORDER_TOKEN] WARNING: No Transaction found for order {order.id}, creating new one")
                 sys.stdout.flush()
                 # Create Transaction if it doesn't exist (shouldn't happen, but handle it)
-                Transaction.objects.create(
+                transaction = Transaction.objects.create(
                     user=request.user,
                     transaction_type='phonepe_payment',
                     amount=order.total_amount,
@@ -564,7 +622,7 @@ def create_order_token_for_mobile(request, order_id):
                     merchant_order_id=merchant_order_id,
                     payer_name=request.user.name if request.user.name else None,
                 )
-                print(f"[CREATE_ORDER_TOKEN] Created new Transaction with merchant_order_id: {merchant_order_id}")
+                print(f"[CREATE_ORDER_TOKEN] Created new Transaction {transaction.id} with merchant_order_id: {merchant_order_id}")
                 sys.stdout.flush()
         except Exception as e:
             print(f"[CREATE_ORDER_TOKEN] ERROR updating Transaction: {str(e)}")
