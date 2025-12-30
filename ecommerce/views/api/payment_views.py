@@ -246,9 +246,13 @@ def payment_status(request):
             try:
                 transaction = Transaction.objects.get(merchant_order_id=merchant_order_id, user=request.user)
                 order = transaction.related_order
+                print(f"[PAYMENT_STATUS] Found transaction: {transaction.id}, order: {order.id if order else 'None'}, transaction.status: {transaction.status}")
+                sys.stdout.flush()
             except Transaction.DoesNotExist:
                 transaction = None
                 order = None
+                print(f"[PAYMENT_STATUS] Transaction not found for merchant_order_id: {merchant_order_id}, user: {request.user.id}")
+                sys.stdout.flush()
         
         # Retry logic for PENDING/INITIATED statuses (handles timing issues)
         max_retries = 3
@@ -300,6 +304,9 @@ def payment_status(request):
             )
         
         # Update Transaction and Order payment status if found
+        print(f"[PAYMENT_STATUS] After retry loop - transaction: {transaction.id if transaction else 'None'}, order: {order.id if order else 'None'}")
+        sys.stdout.flush()
+        
         if transaction and order:
             payment_data = status_response.get('data', {}).get('paymentDetails', {}) or status_response.get('data', {})
             
@@ -315,6 +322,7 @@ def payment_status(request):
             print(f"[PAYMENT_STATUS] Final status check - status_to_check='{status_to_check}', payment_state='{payment_state}', payment_status_value='{payment_status_value}'")
             print(f"[PAYMENT_STATUS] Payment data keys: {list(payment_data.keys()) if payment_data else 'None'}")
             print(f"[PAYMENT_STATUS] Status response data keys: {list(status_response.get('data', {}).keys())}")
+            print(f"[PAYMENT_STATUS] Checking if '{status_to_check}' is in success_statuses: {['COMPLETED', 'SUCCESS', 'PAYMENT_SUCCESS', 'PAID', 'SUCCESSFUL', 'COMPLETE']}")
             sys.stdout.flush()
             
             # Expanded success status list to handle all PhonePe success states
@@ -322,7 +330,7 @@ def payment_status(request):
             
             # Map PhonePe state values: COMPLETED, FAILED, PENDING
             if status_to_check in success_statuses:
-                print(f"[PAYMENT_STATUS] Status is SUCCESS: {status_to_check}")
+                print(f"[PAYMENT_STATUS] Status is SUCCESS: {status_to_check} - Updating transaction and order")
                 sys.stdout.flush()
                 transaction.status = 'completed'
                 transaction.utr = payment_data.get('utr') or transaction.utr
@@ -413,13 +421,18 @@ def payment_status(request):
             
             # Return order data with payment status
             order_serializer = OrderSerializer(order)
+            print(f"[PAYMENT_STATUS] Returning success response with order: {order.id}, payment_status: {order.payment_status}")
+            sys.stdout.flush()
             return Response({
                 'success': True,
                 'order': order_serializer.data,
                 'paymentDetails': payment_data
             }, status=status.HTTP_200_OK)
         
-        # Return payment status without order data
+        # Return payment status without order data (transaction/order not found)
+        print(f"[PAYMENT_STATUS] WARNING: Transaction or order not found, returning payment status only")
+        print(f"[PAYMENT_STATUS] Payment status from PhonePe: {status_response.get('data', {}).get('state', 'UNKNOWN')}")
+        sys.stdout.flush()
         return Response({
             'success': True,
             'paymentDetails': status_response.get('data', {})
