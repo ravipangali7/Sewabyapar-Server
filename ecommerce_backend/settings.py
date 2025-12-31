@@ -250,13 +250,13 @@ def get_base_url():
 PHONEPE_BASE_URL = get_base_url()
 
 # SabPaisa Payment Gateway Configuration
-SABPAISA_CLIENT_CODE = 'DJ020'  # TODO: Replace with your actual client code
-SABPAISA_AES_KEY = 'ISTrmmDC2bTvkxzlDRrVguVwetGS8xC/UFPsp6w+Itg='
-SABPAISA_AES_IV = 'M+aUFgRMPq7ci+Cmoytp3KJ2GPBOwO72Z2Cjbr55zY7++pT9mLES2M5cIblnBtaX'
-SABPAISA_TRANS_USER_NAME = 'DJL754@sp'  # TODO: Replace with your actual username
-SABPAISA_TRANS_USER_PASSWORD = '4q3qhgmJNM4m'  # TODO: Replace with your actual password
-SABPAISA_MCC = '5411'  # TODO: Replace with your actual Merchant Category Code
-SABPAISA_ENV = 'staging'  # 'staging' or 'prod'
+SABPAISA_CLIENT_CODE = 'BIKA79'
+SABPAISA_AES_KEY = 'SqfDQjRyT4zAr2r0iVLoE8FWKOPw6iBsO7gdjjxlK9A='
+SABPAISA_AES_IV = 'NYMri5m/Bg2+KZj2FRXTD0x/G5snqrqIFOoe5m8bCLX4t9PcOXtHeEfFCqcQvw7n'
+SABPAISA_TRANS_USER_NAME = 'tekmk2122@gmail.com'
+SABPAISA_TRANS_USER_PASSWORD = 'BIKA79_SP24566'
+SABPAISA_MCC = '5411'  # Merchant Category Code
+SABPAISA_ENV = 'prod'  # 'staging' or 'prod'
 SABPAISA_STAGING_URL = 'https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1'
 SABPAISA_LIVE_URL = 'https://securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1'
 

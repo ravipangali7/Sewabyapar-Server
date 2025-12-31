@@ -72,7 +72,7 @@ class FinanceReportView(StaffRequiredMixin, ListView):
         context['total_transactions'] = all_transactions.count()
         context['total_revenue'] = all_transactions.filter(
             status__in=['completed', 'success'],
-            transaction_type__in=['phonepe_payment', 'payout']
+            transaction_type__in=['phonepe_payment', 'sabpaisa_payment', 'payout']
         ).aggregate(total=Sum('amount'))['total'] or 0
         
         context['total_commissions'] = all_transactions.filter(
@@ -89,7 +89,7 @@ class FinanceReportView(StaffRequiredMixin, ListView):
         context['filtered_count'] = filtered_queryset.count()
         context['filtered_revenue'] = filtered_queryset.filter(
             status__in=['completed', 'success'],
-            transaction_type__in=['phonepe_payment', 'payout']
+            transaction_type__in=['phonepe_payment', 'sabpaisa_payment', 'payout']
         ).aggregate(total=Sum('amount'))['total'] or 0
         
         context['filtered_commissions'] = filtered_queryset.filter(

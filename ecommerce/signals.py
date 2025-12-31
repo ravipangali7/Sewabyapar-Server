@@ -65,10 +65,11 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 # Note: Commission transaction is tracked at platform level, not user level
                 # We can create it with a system user or track it separately
                 
-                # Get PhonePe transaction details from Transaction model if available
-                phonepe_transaction = Transaction.objects.filter(
+                # Get payment transaction details from Transaction model if available
+                # Check for both PhonePe and SabPaisa transactions
+                payment_transaction = Transaction.objects.filter(
                     related_order=instance,
-                    transaction_type='phonepe_payment'
+                    transaction_type__in=['phonepe_payment', 'sabpaisa_payment']
                 ).first()
                 
                 # Create transaction record for merchant payout
@@ -79,9 +80,9 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     status='completed',
                     description=f'Payout from order {instance.order_number}',
                     related_order=instance,
-                    utr=phonepe_transaction.utr if phonepe_transaction and phonepe_transaction.utr else None,
-                    bank_id=phonepe_transaction.bank_id if phonepe_transaction and phonepe_transaction.bank_id else None,
-                    vpa=phonepe_transaction.vpa if phonepe_transaction and phonepe_transaction.vpa else None,
+                    utr=payment_transaction.utr if payment_transaction and payment_transaction.utr else None,
+                    bank_id=payment_transaction.bank_id if payment_transaction and payment_transaction.bank_id else None,
+                    vpa=payment_transaction.vpa if payment_transaction and payment_transaction.vpa else None,
                     payer_name=vendor.name if vendor.name else None,
                 )
                 

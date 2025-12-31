@@ -1112,6 +1112,43 @@ def initiate_sabpaisa_payment_view(request, order_id):
         print(f"Payment initiated successfully. Client Txn ID: {payment_response.get('clientTxnId')}")
         sys.stdout.flush()
         
+        # Create Transaction record for SabPaisa payment
+        client_txn_id = payment_response.get('clientTxnId')
+        try:
+            # Check if transaction already exists (shouldn't happen, but handle it)
+            transaction = Transaction.objects.filter(
+                related_order=order,
+                transaction_type='sabpaisa_payment',
+                user=request.user
+            ).first()
+            
+            if transaction:
+                # Update existing transaction with new client_txn_id
+                transaction.merchant_order_id = client_txn_id
+                transaction.save()
+                print(f"[SABPAISA_INITIATE] Updated Transaction {transaction.id} with client_txn_id: {client_txn_id}")
+                sys.stdout.flush()
+            else:
+                # Create new Transaction record
+                transaction = Transaction.objects.create(
+                    user=request.user,
+                    transaction_type='sabpaisa_payment',
+                    amount=order.total_amount,
+                    status='pending',
+                    description=f'SabPaisa payment for order {order.order_number}',
+                    related_order=order,
+                    merchant_order_id=client_txn_id,
+                    payer_name=payer_name,
+                )
+                print(f"[SABPAISA_INITIATE] Created Transaction {transaction.id} with client_txn_id: {client_txn_id}")
+                sys.stdout.flush()
+        except Exception as e:
+            print(f"[SABPAISA_INITIATE] ERROR creating Transaction: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            sys.stdout.flush()
+            # Don't fail the request, but log the error
+        
         return Response({
             'success': True,
             'data': {
@@ -1193,6 +1230,43 @@ def sabpaisa_payment_callback(request):
                 status=status.HTTP_404_NOT_FOUND
             )
         
+        # Find or create Transaction record for this payment
+        transaction = None
+        try:
+            # Try to find existing transaction by merchant_order_id (client_txn_id)
+            transaction = Transaction.objects.filter(
+                merchant_order_id=client_txn_id,
+                transaction_type='sabpaisa_payment'
+            ).first()
+            
+            # If not found, try to find by related_order
+            if not transaction:
+                transaction = Transaction.objects.filter(
+                    related_order=order,
+                    transaction_type='sabpaisa_payment'
+                ).first()
+            
+            # If still not found, create new transaction
+            if not transaction:
+                transaction = Transaction.objects.create(
+                    user=order.user,
+                    transaction_type='sabpaisa_payment',
+                    amount=order.total_amount,
+                    status='pending',
+                    description=f'SabPaisa payment for order {order.order_number}',
+                    related_order=order,
+                    merchant_order_id=client_txn_id,
+                    payer_name=order.user.name if order.user.name else None,
+                )
+                print(f"[SABPAISA_CALLBACK] Created new Transaction {transaction.id} for client_txn_id: {client_txn_id}")
+                sys.stdout.flush()
+        except Exception as e:
+            print(f"[SABPAISA_CALLBACK] ERROR finding/creating Transaction: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            sys.stdout.flush()
+            # Continue processing even if transaction handling fails
+        
         # Parse status code and update order
         payment_status, order_status = parse_sabpaisa_status_code(status_code)
         
@@ -1211,6 +1285,45 @@ def sabpaisa_payment_callback(request):
                 'order_id': None,
                 'order_number': None
             }, status=status.HTTP_200_OK)
+        
+        # Update Transaction record based on payment status
+        if transaction:
+            try:
+                if payment_status == 'success':
+                    transaction.status = 'completed'
+                    # Store SabPaisa transaction ID in merchant_order_id (or keep client_txn_id)
+                    # We can store sabpaisa_txn_id in a separate field if needed, but for now reuse merchant_order_id
+                    # The client_txn_id is already stored, so we keep it
+                    # Store payment mode in bank_id field (reuse existing field)
+                    if payment_mode:
+                        transaction.bank_id = payment_mode
+                    # Store bank name if available (can use vpa field or description)
+                    if bank_name:
+                        transaction.description += f" | Bank: {bank_name}"
+                    print(f"[SABPAISA_CALLBACK] Updated Transaction {transaction.id} to 'completed'")
+                elif payment_status == 'failed':
+                    transaction.status = 'failed'
+                    if sabpaisa_message:
+                        transaction.description += f" | Error: {sabpaisa_message}"
+                    print(f"[SABPAISA_CALLBACK] Updated Transaction {transaction.id} to 'failed'")
+                elif payment_status == 'cancelled':
+                    transaction.status = 'cancelled'
+                    print(f"[SABPAISA_CALLBACK] Updated Transaction {transaction.id} to 'cancelled'")
+                else:
+                    # Keep as pending for other statuses
+                    print(f"[SABPAISA_CALLBACK] Transaction {transaction.id} status remains 'pending' (payment_status: {payment_status})")
+                
+                # Ensure transaction is linked to order
+                if not transaction.related_order:
+                    transaction.related_order = order
+                
+                transaction.save()
+                sys.stdout.flush()
+            except Exception as e:
+                print(f"[SABPAISA_CALLBACK] ERROR updating Transaction: {str(e)}")
+                import traceback
+                print(traceback.format_exc())
+                sys.stdout.flush()
         
         # If payment successful, proceed with order processing
         order.payment_status = payment_status
