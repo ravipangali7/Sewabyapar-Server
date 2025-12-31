@@ -255,6 +255,16 @@ class ShipdaakService:
                             pincode = pincode_match.group(1)
                             break
             
+            # Normalize phone number to exactly 10 digits for exact matching
+            # Remove all non-digit characters
+            phone_digits = re.sub(r'\D', '', str(store.phone))
+            # Take last 10 digits if longer, pad with 0 if shorter
+            if len(phone_digits) > 10:
+                phone_digits = phone_digits[-10:]
+            elif len(phone_digits) < 10:
+                phone_digits = phone_digits.zfill(10)
+            normalized_phone = phone_digits if phone_digits else store.phone
+            
             # Prepare warehouse data
             warehouse_data = {
                 "pickup_location": {
@@ -263,7 +273,7 @@ class ShipdaakService:
                     "address_line_1": store.address or "Address not provided",
                     "address_line_2": "",
                     "pincode": pincode,
-                    "phone": store.phone,
+                    "phone": normalized_phone,  # Use normalized phone for exact matching
                     "gst_number": ""  # GST number not in store model, can be added later
                 },
                 "has_different_rto": False,  # Using same address for RTO
@@ -273,7 +283,7 @@ class ShipdaakService:
                     "address_line_1": store.address or "Address not provided",
                     "address_line_2": "",
                     "pincode": pincode,
-                    "phone": store.phone,
+                    "phone": normalized_phone,  # Use normalized phone for exact matching
                     "gst_number": ""
                 }
             }
@@ -343,26 +353,37 @@ class ShipdaakService:
                             pincode = pincode_match.group(1)
                             break
             
-            # Prepare warehouse data using same structure as create_warehouse
-            # The create-warehouse endpoint is idempotent and will update existing warehouses
+            # Normalize phone number to exactly 10 digits for exact matching
+            # Remove all non-digit characters
+            phone_digits = re.sub(r'\D', '', str(store.phone))
+            # Take last 10 digits if longer, pad with 0 if shorter
+            if len(phone_digits) > 10:
+                phone_digits = phone_digits[-10:]
+            elif len(phone_digits) < 10:
+                phone_digits = phone_digits.zfill(10)
+            normalized_phone = phone_digits if phone_digits else store.phone
+            
+            # Prepare warehouse data - include warehouse IDs to help Shipdaak identify existing warehouses
             warehouse_data = {
+                "pickup_warehouse_id": store.shipdaak_pickup_warehouse_id,  # Include existing ID
                 "pickup_location": {
                     "warehouse_name": store.name,
                     "contact_name": store.owner.name if store.owner else "Store Owner",
                     "address_line_1": store.address or "Address not provided",
                     "address_line_2": "",
                     "pincode": pincode,
-                    "phone": store.phone,
+                    "phone": normalized_phone,  # Use normalized phone for exact matching
                     "gst_number": ""  # GST number not in store model, can be added later
                 },
                 "has_different_rto": False,  # Using same address for RTO
+                "rto_warehouse_id": store.shipdaak_rto_warehouse_id,  # Include existing RTO ID
                 "rto_location": {
                     "warehouse_name": f"{store.name} - RTO",
                     "contact_name": store.owner.name if store.owner else "Store Owner",
                     "address_line_1": store.address or "Address not provided",
                     "address_line_2": "",
                     "pincode": pincode,
-                    "phone": store.phone,
+                    "phone": normalized_phone,  # Use normalized phone for exact matching
                     "gst_number": ""
                 }
             }
