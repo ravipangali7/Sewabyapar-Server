@@ -6,9 +6,9 @@ from django.db import migrations, models
 
 def cleanup_invalid_address_ids(apps, schema_editor):
     """
-    Clean up corrupted address IDs in Order table.
-    This function checks if the columns exist as ForeignKey (_id columns) and cleans them up.
-    If they're still TextField, the AlterField operation will handle the conversion.
+    Clean up corrupted address data in Order table.
+    If columns are TextField, we need to clear them before AlterField converts to ForeignKey.
+    If columns are already ForeignKey (_id), clean up invalid foreign key references.
     """
     import sys
     from django.db import connection
@@ -23,12 +23,56 @@ def cleanup_invalid_address_ids(apps, schema_editor):
         # Check if shipping_address_id and billing_address_id exist (ForeignKey columns)
         has_shipping_id = 'shipping_address_id' in column_names
         has_billing_id = 'billing_address_id' in column_names
+        has_shipping_text = 'shipping_address' in column_names
+        has_billing_text = 'billing_address' in column_names
         
-        # If the _id columns don't exist, they're still TextField and AlterField will handle conversion
-        # No cleanup needed in this case
-        if not has_shipping_id and not has_billing_id:
-            print("Address columns are still TextField (shipping_address, billing_address). AlterField will handle conversion. Skipping cleanup.")
+        # Clear TextField columns if they exist (before AlterField converts them)
+        # Django can't convert text addresses to ForeignKey IDs automatically
+        if has_shipping_text:
+            print("Clearing shipping_address TextField before converting to ForeignKey...")
+            # Try to set to NULL, but if column is NOT NULL, we'll need to handle it differently
+            try:
+                cursor.execute("UPDATE ecommerce_order SET shipping_address = NULL WHERE shipping_address IS NOT NULL")
+                affected = cursor.rowcount
+                print(f"Cleared shipping_address TextField for {affected} orders")
+            except Exception as e:
+                # If setting to NULL fails (e.g., column is NOT NULL), set to empty string
+                print(f"Could not set shipping_address to NULL: {e}. Setting to empty string instead.")
+                cursor.execute("UPDATE ecommerce_order SET shipping_address = '' WHERE shipping_address IS NOT NULL")
+                affected = cursor.rowcount
+                print(f"Cleared shipping_address TextField for {affected} orders")
             sys.stdout.flush()
+        
+        if has_billing_text:
+            print("Clearing billing_address TextField before converting to ForeignKey...")
+            try:
+                cursor.execute("UPDATE ecommerce_order SET billing_address = NULL WHERE billing_address IS NOT NULL")
+                affected = cursor.rowcount
+                print(f"Cleared billing_address TextField for {affected} orders")
+            except Exception as e:
+                print(f"Could not set billing_address to NULL: {e}. Setting to empty string instead.")
+                cursor.execute("UPDATE ecommerce_order SET billing_address = '' WHERE billing_address IS NOT NULL")
+                affected = cursor.rowcount
+                print(f"Cleared billing_address TextField for {affected} orders")
+            sys.stdout.flush()
+        
+        # Also clear _id columns if they exist with invalid data
+        if has_shipping_id:
+            print("Clearing invalid shipping_address_id values...")
+            cursor.execute("UPDATE ecommerce_order SET shipping_address_id = NULL WHERE shipping_address_id IS NOT NULL")
+            affected = cursor.rowcount
+            print(f"Cleared shipping_address_id for {affected} orders")
+            sys.stdout.flush()
+        
+        if has_billing_id:
+            print("Clearing invalid billing_address_id values...")
+            cursor.execute("UPDATE ecommerce_order SET billing_address_id = NULL WHERE billing_address_id IS NOT NULL")
+            affected = cursor.rowcount
+            print(f"Cleared billing_address_id for {affected} orders")
+            sys.stdout.flush()
+        
+        # If the _id columns don't exist and we've already handled TextField, we're done
+        if not has_shipping_id and not has_billing_id:
             return
         
         # Get all valid address IDs
