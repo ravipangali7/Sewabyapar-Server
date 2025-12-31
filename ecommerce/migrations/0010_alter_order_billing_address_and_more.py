@@ -52,18 +52,14 @@ def cleanup_invalid_address_ids(apps, schema_editor):
                 
                 # First, delete related OrderItems to avoid foreign key constraint violations
                 placeholders = ','.join(['?'] * len(orders_to_delete))
-                cursor.execute(
-                    f"DELETE FROM ecommerce_orderitem WHERE order_id IN ({placeholders})",
-                    orders_to_delete
-                )
+                sql_items = "DELETE FROM ecommerce_orderitem WHERE order_id IN (" + placeholders + ")"
+                cursor.execute(sql_items, orders_to_delete)
                 deleted_items = cursor.rowcount
                 print(f"Deleted {deleted_items} related OrderItems")
                 
                 # Then delete the orders
-                cursor.execute(
-                    f"DELETE FROM ecommerce_order WHERE id IN ({placeholders})",
-                    orders_to_delete
-                )
+                sql_orders = "DELETE FROM ecommerce_order WHERE id IN (" + placeholders + ")"
+                cursor.execute(sql_orders, orders_to_delete)
                 deleted_orders = cursor.rowcount
                 print(f"Deleted {deleted_orders} orders with address data")
                 sys.stdout.flush()
