@@ -237,16 +237,23 @@ class ShipdaakService:
             Dict with 'pickup_warehouse_id' and 'rto_warehouse_id' or None if fails
         """
         try:
-            # Extract pincode from address (simple extraction - assumes pincode is at end)
-            # You may need to adjust this based on your address format
+            # Extract pincode from address - improved extraction
             pincode = "110001"  # Default pincode
-            address_lines = store.address.split('\n') if store.address else []
-            for line in reversed(address_lines):
-                # Try to find 6-digit number (Indian pincode format)
-                pincode_match = re.search(r'\b\d{6}\b', line)
+            if store.address:
+                # Try multiple methods to extract pincode
+                # Method 1: Look for 6-digit number at the end of address (most common)
+                pincode_match = re.search(r'\b(\d{6})\b', store.address)
                 if pincode_match:
-                    pincode = pincode_match.group()
-                    break
+                    pincode = pincode_match.group(1)
+                else:
+                    # Method 2: Look in address lines (split by newline or comma)
+                    address_parts = re.split(r'[,\n]', store.address)
+                    for part in reversed(address_parts):
+                        part = part.strip()
+                        pincode_match = re.search(r'\b(\d{6})\b', part)
+                        if pincode_match:
+                            pincode = pincode_match.group(1)
+                            break
             
             # Prepare warehouse data
             warehouse_data = {
@@ -293,6 +300,9 @@ class ShipdaakService:
         """
         Update warehouse in Shipdaak from store data
         
+        Uses the create-warehouse endpoint which is idempotent and can update existing warehouses.
+        The endpoint response says "created/verified successfully" indicating it handles both scenarios.
+        
         Args:
             store: Store model instance with existing shipdaak_pickup_warehouse_id
         
@@ -315,19 +325,27 @@ class ShipdaakService:
                     return True
                 return False
             
-            # Extract pincode from address
+            # Extract pincode from address - improved extraction
             pincode = "110001"  # Default pincode
-            address_lines = store.address.split('\n') if store.address else []
-            for line in reversed(address_lines):
-                # Try to find 6-digit number (Indian pincode format)
-                pincode_match = re.search(r'\b\d{6}\b', line)
+            if store.address:
+                # Try multiple methods to extract pincode
+                # Method 1: Look for 6-digit number at the end of address (most common)
+                pincode_match = re.search(r'\b(\d{6})\b', store.address)
                 if pincode_match:
-                    pincode = pincode_match.group()
-                    break
+                    pincode = pincode_match.group(1)
+                else:
+                    # Method 2: Look in address lines (split by newline or comma)
+                    address_parts = re.split(r'[,\n]', store.address)
+                    for part in reversed(address_parts):
+                        part = part.strip()
+                        pincode_match = re.search(r'\b(\d{6})\b', part)
+                        if pincode_match:
+                            pincode = pincode_match.group(1)
+                            break
             
-            # Prepare warehouse update data
+            # Prepare warehouse data using same structure as create_warehouse
+            # The create-warehouse endpoint is idempotent and will update existing warehouses
             warehouse_data = {
-                "pickup_warehouse_id": store.shipdaak_pickup_warehouse_id,
                 "pickup_location": {
                     "warehouse_name": store.name,
                     "contact_name": store.owner.name if store.owner else "Store Owner",
@@ -349,28 +367,35 @@ class ShipdaakService:
                 }
             }
             
-            # Try PUT request to update warehouse
-            # Note: If Shipdaak API doesn't support update, this will fail gracefully
-            response = self._make_request('PUT', '/v1/warehouse/update-warehouse', data=warehouse_data)
+            # Use POST to create-warehouse endpoint (idempotent - updates existing warehouses)
+            response = self._make_request('POST', '/v1/warehouse/create-warehouse', data=warehouse_data)
             
             if response and response.get('status'):
-                print(f"[INFO] Successfully updated Shipdaak warehouse for store {store.id}")
+                response_data = response.get('data', {})
+                # Verify that warehouse IDs match (should be same if updating existing)
+                returned_pickup_id = response_data.get('pickup_warehouse_id')
+                returned_rto_id = response_data.get('rto_warehouse_id')
+                
+                if returned_pickup_id and returned_pickup_id != store.shipdaak_pickup_warehouse_id:
+                    # Warehouse IDs changed - update our records
+                    print(f"[INFO] Shipdaak returned different warehouse IDs. Updating store {store.id} warehouse IDs.")
+                    sys.stdout.flush()
+                    store.shipdaak_pickup_warehouse_id = returned_pickup_id
+                    store.shipdaak_rto_warehouse_id = returned_rto_id
+                    store.save(update_fields=['shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id'])
+                
+                print(f"[INFO] Successfully updated Shipdaak warehouse for store {store.id} (warehouse IDs: pickup={returned_pickup_id or store.shipdaak_pickup_warehouse_id}, rto={returned_rto_id or store.shipdaak_rto_warehouse_id})")
                 sys.stdout.flush()
                 return True
             else:
-                # If update endpoint doesn't exist, log warning but don't fail
-                print(f"[WARNING] Shipdaak warehouse update failed or endpoint not available: {response}")
-                print(f"[INFO] Warehouse IDs remain unchanged. Store update completed successfully.")
+                print(f"[ERROR] Shipdaak warehouse update failed for store {store.id}: {response}")
                 sys.stdout.flush()
-                # Return True anyway since store was updated successfully
-                # The warehouse in Shipdaak will have old data, but store update succeeded
-                return True
+                return False
                 
         except Exception as e:
             print(f"[ERROR] Error updating Shipdaak warehouse for store {store.id}: {str(e)}")
             traceback.print_exc()
-            # Return True to not block store update even if warehouse update fails
-            return True
+            return False
     
     def create_shipment(self, order, courier_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
