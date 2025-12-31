@@ -28,29 +28,44 @@ def cleanup_invalid_address_ids(apps, schema_editor):
         
         # For SQLite with NOT NULL TextField columns, we need to delete orders with address data
         # Since we can't set TextField to NULL due to NOT NULL constraint, we'll delete problematic rows
+        # We also need to delete related OrderItems to avoid foreign key constraint violations
         if has_shipping_text or has_billing_text:
             print("Handling TextField to ForeignKey conversion for SQLite...")
             
+            # Get order IDs that need to be deleted
+            orders_to_delete = []
+            
             if has_shipping_text:
-                cursor.execute("SELECT COUNT(*) FROM ecommerce_order WHERE shipping_address IS NOT NULL AND shipping_address != ''")
-                count = cursor.fetchone()[0]
-                if count > 0:
-                    print(f"WARNING: {count} orders have shipping_address data. These will be deleted to allow migration.")
-                    print("You can restore these orders from backup if needed.")
-                    cursor.execute("DELETE FROM ecommerce_order WHERE shipping_address IS NOT NULL AND shipping_address != ''")
-                    deleted = cursor.rowcount
-                    print(f"Deleted {deleted} orders with shipping_address data")
-                sys.stdout.flush()
+                cursor.execute("SELECT id FROM ecommerce_order WHERE shipping_address IS NOT NULL AND shipping_address != ''")
+                orders_to_delete.extend([row[0] for row in cursor.fetchall()])
             
             if has_billing_text:
-                cursor.execute("SELECT COUNT(*) FROM ecommerce_order WHERE billing_address IS NOT NULL AND billing_address != ''")
-                count = cursor.fetchone()[0]
-                if count > 0:
-                    print(f"WARNING: {count} orders have billing_address data. These will be deleted to allow migration.")
-                    print("You can restore these orders from backup if needed.")
-                    cursor.execute("DELETE FROM ecommerce_order WHERE billing_address IS NOT NULL AND billing_address != ''")
-                    deleted = cursor.rowcount
-                    print(f"Deleted {deleted} orders with billing_address data")
+                cursor.execute("SELECT id FROM ecommerce_order WHERE billing_address IS NOT NULL AND billing_address != ''")
+                orders_to_delete.extend([row[0] for row in cursor.fetchall()])
+            
+            # Remove duplicates
+            orders_to_delete = list(set(orders_to_delete))
+            
+            if orders_to_delete:
+                print(f"WARNING: {len(orders_to_delete)} orders have address data. These will be deleted to allow migration.")
+                print("You can restore these orders from backup if needed.")
+                
+                # First, delete related OrderItems to avoid foreign key constraint violations
+                placeholders = ','.join(['?'] * len(orders_to_delete))
+                cursor.execute(
+                    f"DELETE FROM ecommerce_orderitem WHERE order_id IN ({placeholders})",
+                    orders_to_delete
+                )
+                deleted_items = cursor.rowcount
+                print(f"Deleted {deleted_items} related OrderItems")
+                
+                # Then delete the orders
+                cursor.execute(
+                    f"DELETE FROM ecommerce_order WHERE id IN ({placeholders})",
+                    orders_to_delete
+                )
+                deleted_orders = cursor.rowcount
+                print(f"Deleted {deleted_orders} orders with address data")
                 sys.stdout.flush()
         
         # Also clear _id columns if they exist with invalid data
