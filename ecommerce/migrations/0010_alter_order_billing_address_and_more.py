@@ -26,43 +26,12 @@ def cleanup_invalid_address_ids(apps, schema_editor):
         has_shipping_text = 'shipping_address' in column_names
         has_billing_text = 'billing_address' in column_names
         
-        # For SQLite with NOT NULL TextField columns, we need a workaround
-        # Since we can't set TextField to NULL, we'll create a temporary dummy address
-        # and use its ID, then set to NULL after conversion
+        # For SQLite with NOT NULL TextField columns, we need to delete orders with address data
+        # Since we can't set TextField to NULL due to NOT NULL constraint, we'll delete problematic rows
         if has_shipping_text or has_billing_text:
-            print("Creating temporary address for migration workaround...")
-            Address = apps.get_model('core', 'Address')
-            User = apps.get_model('core', 'User')
+            print("Handling TextField to ForeignKey conversion for SQLite...")
             
-            # Get or create a dummy user for the temporary address
-            dummy_user = User.objects.first()
-            if not dummy_user:
-                print("WARNING: No users found. Migration may fail.")
-                sys.stdout.flush()
-                return
-            
-            # Create a temporary address that we'll use during conversion
-            temp_address, created = Address.objects.get_or_create(
-                user=dummy_user,
-                address='TEMP_MIGRATION_ADDRESS',
-                defaults={
-                    'city': 'TEMP',
-                    'state': 'TEMP',
-                    'zip_code': '00000',
-                    'country': 'TEMP',
-                }
-            )
-            temp_address_id = temp_address.id
-            print(f"Using temporary address ID: {temp_address_id}")
-            sys.stdout.flush()
-            
-            # Update TextField columns to use the temp address ID as a placeholder
-            # This allows AlterField to convert successfully
             if has_shipping_text:
-                # We can't directly update TextField to an integer, so we'll need to handle this differently
-                # Actually, we can't do this - TextField can't hold integer values
-                # The real solution is to delete rows or recreate table
-                # For now, let's just delete rows with address data (they can be restored from backup)
                 cursor.execute("SELECT COUNT(*) FROM ecommerce_order WHERE shipping_address IS NOT NULL AND shipping_address != ''")
                 count = cursor.fetchone()[0]
                 if count > 0:
@@ -70,7 +39,7 @@ def cleanup_invalid_address_ids(apps, schema_editor):
                     print("You can restore these orders from backup if needed.")
                     cursor.execute("DELETE FROM ecommerce_order WHERE shipping_address IS NOT NULL AND shipping_address != ''")
                     deleted = cursor.rowcount
-                    print(f"Deleted {deleted} orders")
+                    print(f"Deleted {deleted} orders with shipping_address data")
                 sys.stdout.flush()
             
             if has_billing_text:
@@ -78,13 +47,11 @@ def cleanup_invalid_address_ids(apps, schema_editor):
                 count = cursor.fetchone()[0]
                 if count > 0:
                     print(f"WARNING: {count} orders have billing_address data. These will be deleted to allow migration.")
+                    print("You can restore these orders from backup if needed.")
                     cursor.execute("DELETE FROM ecommerce_order WHERE billing_address IS NOT NULL AND billing_address != ''")
                     deleted = cursor.rowcount
-                    print(f"Deleted {deleted} orders")
+                    print(f"Deleted {deleted} orders with billing_address data")
                 sys.stdout.flush()
-            
-            # Clean up temp address after migration (we'll do this in a post-migration step)
-            # For now, just leave it
         
         # Also clear _id columns if they exist with invalid data
         if has_shipping_id:
@@ -182,15 +149,8 @@ def cleanup_invalid_address_ids(apps, schema_editor):
 
 def post_migration_cleanup(apps, schema_editor):
     """Clean up after AlterField operations"""
-    import sys
-    Address = apps.get_model('core', 'Address')
-    # Delete temporary migration address if it exists
-    temp_addresses = Address.objects.filter(address='TEMP_MIGRATION_ADDRESS')
-    if temp_addresses.exists():
-        count = temp_addresses.count()
-        temp_addresses.delete()
-        print(f"Cleaned up {count} temporary migration address(es)")
-        sys.stdout.flush()
+    # No cleanup needed - we didn't create any temporary data
+    pass
 
 
 def reverse_cleanup(apps, schema_editor):
