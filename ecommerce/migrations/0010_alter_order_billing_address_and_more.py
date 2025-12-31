@@ -4,6 +4,89 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def cleanup_invalid_address_ids(apps, schema_editor):
+    """
+    Clean up corrupted address IDs in Order table.
+    Some orders have string values in shipping_address_id/billing_address_id 
+    instead of valid integer foreign keys. Set these to NULL.
+    """
+    import sys
+    from django.db import connection
+    
+    Order = apps.get_model('ecommerce', 'Order')
+    Address = apps.get_model('core', 'Address')
+    
+    # Use raw SQL to check and fix invalid foreign keys
+    # This is safer when dealing with corrupted data
+    with connection.cursor() as cursor:
+        # Get all valid address IDs
+        cursor.execute("SELECT id FROM core_address")
+        valid_address_ids = {row[0] for row in cursor.fetchall()}
+        
+        if not valid_address_ids:
+            # No addresses exist, set all to NULL
+            cursor.execute("UPDATE ecommerce_order SET shipping_address_id = NULL WHERE shipping_address_id IS NOT NULL")
+            cursor.execute("UPDATE ecommerce_order SET billing_address_id = NULL WHERE billing_address_id IS NOT NULL")
+            print("No addresses found, set all order address references to NULL")
+            sys.stdout.flush()
+            return
+        
+        # Get all orders with non-null address IDs
+        cursor.execute("SELECT id, shipping_address_id, billing_address_id FROM ecommerce_order")
+        orders = cursor.fetchall()
+        
+        invalid_shipping = []
+        invalid_billing = []
+        
+        for order_id, shipping_id, billing_id in orders:
+            # Check shipping_address_id
+            if shipping_id is not None:
+                try:
+                    # Try to convert to int
+                    shipping_id_int = int(shipping_id) if isinstance(shipping_id, str) else shipping_id
+                    if shipping_id_int not in valid_address_ids:
+                        invalid_shipping.append(order_id)
+                except (ValueError, TypeError):
+                    # Not a valid integer
+                    invalid_shipping.append(order_id)
+            
+            # Check billing_address_id
+            if billing_id is not None:
+                try:
+                    # Try to convert to int
+                    billing_id_int = int(billing_id) if isinstance(billing_id, str) else billing_id
+                    if billing_id_int not in valid_address_ids:
+                        invalid_billing.append(order_id)
+                except (ValueError, TypeError):
+                    # Not a valid integer
+                    invalid_billing.append(order_id)
+        
+        # Fix invalid shipping_address_id
+        if invalid_shipping:
+            placeholders = ','.join(['?'] * len(invalid_shipping))
+            cursor.execute(
+                f"UPDATE ecommerce_order SET shipping_address_id = NULL WHERE id IN ({placeholders})",
+                invalid_shipping
+            )
+            print(f"Fixed {len(invalid_shipping)} orders with invalid shipping_address_id")
+            sys.stdout.flush()
+        
+        # Fix invalid billing_address_id
+        if invalid_billing:
+            placeholders = ','.join(['?'] * len(invalid_billing))
+            cursor.execute(
+                f"UPDATE ecommerce_order SET billing_address_id = NULL WHERE id IN ({placeholders})",
+                invalid_billing
+            )
+            print(f"Fixed {len(invalid_billing)} orders with invalid billing_address_id")
+            sys.stdout.flush()
+
+
+def reverse_cleanup(apps, schema_editor):
+    """Reverse migration - nothing to reverse for data cleanup"""
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -12,6 +95,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # First, clean up corrupted data
+        migrations.RunPython(cleanup_invalid_address_ids, reverse_cleanup),
+        # Then, alter the fields
         migrations.AlterField(
             model_name='order',
             name='billing_address',
