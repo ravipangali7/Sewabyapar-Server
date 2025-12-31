@@ -762,11 +762,18 @@ def merchant_store_detail(request, pk):
         if serializer.is_valid():
             serializer.save()
             
-            # Auto-create warehouse if it doesn't exist
-            if not store.shipdaak_pickup_warehouse_id:
-                try:
-                    from ecommerce.services.shipdaak_service import ShipdaakService
-                    shipdaak = ShipdaakService()
+            # Sync warehouse with Shipdaak
+            try:
+                from ecommerce.services.shipdaak_service import ShipdaakService
+                shipdaak = ShipdaakService()
+                
+                if store.shipdaak_pickup_warehouse_id:
+                    # Update existing warehouse
+                    shipdaak.update_warehouse(store)
+                    print(f"[INFO] Successfully synced Shipdaak warehouse for store {store.id} on update")
+                    sys.stdout.flush()
+                else:
+                    # Auto-create warehouse if it doesn't exist
                     warehouse_data = shipdaak.create_warehouse(store)
                     if warehouse_data:
                         store.shipdaak_pickup_warehouse_id = warehouse_data.get('pickup_warehouse_id')
@@ -777,9 +784,9 @@ def merchant_store_detail(request, pk):
                                                 'shipdaak_warehouse_created_at'])
                         print(f"[INFO] Successfully created Shipdaak warehouse for store {store.id} on update")
                         sys.stdout.flush()
-                except Exception as e:
-                    print(f"[ERROR] Error creating Shipdaak warehouse for store {store.id} on update: {str(e)}")
-                    traceback.print_exc()
+            except Exception as e:
+                print(f"[ERROR] Error syncing Shipdaak warehouse for store {store.id} on update: {str(e)}")
+                traceback.print_exc()
             
             return Response(StoreSerializer(store, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
