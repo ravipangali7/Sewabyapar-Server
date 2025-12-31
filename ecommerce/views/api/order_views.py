@@ -121,62 +121,29 @@ def order_list_create(request):
                 elif request.user.name:
                     payer_name = request.user.name
                 
-                # Create Transaction record for PhonePe payment
+                # Create Transaction record for SabPaisa payment (merchant_order_id will be set when payment is initiated)
+                # Note: clientTxnId will be generated in initiate_sabpaisa_payment service
                 Transaction.objects.create(
                     user=request.user,
-                    transaction_type='phonepe_payment',
+                    transaction_type='sabpaisa_payment',
                     amount=total_amount,
                     status='pending',
-                    description=f'PhonePe payment for order {order_number}',
+                    description=f'SabPaisa payment for order {order_number}',
                     related_order=temp_order,
-                    merchant_order_id=merchant_order_id,
+                    merchant_order_id=None,  # Will be set when payment is initiated via initiate_sabpaisa_payment_view
                     payer_name=payer_name,
                 )
                 
-                # Build redirect URL for callback
-                redirect_url = f"{settings.PHONEPE_BASE_URL}/api/payments/callback/?merchant_order_id={merchant_order_id}"
-                
-                # Initiate payment using PhonePe SDK
-                payment_response = initiate_payment(
-                    amount=float(total_amount),
-                    merchant_order_id=merchant_order_id,
-                    redirect_url=redirect_url
-                )
-                
-                if 'error' in payment_response:
-                    temp_order.delete()
-                    return Response(
-                        {
-                            'success': False,
-                            'error': f"Payment initiation failed: {payment_response['error']}",
-                            'error_code': payment_response.get('error_code'),
-                            'error_message': payment_response.get('error_message')
-                        },
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-                
-                # Extract redirect URL from response
-                redirect_url_from_response = payment_response.get('redirectUrl') or payment_response.get('data', {}).get('redirectUrl')
-                
-                if not redirect_url_from_response:
-                    temp_order.delete()
-                    return Response(
-                        {
-                            'success': False,
-                            'error': 'No redirect URL received from PhonePe'
-                        },
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-                
-                # Return payment initiation response
+                # Return order creation response (frontend will call initiate_sabpaisa_payment_view endpoint)
                 return Response({
                     'success': True,
-                    'message': 'Payment initiated successfully',
-                    'order_id': temp_order.id,
-                    'order_number': temp_order.order_number,
-                    'redirectUrl': redirect_url_from_response,
-                    'merchantOrderId': merchant_order_id
-                }, status=status.HTTP_200_OK)
+                    'data': {
+                        'id': temp_order.id,
+                        'order_id': temp_order.id,
+                        'order_number': temp_order.order_number,
+                        'total_amount': str(temp_order.total_amount),
+                    }
+                }, status=status.HTTP_201_CREATED)
             
             except Exception as e:
                 print(f"[ERROR] Error initiating payment: {str(e)}")

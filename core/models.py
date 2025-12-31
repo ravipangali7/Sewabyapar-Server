@@ -295,10 +295,10 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     description = models.TextField(blank=True, help_text='Transaction description')
-    related_order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe/sabpaisa transactions')
+    related_order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe transactions')
     related_withdrawal = models.ForeignKey('ecommerce.Withdrawal', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related withdrawal for withdrawal transactions')
-    # PhonePe transaction fields
-    merchant_order_id = models.CharField(max_length=100, blank=True, null=True, help_text='Merchant Order ID for PhonePe payment callbacks', db_index=True)
+    # PhonePe/SabPaisa transaction fields
+    merchant_order_id = models.CharField(max_length=100, blank=True, null=True, help_text='Merchant Order ID for PhonePe/SabPaisa payment callbacks (clientTxnId for SabPaisa)', db_index=True)
     utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference (UTR) for PhonePe transactions')
     bank_id = models.CharField(max_length=20, blank=True, null=True, help_text='Bank ID for PhonePe transactions')
     vpa = models.CharField(max_length=100, blank=True, null=True, help_text='Virtual Payment Address (VPA) for PhonePe transactions')
