@@ -7,62 +7,86 @@ from django.db import migrations, models
 def cleanup_invalid_address_ids(apps, schema_editor):
     """
     Clean up corrupted address IDs in Order table.
-    Some orders have string values in shipping_address_id/billing_address_id 
-    instead of valid integer foreign keys. Set these to NULL.
+    This function checks if the columns exist as ForeignKey (_id columns) and cleans them up.
+    If they're still TextField, the AlterField operation will handle the conversion.
     """
     import sys
     from django.db import connection
     
-    Order = apps.get_model('ecommerce', 'Order')
-    Address = apps.get_model('core', 'Address')
-    
-    # Use raw SQL to check and fix invalid foreign keys
-    # This is safer when dealing with corrupted data
+    # Check what columns actually exist in the table
     with connection.cursor() as cursor:
+        # Get table schema
+        cursor.execute("PRAGMA table_info(ecommerce_order)")
+        column_info = cursor.fetchall()
+        column_names = {row[1] for row in column_info}  # Set of column names
+        
+        # Check if shipping_address_id and billing_address_id exist (ForeignKey columns)
+        has_shipping_id = 'shipping_address_id' in column_names
+        has_billing_id = 'billing_address_id' in column_names
+        
+        # If the _id columns don't exist, they're still TextField and AlterField will handle conversion
+        # No cleanup needed in this case
+        if not has_shipping_id and not has_billing_id:
+            print("Address columns are still TextField (shipping_address, billing_address). AlterField will handle conversion. Skipping cleanup.")
+            sys.stdout.flush()
+            return
+        
         # Get all valid address IDs
-        cursor.execute("SELECT id FROM core_address")
-        valid_address_ids = {row[0] for row in cursor.fetchall()}
+        Address = apps.get_model('core', 'Address')
+        valid_address_ids = set(Address.objects.values_list('id', flat=True))
         
         if not valid_address_ids:
             # No addresses exist, set all to NULL
-            cursor.execute("UPDATE ecommerce_order SET shipping_address_id = NULL WHERE shipping_address_id IS NOT NULL")
-            cursor.execute("UPDATE ecommerce_order SET billing_address_id = NULL WHERE billing_address_id IS NOT NULL")
+            if has_shipping_id:
+                cursor.execute("UPDATE ecommerce_order SET shipping_address_id = NULL WHERE shipping_address_id IS NOT NULL")
+            if has_billing_id:
+                cursor.execute("UPDATE ecommerce_order SET billing_address_id = NULL WHERE billing_address_id IS NOT NULL")
             print("No addresses found, set all order address references to NULL")
             sys.stdout.flush()
             return
         
-        # Get all orders with non-null address IDs
-        cursor.execute("SELECT id, shipping_address_id, billing_address_id FROM ecommerce_order")
+        # Build SELECT query based on what columns exist
+        select_cols = ['id']
+        if has_shipping_id:
+            select_cols.append('shipping_address_id')
+        if has_billing_id:
+            select_cols.append('billing_address_id')
+        
+        cursor.execute(f"SELECT {', '.join(select_cols)} FROM ecommerce_order")
         orders = cursor.fetchall()
         
         invalid_shipping = []
         invalid_billing = []
         
-        for order_id, shipping_id, billing_id in orders:
-            # Check shipping_address_id
-            if shipping_id is not None:
-                try:
-                    # Try to convert to int
-                    shipping_id_int = int(shipping_id) if isinstance(shipping_id, str) else shipping_id
-                    if shipping_id_int not in valid_address_ids:
-                        invalid_shipping.append(order_id)
-                except (ValueError, TypeError):
-                    # Not a valid integer
-                    invalid_shipping.append(order_id)
+        for row in orders:
+            order_id = row[0]
+            col_idx = 1
             
-            # Check billing_address_id
-            if billing_id is not None:
-                try:
-                    # Try to convert to int
-                    billing_id_int = int(billing_id) if isinstance(billing_id, str) else billing_id
-                    if billing_id_int not in valid_address_ids:
+            # Check shipping_address_id if it exists
+            if has_shipping_id:
+                shipping_id = row[col_idx]
+                col_idx += 1
+                if shipping_id is not None:
+                    try:
+                        shipping_id_int = int(shipping_id) if isinstance(shipping_id, str) else shipping_id
+                        if shipping_id_int not in valid_address_ids:
+                            invalid_shipping.append(order_id)
+                    except (ValueError, TypeError):
+                        invalid_shipping.append(order_id)
+            
+            # Check billing_address_id if it exists
+            if has_billing_id:
+                billing_id = row[col_idx]
+                if billing_id is not None:
+                    try:
+                        billing_id_int = int(billing_id) if isinstance(billing_id, str) else billing_id
+                        if billing_id_int not in valid_address_ids:
+                            invalid_billing.append(order_id)
+                    except (ValueError, TypeError):
                         invalid_billing.append(order_id)
-                except (ValueError, TypeError):
-                    # Not a valid integer
-                    invalid_billing.append(order_id)
         
         # Fix invalid shipping_address_id
-        if invalid_shipping:
+        if invalid_shipping and has_shipping_id:
             placeholders = ','.join(['?'] * len(invalid_shipping))
             cursor.execute(
                 f"UPDATE ecommerce_order SET shipping_address_id = NULL WHERE id IN ({placeholders})",
@@ -72,7 +96,7 @@ def cleanup_invalid_address_ids(apps, schema_editor):
             sys.stdout.flush()
         
         # Fix invalid billing_address_id
-        if invalid_billing:
+        if invalid_billing and has_billing_id:
             placeholders = ','.join(['?'] * len(invalid_billing))
             cursor.execute(
                 f"UPDATE ecommerce_order SET billing_address_id = NULL WHERE id IN ({placeholders})",
