@@ -51,16 +51,18 @@ def cleanup_invalid_address_ids(apps, schema_editor):
                 print("You can restore these orders from backup if needed.")
                 
                 # First, delete related OrderItems to avoid foreign key constraint violations
-                placeholders = ','.join(['?'] * len(orders_to_delete))
-                sql_items = "DELETE FROM ecommerce_orderitem WHERE order_id IN (" + placeholders + ")"
-                cursor.execute(sql_items, orders_to_delete)
-                deleted_items = cursor.rowcount
+                # Use individual deletes to avoid SQL formatting issues with Django's debug mode
+                deleted_items = 0
+                for order_id in orders_to_delete:
+                    cursor.execute("DELETE FROM ecommerce_orderitem WHERE order_id = ?", (order_id,))
+                    deleted_items += cursor.rowcount
                 print(f"Deleted {deleted_items} related OrderItems")
                 
                 # Then delete the orders
-                sql_orders = "DELETE FROM ecommerce_order WHERE id IN (" + placeholders + ")"
-                cursor.execute(sql_orders, orders_to_delete)
-                deleted_orders = cursor.rowcount
+                deleted_orders = 0
+                for order_id in orders_to_delete:
+                    cursor.execute("DELETE FROM ecommerce_order WHERE id = ?", (order_id,))
+                    deleted_orders += cursor.rowcount
                 print(f"Deleted {deleted_orders} orders with address data")
                 sys.stdout.flush()
         
