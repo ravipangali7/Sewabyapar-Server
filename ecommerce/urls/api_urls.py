@@ -50,6 +50,7 @@ urlpatterns = [
     path('payments/callback/', payment_views.payment_callback, name='payment-callback'),
     # SabPaisa Payment URLs
     path('payments/sabpaisa/initiate/<int:order_id>/', payment_views.initiate_sabpaisa_payment_view, name='initiate-sabpaisa-payment'),
+    path('payments/sabpaisa/save-transaction/<int:order_id>/', payment_views.save_sabpaisa_transaction_view, name='save-sabpaisa-transaction'),
     path('payments/sabpaisa/callback/', payment_views.sabpaisa_payment_callback, name='sabpaisa-payment-callback'),
     
     # Merchant URLs

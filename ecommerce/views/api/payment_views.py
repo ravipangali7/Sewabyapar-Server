@@ -1178,6 +1178,106 @@ def initiate_sabpaisa_payment_view(request, order_id):
 
 
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def save_sabpaisa_transaction_view(request, order_id):
+    """
+    Save SabPaisa transaction with clientTxnId
+    Called from Flutter after generating clientTxnId, before opening payment
+    
+    POST /api/payments/sabpaisa/save-transaction/<order_id>/
+    Body: {"clientTxnId": "TXN..."}
+    """
+    import sys
+    print(f"\n=== Save SabPaisa Transaction Request ===")
+    print(f"Order ID: {order_id}")
+    print(f"User: {request.user.username if request.user else 'Anonymous'}")
+    sys.stdout.flush()
+    
+    try:
+        # Get order by ID and user
+        order = get_object_or_404(Order, pk=order_id, user=request.user)
+        print(f"Order found: {order.order_number}, Amount: {order.total_amount}")
+        sys.stdout.flush()
+        
+        # Get clientTxnId from request body
+        client_txn_id = request.data.get('clientTxnId') or request.POST.get('clientTxnId')
+        
+        if not client_txn_id:
+            print(f"ERROR: clientTxnId not provided in request")
+            sys.stdout.flush()
+            return Response(
+                {'error': 'clientTxnId is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        print(f"Client Txn ID: {client_txn_id}")
+        sys.stdout.flush()
+        
+        # Find existing Transaction for this order (created during order creation)
+        transaction = Transaction.objects.filter(
+            related_order=order,
+            transaction_type='sabpaisa_payment',
+            user=request.user
+        ).first()
+        
+        if not transaction:
+            print(f"WARNING: Transaction not found for order {order_id}, creating new one")
+            sys.stdout.flush()
+            # Create new transaction if it doesn't exist
+            transaction = Transaction.objects.create(
+                user=request.user,
+                transaction_type='sabpaisa_payment',
+                amount=order.total_amount,
+                status='pending',
+                description=f'SabPaisa payment for order {order.order_number}',
+                related_order=order,
+                merchant_order_id=client_txn_id,
+                payer_name=order.user.name if order.user.name else 'Customer',
+            )
+            print(f"[SAVE_TRANSACTION] Created new Transaction {transaction.id} with clientTxnId: {client_txn_id}")
+        else:
+            # Update existing transaction with clientTxnId
+            transaction.merchant_order_id = client_txn_id
+            transaction.save()
+            print(f"[SAVE_TRANSACTION] Updated Transaction {transaction.id} with clientTxnId: {client_txn_id}")
+        
+        sys.stdout.flush()
+        
+        # Update Order with clientTxnId (reusing phonepe_merchant_order_id field)
+        order.phonepe_merchant_order_id = client_txn_id
+        order.save()
+        print(f"[SAVE_TRANSACTION] Updated Order {order.id} with clientTxnId: {client_txn_id}")
+        sys.stdout.flush()
+        
+        return Response({
+            'success': True,
+            'message': 'Transaction saved successfully',
+            'data': {
+                'transactionId': transaction.id,
+                'clientTxnId': client_txn_id,
+            }
+        }, status=status.HTTP_200_OK)
+    
+    except Order.DoesNotExist:
+        print(f"ERROR: Order {order_id} not found")
+        sys.stdout.flush()
+        return Response(
+            {'error': 'Order not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"EXCEPTION in save_sabpaisa_transaction_view: {str(e)}")
+        print(f"Traceback:\n{error_traceback}")
+        sys.stdout.flush()
+        return Response(
+            {'error': f'Unexpected error: {str(e)}', 'traceback': error_traceback},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
 @permission_classes([permissions.AllowAny])  # AllowAny because SabPaisa will POST here
 def sabpaisa_payment_callback(request):
     """
