@@ -200,3 +200,24 @@ class UserBulkDeleteView(StaffRequiredMixin, View):
             messages.warning(request, 'Please select at least one user to delete.')
         return redirect('myadmin:core:user_list')
 
+
+def toggle_edit_access(request, pk):
+    """Toggle is_edit_access for a merchant user"""
+    if request.method == 'POST':
+        try:
+            user = get_object_or_404(User, pk=pk)
+            if not user.is_merchant:
+                messages.error(request, 'Only merchants can have edit access toggled.')
+                return redirect('myadmin:core:user_list')
+            
+            user.is_edit_access = not user.is_edit_access
+            user.save()
+            status = 'enabled' if user.is_edit_access else 'disabled'
+            messages.success(request, f'Edit access {status} for {user.name}.')
+        except Exception as e:
+            print(f'[ERROR] Error toggling edit access: {str(e)}')
+            traceback.print_exc()
+            messages.error(request, 'An error occurred while toggling edit access.')
+        return redirect('myadmin:core:user_list')
+    return redirect('myadmin:core:user_list')
+

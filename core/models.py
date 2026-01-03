@@ -94,6 +94,9 @@ class User(AbstractUser):
     # Merchant code field
     merchant_code = models.CharField(max_length=50, null=True, blank=True, unique=True, help_text='Auto-generated merchant code (e.g., MSB1, MSB2) - only for merchants')
     
+    # Merchant edit access field
+    is_edit_access = models.BooleanField(default=False, help_text='Whether merchant can edit store after creation (default False)')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

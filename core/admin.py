@@ -14,7 +14,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('phone', 'password')}),
         ('Personal info', {'fields': ('name', 'email', 'fcm_token', 'profile_picture')}),
-        ('Role', {'fields': ('is_merchant', 'is_driver')}),
+        ('Role', {'fields': ('is_merchant', 'is_driver', 'is_edit_access')}),
         ('Balance', {'fields': ('balance',)}),
         ('KYC Verification', {
             'fields': ('national_id', 'national_id_document_front', 'national_id_document_back', 'pan_no', 'pan_document', 'company_register_id', 'company_register_document', 'is_kyc_verified', 'kyc_submitted_at', 'kyc_verified_at'),

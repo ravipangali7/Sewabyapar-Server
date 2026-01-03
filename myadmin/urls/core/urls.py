@@ -12,6 +12,7 @@ urlpatterns = [
     path('users/<int:pk>/update/', user_views.UserUpdateView.as_view(), name='user_update'),
     path('users/<int:pk>/delete/', user_views.UserDeleteView.as_view(), name='user_delete'),
     path('users/<int:pk>/verify-kyc/', user_views.verify_kyc, name='user_verify_kyc'),
+    path('users/<int:pk>/toggle-edit-access/', user_views.toggle_edit_access, name='user_toggle_edit_access'),
     path('users/bulk-delete/', user_views.UserBulkDeleteView.as_view(), name='user_bulk_delete'),
     
     # KYC URLs

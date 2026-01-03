@@ -220,6 +220,14 @@
                                             <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> KYC
                                         </a>
                                     {% endif %}
+                                    {% if user.is_merchant %}
+                                        <form method="post" action="{% url 'myadmin:core:user_toggle_edit_access' user.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm {% if user.is_edit_access %}btn-warning{% else %}btn-secondary{% endif %}" title="{% if user.is_edit_access %}Disable{% else %}Enable{% endif %} Edit Access">
+                                                <i class="align-middle" data-feather="{% if user.is_edit_access %}lock{% else %}unlock{% endif %}" style="width: 14px; height: 14px;"></i> {% if user.is_edit_access %}Edit ON{% else %}Edit OFF{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
