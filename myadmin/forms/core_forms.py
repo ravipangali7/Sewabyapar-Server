@@ -167,12 +167,15 @@ class SuperSettingForm(forms.ModelForm):
     """Form for SuperSetting"""
     class Meta:
         model = SuperSetting
-        fields = ['sales_commission', 'basic_shipping_charge', 'balance', 'merchant_agreement_file']
+        fields = ['sales_commission', 'basic_shipping_charge', 'balance', 'merchant_agreement_file', 'is_phone_pe', 'is_sabpaisa', 'is_cod']
         widgets = {
             'sales_commission': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
             'basic_shipping_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'balance': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'merchant_agreement_file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
+            'is_phone_pe': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_sabpaisa': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_cod': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def clean_sales_commission(self):

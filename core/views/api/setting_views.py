@@ -26,6 +26,9 @@ def super_setting(request):
             'basic_shipping_charge': float(setting.basic_shipping_charge),
             'balance': float(setting.balance),
             'merchant_agreement_file': merchant_agreement_file_url,
+            'is_phone_pe': setting.is_phone_pe,
+            'is_sabpaisa': setting.is_sabpaisa,
+            'is_cod': setting.is_cod,
         }, status=status.HTTP_200_OK)
     except Exception as e:
         print(f"[ERROR] Error getting SuperSetting: {str(e)}")

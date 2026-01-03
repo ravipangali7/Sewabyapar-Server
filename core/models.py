@@ -255,6 +255,9 @@ class SuperSetting(models.Model):
                                  help_text='Platform balance')
     merchant_agreement_file = models.FileField(upload_to='merchant_agreements/', blank=True, null=True,
                                                help_text='Merchant agreement file for download')
+    is_phone_pe = models.BooleanField(default=True, help_text='Enable PhonePe payment method')
+    is_sabpaisa = models.BooleanField(default=True, help_text='Enable SabPaisa payment method')
+    is_cod = models.BooleanField(default=True, help_text='Enable Cash on Delivery payment method')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
