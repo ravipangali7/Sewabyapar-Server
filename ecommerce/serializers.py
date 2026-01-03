@@ -24,10 +24,10 @@ class StoreSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         
         # Convert logo and banner to full URLs
-        if data.get('logo') and request:
-            data['logo'] = request.build_absolute_uri(instance.logo.url) if instance.logo else None
-        if data.get('banner') and request:
-            data['banner'] = request.build_absolute_uri(instance.banner.url) if instance.banner else None
+        if instance.logo and request:
+            data['logo'] = request.build_absolute_uri(instance.logo.url)
+        if instance.banner and request:
+            data['banner'] = request.build_absolute_uri(instance.banner.url)
         
         return data
 

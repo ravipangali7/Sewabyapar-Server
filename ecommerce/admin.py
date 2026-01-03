@@ -12,6 +12,25 @@ class StoreAdmin(admin.ModelAdmin):
     search_fields = ['name', 'owner__username', 'email']
     readonly_fields = ['created_at', 'updated_at', 'shipdaak_pickup_warehouse_id', 
                       'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at']
+    fieldsets = (
+        ('Store Information', {
+            'fields': ('name', 'description', 'owner', 'logo', 'banner')
+        }),
+        ('Contact Information', {
+            'fields': ('phone', 'email', 'address', 'latitude', 'longitude')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Shipdaak Integration', {
+            'fields': ('shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Category)
