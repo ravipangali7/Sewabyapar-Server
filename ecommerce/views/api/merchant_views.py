@@ -756,6 +756,12 @@ def merchant_store_detail(request, pk):
         return Response(serializer.data)
     
     elif request.method in ['PUT', 'PATCH']:
+        # Check if merchant has edit access
+        if not request.user.is_edit_access:
+            return Response({
+                'error': 'You do not have permission to edit your store. Please contact admin to enable edit access.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         serializer = StoreSerializer(store, data=request.data, 
                                     partial=request.method == 'PATCH', 
                                     context={'request': request})
