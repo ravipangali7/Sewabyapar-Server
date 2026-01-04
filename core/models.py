@@ -126,10 +126,11 @@ class User(AbstractUser):
             })
     
     def save(self, *args, **kwargs):
+        # Set username to phone number before validation
+        if self.phone:
+            self.username = self.phone
         # Validate before saving
         self.full_clean()
-        # Set username to phone number
-        self.username = self.phone
         # Auto-set country based on country_code if not already set
         if self.country_code == '+977' and not self.country:
             self.country = 'Nepal'
