@@ -114,21 +114,30 @@ class SMSService:
             Dict[str, Any]: Result containing success status and message
         """
         try:
-            # Prepare parameters
-            params = {
-                'authorization': self.fast2sms_config['API_KEY'],
+            # Prepare JSON body as per Fast2SMS bulkV2 API specification
+            payload = {
                 'message': message,
                 'language': self.fast2sms_config['LANGUAGE'],
                 'route': self.fast2sms_config['ROUTE'],
-                'numbers': phone_number,
-                'flash': '0'
+                'numbers': phone_number,  # Can be comma-separated for multiple numbers
+                'flash': 0
             }
             
-            # Build URL with proper encoding
-            url = f"{self.fast2sms_config['API_URL']}?{urlencode(params)}"
+            # Prepare headers with authorization
+            headers = {
+                'authorization': self.fast2sms_config['API_KEY'],
+                'content-type': 'application/json',
+                'accept': '*/*',
+                'cache-control': 'no-cache'
+            }
             
-            # Send request
-            response = requests.get(url, timeout=30)
+            # Send POST request with JSON body
+            response = requests.post(
+                self.fast2sms_config['API_URL'],
+                json=payload,
+                headers=headers,
+                timeout=30
+            )
             
             # Check if SMS was sent successfully
             if response.status_code == 200:
