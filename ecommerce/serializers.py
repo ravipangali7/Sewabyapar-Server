@@ -51,8 +51,10 @@ class CategorySerializer(serializers.ModelSerializer):
         return None
     
     def get_subcategories(self, obj):
-        if obj.subcategories.exists():
-            return CategorySerializer(obj.subcategories.all(), many=True, context=self.context).data
+        # Filter only active subcategories and recursively serialize them
+        active_subcategories = obj.subcategories.filter(is_active=True)
+        if active_subcategories.exists():
+            return CategorySerializer(active_subcategories, many=True, context=self.context).data
         return []
 
 

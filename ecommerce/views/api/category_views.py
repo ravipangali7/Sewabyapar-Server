@@ -12,7 +12,12 @@ from ...serializers import CategorySerializer
 def category_list_create(request):
     """List all categories or create a new category"""
     if request.method == 'GET':
-        categories = Category.objects.filter(is_active=True, parent__isnull=True)
+        # Get only parent categories (parent__isnull=True) that are active
+        # Use prefetch_related to optimize nested queries for subcategories
+        categories = Category.objects.filter(
+            is_active=True, 
+            parent__isnull=True
+        ).prefetch_related('subcategories')
         paginator = PageNumberPagination()
         paginated_categories = paginator.paginate_queryset(categories, request)
         serializer = CategorySerializer(paginated_categories, many=True, context={'request': request})
