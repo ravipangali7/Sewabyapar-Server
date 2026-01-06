@@ -3,7 +3,8 @@ from django.urls import path
 from myadmin.views.ecommerce import (
     product_views, category_views, store_views, order_views,
     review_views, cart_views, wishlist_views, coupon_views,
-    product_image_views, order_item_views, banner_views, popup_views
+    product_image_views, order_item_views, banner_views, popup_views,
+    shipping_charge_history_views
 )
 
 app_name = 'ecommerce'
@@ -49,6 +50,10 @@ urlpatterns = [
     # OrderItem URLs (read-only)
     path('order-items/', order_item_views.OrderItemListView.as_view(), name='order_item_list'),
     path('order-items/<int:pk>/', order_item_views.OrderItemDetailView.as_view(), name='order_item_detail'),
+    
+    # Shipping Charge History URLs (read-only)
+    path('shipping-charge-history/', shipping_charge_history_views.ShippingChargeHistoryListView.as_view(), name='shipping_charge_history_list'),
+    path('shipping-charge-history/<int:pk>/', shipping_charge_history_views.ShippingChargeHistoryDetailView.as_view(), name='shipping_charge_history_detail'),
     
     # Review URLs
     path('reviews/', review_views.ReviewListView.as_view(), name='review_list'),

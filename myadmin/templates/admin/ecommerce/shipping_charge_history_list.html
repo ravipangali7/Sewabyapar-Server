@@ -1,0 +1,128 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Shipping Charge History</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:dashboard' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="truck"></i> All Shipping Charge Histories
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" name="search" placeholder="Search by order number, merchant, customer..." value="{{ search }}">
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" name="paid_by">
+                                    <option value="">All Paid By</option>
+                                    <option value="merchant" {% if paid_by == 'merchant' %}selected{% endif %}>Merchant</option>
+                                    <option value="customer" {% if paid_by == 'customer' %}selected{% endif %}>Customer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" name="order" placeholder="Order ID..." value="{{ order_id }}">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" name="merchant" placeholder="Merchant ID..." value="{{ merchant_id }}">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" name="customer" placeholder="Customer ID..." value="{{ customer_id }}">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-primary w-100" type="submit">
+                                    <i class="align-middle" data-feather="search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>S.N</th>
+                                    <th>Order</th>
+                                    <th>Merchant</th>
+                                    <th>Customer</th>
+                                    <th>Shipping Charge</th>
+                                    <th>Paid By</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history in shipping_charge_histories %}
+                                <tr>
+                                    <td>
+                                        {% if page_obj %}
+                                            {{ page_obj.start_index|add:forloop.counter0 }}
+                                        {% else %}
+                                            {{ forloop.counter }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:order_detail' history.order.pk %}" class="text-decoration-none">
+                                            <span class="badge bg-info">{{ history.order.order_number }}</span>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:store_detail' history.merchant.pk %}" class="text-decoration-none">
+                                            {{ history.merchant.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:core:user_detail' history.customer.pk %}" class="text-decoration-none">
+                                            {{ history.customer.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <strong>₹{{ history.shipping_charge|floatformat:2 }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if history.paid_by == 'merchant' %}primary{% else %}success{% endif %}">
+                                            {{ history.get_paid_by_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                                        {{ history.created_at|date:"M d, Y" }}<br>
+                                        <small class="text-muted">{{ history.created_at|date:"g:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:shipping_charge_history_detail' history.pk %}" class="btn btn-sm btn-info">
+                                            <i class="align-middle" data-feather="eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No shipping charge history found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% include 'admin/includes/pagination.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

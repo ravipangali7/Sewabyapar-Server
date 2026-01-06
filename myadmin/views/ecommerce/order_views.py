@@ -83,6 +83,12 @@ class OrderDetailView(StaffRequiredMixin, DetailView):
     model = Order
     template_name = 'admin/ecommerce/order_detail.html'
     context_object_name = 'order'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add shipping charge history for this order
+        context['shipping_charge_history'] = self.object.shipping_charge_history.all().order_by('-created_at')
+        return context
 
 
 class OrderCreateView(StaffRequiredMixin, CreateView):

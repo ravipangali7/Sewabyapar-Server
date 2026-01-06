@@ -411,6 +411,78 @@
             </div>
         </div>
     </div>
+
+    <!-- Shipping Charge History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="truck"></i> Shipping Charge History
+                    </h5>
+                    <a href="{% url 'myadmin:ecommerce:shipping_charge_history_list' %}?order={{ order.pk }}" class="btn btn-sm btn-outline-primary float-end">
+                        <i class="align-middle" data-feather="external-link"></i> View All History
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if shipping_charge_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Shipping Charge</th>
+                                    <th>Paid By</th>
+                                    <th>Merchant</th>
+                                    <th>Customer</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history in shipping_charge_history %}
+                                <tr>
+                                    <td>
+                                        <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                                        {{ history.created_at|date:"M d, Y" }}<br>
+                                        <small class="text-muted">{{ history.created_at|date:"g:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>₹{{ history.shipping_charge|floatformat:2 }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if history.paid_by == 'merchant' %}primary{% else %}success{% endif %}">
+                                            {{ history.get_paid_by_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:store_detail' history.merchant.pk %}" class="text-decoration-none">
+                                            {{ history.merchant.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:core:user_detail' history.customer.pk %}" class="text-decoration-none">
+                                            {{ history.customer.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:shipping_charge_history_detail' history.pk %}" class="btn btn-sm btn-info">
+                                            <i class="align-middle" data-feather="eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="align-middle" data-feather="info"></i> No shipping charge history available for this order.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

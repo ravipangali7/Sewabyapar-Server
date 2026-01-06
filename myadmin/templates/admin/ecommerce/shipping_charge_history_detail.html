@@ -1,0 +1,163 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Shipping Charge History Details</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:shipping_charge_history_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Shipping Charge</h6>
+                            <h4 class="mb-0">₹{{ shipping_charge_history.shipping_charge|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Paid By</h6>
+                            <span class="badge bg-{% if shipping_charge_history.paid_by == 'merchant' %}primary{% else %}success{% endif %} fs-6">
+                                {{ shipping_charge_history.get_paid_by_display }}
+                            </span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if shipping_charge_history.paid_by == 'merchant' %}store{% else %}user{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Created At</h6>
+                            <div class="fs-6">{{ shipping_charge_history.created_at|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ shipping_charge_history.created_at|date:"g:i A" }}</small>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="truck"></i> Shipping Charge History Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="shopping-cart" style="width: 16px; height: 16px;"></i> Order:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:order_detail' shipping_charge_history.order.pk %}" class="text-decoration-none">
+                                <span class="badge bg-info fs-6">{{ shipping_charge_history.order.order_number }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="store" style="width: 16px; height: 16px;"></i> Merchant:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:ecommerce:store_detail' shipping_charge_history.merchant.pk %}" class="text-decoration-none">
+                                {{ shipping_charge_history.merchant.name }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Customer:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' shipping_charge_history.customer.pk %}" class="text-decoration-none">
+                                {{ shipping_charge_history.customer.name }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Shipping Charge:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ shipping_charge_history.shipping_charge|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="{% if shipping_charge_history.paid_by == 'merchant' %}store{% else %}user{% endif %}" style="width: 16px; height: 16px;"></i> Paid By:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-{% if shipping_charge_history.paid_by == 'merchant' %}primary{% else %}success{% endif %} fs-6">
+                                {{ shipping_charge_history.get_paid_by_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created At:</strong></div>
+                        <div class="col-sm-8">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ shipping_charge_history.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ shipping_charge_history.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Quick Links
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'myadmin:ecommerce:order_detail' shipping_charge_history.order.pk %}" class="btn btn-outline-primary">
+                            <i class="align-middle" data-feather="shopping-cart"></i> View Order
+                        </a>
+                        <a href="{% url 'myadmin:ecommerce:store_detail' shipping_charge_history.merchant.pk %}" class="btn btn-outline-info">
+                            <i class="align-middle" data-feather="store"></i> View Merchant
+                        </a>
+                        <a href="{% url 'myadmin:core:user_detail' shipping_charge_history.customer.pk %}" class="btn btn-outline-success">
+                            <i class="align-middle" data-feather="user"></i> View Customer
+                        </a>
+                        <a href="{% url 'myadmin:ecommerce:shipping_charge_history_list' %}?order={{ shipping_charge_history.order.pk }}" class="btn btn-outline-secondary">
+                            <i class="align-middle" data-feather="list"></i> All History for Order
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
