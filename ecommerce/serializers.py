@@ -14,6 +14,7 @@ class StoreSerializer(serializers.ModelSerializer):
         model = Store
         fields = ['id', 'name', 'description', 'owner', 'logo', 'banner', 'address', 
                  'latitude', 'longitude', 'phone', 'email', 'is_active', 
+                 'take_shipping_responsibility', 'minimum_order_value',
                  'shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 
                  'shipdaak_warehouse_created_at', 'created_at', 'updated_at']
         read_only_fields = ['id', 'shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 
