@@ -38,14 +38,25 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 # Calculate commission and round to 2 decimal places
                 # Ensure we're working with Decimal types
                 subtotal = Decimal(str(instance.subtotal))
+                shipping_cost = Decimal(str(instance.shipping_cost))
                 sales_commission_percentage = Decimal(str(super_setting.sales_commission))
-                commission = (subtotal * sales_commission_percentage) / Decimal('100')
+                
+                # Check if merchant takes shipping responsibility
+                store = instance.merchant
+                if store and store.take_shipping_responsibility:
+                    # Merchant pays shipping: commission on (subtotal - shipping_cost)
+                    net_for_commission = subtotal - shipping_cost
+                    commission = (net_for_commission * sales_commission_percentage) / Decimal('100')
+                    # Vendor payout = subtotal - shipping_cost - commission
+                    vendor_payout = net_for_commission - commission
+                else:
+                    # Customer pays shipping: commission on subtotal only
+                    commission = (subtotal * sales_commission_percentage) / Decimal('100')
+                    # Vendor payout = subtotal - commission
+                    vendor_payout = subtotal - commission
+                
                 # Round to 2 decimal places
                 commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                
-                # Calculate vendor payout (subtotal - commission) and round to 2 decimal places
-                vendor_payout = subtotal - commission
-                # Round to 2 decimal places
                 vendor_payout = vendor_payout.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
                 # Update SuperSetting balance with commission

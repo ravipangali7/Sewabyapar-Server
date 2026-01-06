@@ -86,6 +86,7 @@ def split_order_by_vendor(temp_order):
             basic_shipping_charge = Decimal('0')
         
         # Create separate order for each vendor
+        from ecommerce.models import ShippingChargeHistory
         created_orders = []
         for store, items in vendor_items.items():
             # Calculate subtotal for this vendor - convert to Decimal to avoid type mismatch
@@ -93,7 +94,14 @@ def split_order_by_vendor(temp_order):
             for item in items:
                 item_total = Decimal(str(item['price'])) * Decimal(str(item['quantity']))
                 vendor_subtotal += item_total
-            vendor_total = vendor_subtotal + basic_shipping_charge
+            
+            # Calculate shipping cost: only charge if merchant doesn't take shipping responsibility
+            if store.take_shipping_responsibility:
+                shipping_cost = Decimal('0')
+            else:
+                shipping_cost = basic_shipping_charge
+            
+            vendor_total = vendor_subtotal + shipping_cost
             
             # Generate order number
             order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -104,7 +112,7 @@ def split_order_by_vendor(temp_order):
                 merchant=store,
                 order_number=order_number,
                 subtotal=vendor_subtotal,
-                shipping_cost=basic_shipping_charge,
+                shipping_cost=shipping_cost,
                 total_amount=vendor_total,
                 shipping_address=temp_order.shipping_address,
                 billing_address=temp_order.billing_address,
@@ -129,6 +137,17 @@ def split_order_by_vendor(temp_order):
                     quantity=item_quantity,
                     price=item_price,
                     total=item_total,
+                )
+            
+            # Create shipping charge history record
+            if shipping_cost > 0:
+                paid_by = 'merchant' if store.take_shipping_responsibility else 'customer'
+                ShippingChargeHistory.objects.create(
+                    order=order,
+                    merchant=store,
+                    customer=temp_order.user,
+                    shipping_charge=shipping_cost,
+                    paid_by=paid_by
                 )
             
             created_orders.append(order)
@@ -292,13 +311,21 @@ def process_checkout(request):
             except:
                 super_setting = SuperSetting.objects.create()
             
+            from ecommerce.models import ShippingChargeHistory
             created_orders = []
             
             # Create separate order for each vendor
             for store, items in vendor_items.items():
                 # Calculate subtotal for this vendor
                 vendor_subtotal = sum(item.product.price * item.quantity for item in items)
-                vendor_total = vendor_subtotal + basic_shipping_charge
+                
+                # Calculate shipping cost: only charge if merchant doesn't take shipping responsibility
+                if store.take_shipping_responsibility:
+                    shipping_cost = 0
+                else:
+                    shipping_cost = basic_shipping_charge
+                
+                vendor_total = vendor_subtotal + shipping_cost
                 
                 # Generate order number
                 order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -309,7 +336,7 @@ def process_checkout(request):
                     merchant=store,
                     order_number=order_number,
                     subtotal=vendor_subtotal,
-                    shipping_cost=basic_shipping_charge,
+                    shipping_cost=shipping_cost,
                     total_amount=vendor_total,
                     shipping_address=shipping_address_str,
                     billing_address=billing_address_str,
@@ -329,6 +356,17 @@ def process_checkout(request):
                         quantity=item.quantity,
                         price=item.product.price,
                         total=item.product.price * item.quantity,
+                    )
+                
+                # Create shipping charge history record
+                if shipping_cost > 0:
+                    paid_by = 'merchant' if store.take_shipping_responsibility else 'customer'
+                    ShippingChargeHistory.objects.create(
+                        order=order,
+                        merchant=store,
+                        customer=request.user,
+                        shipping_charge=shipping_cost,
+                        paid_by=paid_by
                     )
                 
                 created_orders.append(order)
@@ -396,21 +434,26 @@ def checkout_view(request):
     
     subtotal = sum(item_total['item_total'] for item_total in cart_items_with_totals)
     
-    # Calculate shipping: basic_shipping_charge * number of vendors
+    # Calculate shipping: only for vendors where take_shipping_responsibility=false
     vendor_count = len(vendor_items)
-    shipping = basic_shipping_charge * vendor_count
+    shipping = 0
+    for store in vendor_items.keys():
+        if not store.take_shipping_responsibility:
+            shipping += basic_shipping_charge
     total = subtotal + shipping
     
     # Prepare vendor breakdown for display
     vendor_breakdown = []
     for store, items in vendor_items.items():
         vendor_subtotal = sum(item.product.price * item.quantity for item in items)
+        # Shipping for this vendor
+        vendor_shipping = 0 if store.take_shipping_responsibility else basic_shipping_charge
         vendor_breakdown.append({
             'store': store,
             'items': items,
             'subtotal': vendor_subtotal,
-            'shipping': basic_shipping_charge,
-            'total': vendor_subtotal + basic_shipping_charge,
+            'shipping': vendor_shipping,
+            'total': vendor_subtotal + vendor_shipping,
         })
     
     # Coupon handling

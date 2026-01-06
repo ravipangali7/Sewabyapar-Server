@@ -10,11 +10,76 @@ import random
 import string
 import sys
 import traceback
-from ...models import Order
+from ...models import Order, Store
 from ...serializers import OrderSerializer, OrderCreateSerializer
 from ...services.phonepe_service import initiate_payment, generate_merchant_order_id
 from core.models import SuperSetting, Transaction
 
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def validate_cart_for_order(request):
+    """Validate cart items against minimum order value for each merchant"""
+    try:
+        items_data = request.data.get('items', [])
+        
+        if not items_data:
+            return Response({
+                'valid': True,
+                'message': 'Cart is empty'
+            }, status=status.HTTP_200_OK)
+        
+        # Group items by merchant (store)
+        vendor_items = defaultdict(list)
+        for item_data in items_data:
+            store_id = item_data.get('store')
+            if store_id:
+                try:
+                    store = Store.objects.get(id=store_id)
+                    vendor_items[store].append(item_data)
+                except Store.DoesNotExist:
+                    continue
+        
+        # Validate minimum order value for each merchant
+        errors = []
+        for store, items in vendor_items.items():
+            # Calculate total for this merchant
+            merchant_total = Decimal('0')
+            for item in items:
+                item_total = Decimal(str(item.get('total', 0)))
+                merchant_total += item_total
+            
+            # Check minimum order value
+            minimum_order_value = Decimal(str(store.minimum_order_value))
+            if minimum_order_value > 0 and merchant_total < minimum_order_value:
+                remaining = minimum_order_value - merchant_total
+                errors.append({
+                    'merchant_id': store.id,
+                    'merchant_name': store.name,
+                    'merchant_code': store.owner.merchant_code if store.owner and store.owner.merchant_code else None,
+                    'current_total': float(merchant_total),
+                    'minimum_order_value': float(minimum_order_value),
+                    'remaining': float(remaining)
+                })
+        
+        if errors:
+            return Response({
+                'valid': False,
+                'errors': errors
+            }, status=status.HTTP_200_OK)
+        
+        return Response({
+            'valid': True,
+            'message': 'Cart is valid for order'
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        print(f"[ERROR] Error validating cart: {str(e)}")
+        traceback.print_exc()
+        return Response({
+            'valid': False,
+            'error': f'Error validating cart: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET', 'POST'])
@@ -74,10 +139,31 @@ def order_list_create(request):
                         except Store.DoesNotExist:
                             continue
                 
-                # Calculate total amounts
+                # Validate minimum order value for each merchant
+                for store, items in vendor_items.items():
+                    merchant_total = Decimal(str(sum(item.get('total', 0) for item in items)))
+                    minimum_order_value = Decimal(str(store.minimum_order_value))
+                    if minimum_order_value > 0 and merchant_total < minimum_order_value:
+                        remaining = minimum_order_value - merchant_total
+                        return Response({
+                            'success': False,
+                            'error': f'Order value for {store.name} is {merchant_total}, but minimum order value is {minimum_order_value}. Please add items worth {remaining} more.',
+                            'validation_error': {
+                                'merchant_id': store.id,
+                                'merchant_name': store.name,
+                                'merchant_code': store.owner.merchant_code if store.owner and store.owner.merchant_code else None,
+                                'current_total': float(merchant_total),
+                                'minimum_order_value': float(minimum_order_value),
+                                'remaining': float(remaining)
+                            }
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
                 total_subtotal = Decimal(str(sum(item.get('total', 0) for item in items_data)))
-                vendor_count = len(vendor_items)
-                total_shipping = basic_shipping_charge * vendor_count
+                total_shipping = Decimal('0')
+                for store in vendor_items.keys():
+                    if not store.take_shipping_responsibility:
+                        total_shipping += basic_shipping_charge
                 total_amount = total_subtotal + total_shipping
                 
                 # Generate merchant order ID
@@ -231,10 +317,31 @@ def order_list_create(request):
                         except Store.DoesNotExist:
                             continue
                 
-                # Calculate total amounts
+                # Validate minimum order value for each merchant
+                for store, items in vendor_items.items():
+                    merchant_total = Decimal(str(sum(item.get('total', 0) for item in items)))
+                    minimum_order_value = Decimal(str(store.minimum_order_value))
+                    if minimum_order_value > 0 and merchant_total < minimum_order_value:
+                        remaining = minimum_order_value - merchant_total
+                        return Response({
+                            'success': False,
+                            'error': f'Order value for {store.name} is {merchant_total}, but minimum order value is {minimum_order_value}. Please add items worth {remaining} more.',
+                            'validation_error': {
+                                'merchant_id': store.id,
+                                'merchant_name': store.name,
+                                'merchant_code': store.owner.merchant_code if store.owner and store.owner.merchant_code else None,
+                                'current_total': float(merchant_total),
+                                'minimum_order_value': float(minimum_order_value),
+                                'remaining': float(remaining)
+                            }
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
                 total_subtotal = Decimal(str(sum(item.get('total', 0) for item in items_data)))
-                vendor_count = len(vendor_items)
-                total_shipping = basic_shipping_charge * vendor_count
+                total_shipping = Decimal('0')
+                for store in vendor_items.keys():
+                    if not store.take_shipping_responsibility:
+                        total_shipping += basic_shipping_charge
                 total_amount = total_subtotal + total_shipping
                 
                 # Generate merchant order ID (will be used when creating PhonePe order token)

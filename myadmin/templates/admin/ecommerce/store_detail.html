@@ -150,6 +150,24 @@
                         </div>
                     </div>
                     {% endif %}
+                    <hr>
+                    <h6 class="mb-3"><i class="align-middle" data-feather="truck" style="width: 18px; height: 18px;"></i> Shipping Settings</h6>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Takes Shipping Responsibility:</strong></div>
+                        <div class="col-sm-8">
+                            {% if store.take_shipping_responsibility %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Minimum Order Value:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="fs-6">₹{{ store.minimum_order_value }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,14 +1,14 @@
 from django.contrib import admin
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, GlobalCourier
+    Review, Wishlist, Coupon, GlobalCourier, ShippingChargeHistory
 )
 
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'shipdaak_pickup_warehouse_id', 'created_at']
-    list_filter = ['is_active', 'created_at']
+    list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'take_shipping_responsibility', 'minimum_order_value', 'shipdaak_pickup_warehouse_id', 'created_at']
+    list_filter = ['is_active', 'take_shipping_responsibility', 'created_at']
     search_fields = ['name', 'owner__username', 'email']
     readonly_fields = ['created_at', 'updated_at', 'shipdaak_pickup_warehouse_id', 
                       'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at']
@@ -18,6 +18,9 @@ class StoreAdmin(admin.ModelAdmin):
         }),
         ('Contact Information', {
             'fields': ('phone', 'email', 'address', 'latitude', 'longitude')
+        }),
+        ('Shipping Settings', {
+            'fields': ('take_shipping_responsibility', 'minimum_order_value')
         }),
         ('Status', {
             'fields': ('is_active',)
@@ -119,3 +122,12 @@ class GlobalCourierAdmin(admin.ModelAdmin):
     search_fields = ['courier_name', 'courier_id']
     readonly_fields = ['created_at', 'updated_at']
     list_editable = ['is_active', 'priority']
+
+
+@admin.register(ShippingChargeHistory)
+class ShippingChargeHistoryAdmin(admin.ModelAdmin):
+    list_display = ['order', 'merchant', 'customer', 'shipping_charge', 'paid_by', 'created_at']
+    list_filter = ['paid_by', 'created_at']
+    search_fields = ['order__order_number', 'merchant__name', 'customer__name']
+    readonly_fields = ['created_at']
+    ordering = ['-created_at']
