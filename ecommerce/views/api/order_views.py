@@ -429,7 +429,7 @@ def order_list_create(request):
                 
                 if not first_order:
                     return Response(
-                        {'error': 'No valid items found to create order'},
+                        {'success': False, 'error': 'No valid items found to create order'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
@@ -449,7 +449,27 @@ def order_list_create(request):
                     'orders': orders_serializer.data,
                     'order_count': len(created_orders)
                 }, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Log validation errors for debugging
+                print(f"[ERROR] COD order validation failed for user {request.user.id if request.user else 'None'}:")
+                print(f"[ERROR] Validation errors: {serializer.errors}")
+                print(f"[ERROR] Request data: {request.data}")
+                sys.stdout.flush()
+                
+                # Format serializer errors into a user-friendly message
+                error_messages = []
+                for field, errors in serializer.errors.items():
+                    if isinstance(errors, list):
+                        error_messages.extend([f"{field}: {error}" for error in errors])
+                    else:
+                        error_messages.append(f"{field}: {errors}")
+                
+                return Response({
+                    'success': False,
+                    'error': 'Validation failed',
+                    'message': '; '.join(error_messages) if error_messages else 'Invalid order data',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
