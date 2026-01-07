@@ -4,7 +4,7 @@ from myadmin.views.ecommerce import (
     product_views, category_views, store_views, order_views,
     review_views, cart_views, wishlist_views, coupon_views,
     product_image_views, order_item_views, banner_views, popup_views,
-    shipping_charge_history_views
+    shipping_charge_history_views, payment_setting_views
 )
 
 app_name = 'ecommerce'
@@ -98,5 +98,12 @@ urlpatterns = [
     path('popups/create/', popup_views.PopupCreateView.as_view(), name='popup_create'),
     path('popups/<int:pk>/update/', popup_views.PopupUpdateView.as_view(), name='popup_update'),
     path('popups/<int:pk>/delete/', popup_views.PopupDeleteView.as_view(), name='popup_delete'),
+    
+    # Payment Setting URLs
+    path('payment-settings/', payment_setting_views.PaymentSettingListView.as_view(), name='payment_setting_list'),
+    path('payment-settings/<int:pk>/', payment_setting_views.PaymentSettingDetailView.as_view(), name='payment_setting_detail'),
+    path('payment-settings/<int:pk>/approve/', payment_setting_views.PaymentSettingApproveView.as_view(), name='payment_setting_approve'),
+    path('payment-settings/<int:pk>/reject/', payment_setting_views.PaymentSettingRejectView.as_view(), name='payment_setting_reject'),
+    path('payment-settings/bulk-approve/', payment_setting_views.PaymentSettingBulkApproveView.as_view(), name='payment_setting_bulk_approve'),
 ]
 

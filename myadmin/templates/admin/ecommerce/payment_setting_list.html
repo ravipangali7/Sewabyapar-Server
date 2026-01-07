@@ -1,0 +1,240 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Merchant Payout Method Verification</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:dashboard' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Payment Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="search" placeholder="Search by merchant name, phone, email..." value="{{ search }}">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" name="status">
+                                    <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+                                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                                    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" type="submit">
+                                    <i class="align-middle" data-feather="search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <form method="post" action="{% url 'myadmin:ecommerce:payment_setting_bulk_approve' %}" id="bulk-action-form" class="mb-3">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">Select All</button>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAll()">Deselect All</button>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-sm btn-success" onclick="event.preventDefault(); const form = this.closest('form'); if (form) { confirmQuestion('Approve Payment Settings', 'Are you sure you want to approve selected payment settings?').then(() => form.submit()).catch(() => {}); }">
+                                    <i class="align-middle" data-feather="check-circle"></i> Approve Selected
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="40"><input type="checkbox" id="select-all-checkbox" onclick="toggleAll()"></th>
+                                    <th>Merchant</th>
+                                    <th>Payment Method</th>
+                                    <th>Payment Details</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment_setting in payment_settings %}
+                                <tr>
+                                    <td>
+                                        {% if payment_setting.status == 'pending' %}
+                                        <input type="checkbox" name="selected_items" value="{{ payment_setting.pk }}" class="item-checkbox">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ payment_setting.user.name }}</strong><br>
+                                            <small class="text-muted">{{ payment_setting.user.phone }}</small>
+                                            {% if payment_setting.user.email %}
+                                            <br><small class="text-muted">{{ payment_setting.user.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ payment_setting.get_payment_method_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if payment_setting.payment_method_type == 'bank_account' %}
+                                            <small>
+                                                <strong>Account:</strong> {{ payment_setting.payment_details.account_number|default:"N/A" }}<br>
+                                                <strong>IFSC:</strong> {{ payment_setting.payment_details.ifsc|default:"N/A" }}<br>
+                                                <strong>Bank:</strong> {{ payment_setting.payment_details.bank_name|default:"N/A" }}<br>
+                                                <strong>Holder:</strong> {{ payment_setting.payment_details.account_holder_name|default:"N/A" }}
+                                            </small>
+                                        {% elif payment_setting.payment_method_type == 'upi' %}
+                                            <small>
+                                                <strong>VPA:</strong> {{ payment_setting.payment_details.vpa|default:"N/A" }}<br>
+                                                {% if payment_setting.payment_details.upi_id %}
+                                                <strong>UPI ID:</strong> {{ payment_setting.payment_details.upi_id }}
+                                                {% endif %}
+                                            </small>
+                                        {% elif payment_setting.payment_method_type == 'wallet' %}
+                                            <small>
+                                                <strong>Type:</strong> {{ payment_setting.payment_details.wallet_type|default:"N/A" }}<br>
+                                                <strong>ID:</strong> {{ payment_setting.payment_details.wallet_id|default:"N/A" }}<br>
+                                                {% if payment_setting.payment_details.wallet_provider %}
+                                                <strong>Provider:</strong> {{ payment_setting.payment_details.wallet_provider }}
+                                                {% endif %}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if payment_setting.status == 'approved' %}
+                                            <span class="badge bg-success">
+                                                <i class="align-middle" data-feather="check-circle" style="width: 14px; height: 14px;"></i> Approved
+                                            </span>
+                                            {% if payment_setting.approved_at %}
+                                                <br><small class="text-muted">{{ payment_setting.approved_at|date:"M d, Y" }}</small>
+                                            {% endif %}
+                                        {% elif payment_setting.status == 'rejected' %}
+                                            <span class="badge bg-danger">
+                                                <i class="align-middle" data-feather="x-circle" style="width: 14px; height: 14px;"></i> Rejected
+                                            </span>
+                                            {% if payment_setting.rejected_at %}
+                                                <br><small class="text-muted">{{ payment_setting.rejected_at|date:"M d, Y" }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ payment_setting.created_at|date:"M d, Y" }}<br>
+                                        <small class="text-muted">{{ payment_setting.created_at|date:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'myadmin:ecommerce:payment_setting_detail' payment_setting.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="align-middle" data-feather="eye"></i> Review
+                                        </a>
+                                        {% if payment_setting.status == 'pending' %}
+                                        <form method="post" action="{% url 'myadmin:ecommerce:payment_setting_approve' payment_setting.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="event.preventDefault(); const form = this.closest('form'); if (form) { confirmQuestion('Approve Payment Setting', 'Approve payment setting for {{ payment_setting.user.name }}?').then(() => form.submit()).catch(() => {}); }">
+                                                <i class="align-middle" data-feather="check"></i> Approve
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        {% if payment_setting.status != 'approved' %}
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ payment_setting.pk }}">
+                                            <i class="align-middle" data-feather="x-circle"></i> Reject
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No payment settings found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% include 'admin/includes/pagination.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modals for each payment setting -->
+{% for payment_setting in payment_settings %}
+{% if payment_setting.status != 'approved' %}
+<div class="modal fade" id="rejectModal{{ payment_setting.pk }}" tabindex="-1" aria-labelledby="rejectModalLabel{{ payment_setting.pk }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="rejectModalLabel{{ payment_setting.pk }}">
+                    <i class="align-middle" data-feather="x-circle"></i> Reject Payment Setting
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'myadmin:ecommerce:payment_setting_reject' payment_setting.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="align-middle" data-feather="alert-triangle"></i>
+                        <strong>Warning:</strong> You are about to reject payment setting for <strong>{{ payment_setting.user.name }}</strong>. Please provide a reason for rejection.
+                    </div>
+                    <div class="mb-3">
+                        <label for="rejection_reason{{ payment_setting.pk }}" class="form-label">
+                            <strong>Rejection Reason <span class="text-danger">*</span></strong>
+                        </label>
+                        <textarea class="form-control" id="rejection_reason{{ payment_setting.pk }}" name="rejection_reason" rows="5" required placeholder="Please provide a detailed reason for rejecting this payment setting..."></textarea>
+                        <small class="form-text text-muted">This reason will be visible to the merchant.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="align-middle" data-feather="x-circle"></i> Reject Payment Setting
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<script>
+function toggleAll() {
+    const selectAll = document.getElementById('select-all-checkbox');
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    document.getElementById('select-all-checkbox').checked = true;
+}
+
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('select-all-checkbox').checked = false;
+}
+
+// Initialize Feather icons
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+{% endblock %}

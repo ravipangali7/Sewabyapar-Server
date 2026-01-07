@@ -1,7 +1,7 @@
 """Forms for ecommerce models"""
 from django import forms
 from django.forms.models import inlineformset_factory
-from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem, Banner, Popup
+from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem, Banner, Popup, MerchantPaymentSetting
 from core.models import Address
 
 
@@ -272,4 +272,21 @@ class PopupForm(forms.ModelForm):
             is_active=True,
             is_approved=True
         ).select_related('store', 'category').order_by('name')
+
+
+class PaymentSettingForm(forms.ModelForm):
+    """Form for payment setting - read-only for admin verification"""
+    class Meta:
+        model = MerchantPaymentSetting
+        fields = ['status', 'rejection_reason']
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select', 'disabled': True}),
+            'rejection_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'readonly': True}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make fields read-only for admin viewing
+        for field in self.fields:
+            self.fields[field].disabled = True
 

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, Withdrawal, Banner, Popup
+    Review, Wishlist, Coupon, Withdrawal, Banner, Popup, MerchantPaymentSetting
 )
 from core.models import Transaction
 from core.serializers import UserSerializer, AddressSerializer
@@ -430,6 +430,131 @@ class WithdrawalCreateSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Withdrawal amount must be greater than 0")
         return value
+
+
+class MerchantPaymentSettingSerializer(serializers.ModelSerializer):
+    """Serializer for reading merchant payment settings"""
+    user = UserSerializer(read_only=True)
+    payment_method_type_display = serializers.CharField(source='get_payment_method_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    can_edit = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = MerchantPaymentSetting
+        fields = ['id', 'user', 'payment_method_type', 'payment_method_type_display', 
+                 'status', 'status_display', 'rejection_reason', 'payment_details',
+                 'approved_at', 'rejected_at', 'can_edit', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'approved_at', 'rejected_at', 'created_at', 'updated_at']
+
+
+class MerchantPaymentSettingCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating merchant payment settings"""
+    
+    class Meta:
+        model = MerchantPaymentSetting
+        fields = ['payment_method_type', 'payment_details']
+    
+    def validate_payment_details(self, value):
+        """Validate payment details based on payment method type"""
+        payment_method_type = self.initial_data.get('payment_method_type')
+        
+        if not payment_method_type:
+            raise serializers.ValidationError("Payment method type is required")
+        
+        if payment_method_type == 'bank_account':
+            required_fields = ['account_number', 'ifsc', 'bank_name', 'account_holder_name']
+            for field in required_fields:
+                if field not in value or not value[field]:
+                    raise serializers.ValidationError(f"{field.replace('_', ' ').title()} is required for bank account")
+        
+        elif payment_method_type == 'upi':
+            required_fields = ['vpa']
+            for field in required_fields:
+                if field not in value or not value[field]:
+                    raise serializers.ValidationError(f"{field.upper()} is required for UPI")
+            # Optional: upi_id
+            if 'upi_id' not in value:
+                value['upi_id'] = value.get('vpa', '')
+        
+        elif payment_method_type == 'wallet':
+            required_fields = ['wallet_type', 'wallet_id']
+            for field in required_fields:
+                if field not in value or not value[field]:
+                    raise serializers.ValidationError(f"{field.replace('_', ' ').title()} is required for wallet")
+            # Optional: wallet_provider
+            if 'wallet_provider' not in value:
+                value['wallet_provider'] = value.get('wallet_type', '')
+        
+        return value
+    
+    def create(self, validated_data):
+        """Create payment setting for the authenticated merchant user"""
+        user = self.context['request'].user
+        if not user.is_merchant:
+            raise serializers.ValidationError("Only merchants can create payment settings")
+        
+        # Check if payment setting already exists
+        if MerchantPaymentSetting.objects.filter(user=user).exists():
+            raise serializers.ValidationError("Payment setting already exists. Please update the existing one.")
+        
+        validated_data['user'] = user
+        return super().create(validated_data)
+
+
+class MerchantPaymentSettingUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating merchant payment settings (only if pending or rejected)"""
+    
+    class Meta:
+        model = MerchantPaymentSetting
+        fields = ['payment_method_type', 'payment_details']
+    
+    def validate(self, attrs):
+        """Validate that payment setting can be edited"""
+        instance = self.instance
+        if instance and not instance.can_edit():
+            raise serializers.ValidationError("Cannot edit payment setting that is already approved")
+        return attrs
+    
+    def validate_payment_details(self, value):
+        """Validate payment details based on payment method type"""
+        payment_method_type = self.initial_data.get('payment_method_type') or (self.instance.payment_method_type if self.instance else None)
+        
+        if not payment_method_type:
+            raise serializers.ValidationError("Payment method type is required")
+        
+        if payment_method_type == 'bank_account':
+            required_fields = ['account_number', 'ifsc', 'bank_name', 'account_holder_name']
+            for field in required_fields:
+                if field not in value or not value[field]:
+                    raise serializers.ValidationError(f"{field.replace('_', ' ').title()} is required for bank account")
+        
+        elif payment_method_type == 'upi':
+            required_fields = ['vpa']
+            for field in required_fields:
+                if field not in value or not value[field]:
+                    raise serializers.ValidationError(f"{field.upper()} is required for UPI")
+            if 'upi_id' not in value:
+                value['upi_id'] = value.get('vpa', '')
+        
+        elif payment_method_type == 'wallet':
+            required_fields = ['wallet_type', 'wallet_id']
+            for field in required_fields:
+                if field not in value or not value[field]:
+                    raise serializers.ValidationError(f"{field.replace('_', ' ').title()} is required for wallet")
+            if 'wallet_provider' not in value:
+                value['wallet_provider'] = value.get('wallet_type', '')
+        
+        return value
+    
+    def update(self, instance, validated_data):
+        """Update payment setting and reset status to pending if it was rejected"""
+        if instance.status == 'rejected':
+            # Reset to pending when updating a rejected payment setting
+            validated_data['status'] = 'pending'
+            validated_data['rejection_reason'] = None
+            validated_data['rejected_at'] = None
+        
+        return super().update(instance, validated_data)
 
 
 class BannerSerializer(serializers.ModelSerializer):
