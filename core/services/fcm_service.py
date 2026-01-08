@@ -106,7 +106,6 @@ class FCMService:
                 notification=messaging.AndroidNotification(
                     sound='order_alarm',
                     channel_id='order_alerts',
-                    importance='max',
                     priority='max',
                 ),
             )
