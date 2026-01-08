@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
     Review, Wishlist, Coupon, Withdrawal, Banner, Popup, MerchantPaymentSetting,
@@ -439,8 +440,12 @@ class RevenueHistorySerializer(serializers.Serializer):
                 data['order'] = OrderSerializer(data['order'], context=self.context).data
             # Convert Decimal to float for JSON serialization
             for key in ['order_total', 'shipping_cost', 'commission', 'revenue']:
-                if key in data and isinstance(data[key], Decimal):
-                    data[key] = float(data[key])
+                if key in data:
+                    value = data[key]
+                    if isinstance(value, Decimal):
+                        data[key] = float(value)
+                    elif hasattr(value, '__float__'):
+                        data[key] = float(value)
             return data
         return super().to_representation(instance)
 
