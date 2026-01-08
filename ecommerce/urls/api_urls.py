@@ -3,7 +3,7 @@ from ..views.api import (
     store_views, category_views, product_views,
     cart_views, order_views, review_views, wishlist_views, coupon_views, payment_views,
     merchant_views, transaction_views, withdrawal_views, banner_views, popup_views,
-    payment_setting_views
+    payment_setting_views, shipping_charge_history_views
 )
 
 urlpatterns = [
@@ -77,6 +77,11 @@ urlpatterns = [
     path('transactions/<int:pk>/', transaction_views.transaction_detail, name='transaction-detail'),
     path('merchant/transactions/', transaction_views.merchant_transactions, name='merchant-transactions'),
     path('merchant/wallet/', transaction_views.merchant_wallet, name='merchant-wallet'),
+    
+    # Shipping Charge History URLs
+    path('shipping-charge-history/', shipping_charge_history_views.shipping_charge_history_list, name='shipping-charge-history-list'),
+    path('shipping-charge-history/<int:pk>/', shipping_charge_history_views.shipping_charge_history_detail, name='shipping-charge-history-detail'),
+    path('merchant/shipping-charge-history/', shipping_charge_history_views.merchant_shipping_charge_history_list, name='merchant-shipping-charge-history-list'),
     
     # Withdrawal URLs
     path('merchant/withdrawals/', withdrawal_views.withdrawal_list, name='withdrawal-list'),

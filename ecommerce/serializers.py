@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, Withdrawal, Banner, Popup, MerchantPaymentSetting
+    Review, Wishlist, Coupon, Withdrawal, Banner, Popup, MerchantPaymentSetting,
+    ShippingChargeHistory
 )
 from core.models import Transaction
 from core.serializers import UserSerializer, AddressSerializer
@@ -595,4 +596,17 @@ class PopupSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+
+class ShippingChargeHistorySerializer(serializers.ModelSerializer):
+    order = OrderSerializer(read_only=True)
+    merchant = StoreSerializer(read_only=True)
+    customer = UserSerializer(read_only=True)
+    paid_by_display = serializers.CharField(source='get_paid_by_display', read_only=True)
+    
+    class Meta:
+        model = ShippingChargeHistory
+        fields = ['id', 'order', 'merchant', 'customer', 'shipping_charge', 
+                 'paid_by', 'paid_by_display', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
