@@ -96,44 +96,62 @@ def create_payment_setting(request):
 @api_view(['PUT', 'PATCH'])
 @permission_classes([permissions.IsAuthenticated])
 def update_payment_setting(request):
-    """Update merchant's payment setting (only if pending or rejected)"""
+    """Update merchant's payment setting (only if pending or rejected). Creates if doesn't exist."""
     if not check_merchant_permission(request.user):
         return Response({
             'error': 'Only merchants can update payment settings'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        payment_setting = get_object_or_404(MerchantPaymentSetting, user=request.user)
-        
-        # Check if payment setting can be edited
-        if not payment_setting.can_edit():
+        # Try to get existing payment setting
+        try:
+            payment_setting = MerchantPaymentSetting.objects.get(user=request.user)
+            
+            # Check if payment setting can be edited
+            if not payment_setting.can_edit():
+                return Response({
+                    'error': 'Cannot edit payment setting that is already approved. Please contact admin to make changes.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update existing setting
+            serializer = MerchantPaymentSettingUpdateSerializer(
+                payment_setting, 
+                data=request.data, 
+                partial=request.method == 'PATCH',
+                context={'request': request}
+            )
+            
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            updated_setting = serializer.save()
+            response_serializer = MerchantPaymentSettingSerializer(updated_setting, context={'request': request})
+            
             return Response({
-                'error': 'Cannot edit payment setting that is already approved. Please contact admin to make changes.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        serializer = MerchantPaymentSettingUpdateSerializer(
-            payment_setting, 
-            data=request.data, 
-            partial=request.method == 'PATCH',
-            context={'request': request}
-        )
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        updated_setting = serializer.save()
-        response_serializer = MerchantPaymentSettingSerializer(updated_setting, context={'request': request})
-        
-        return Response({
-            'success': True,
-            'data': response_serializer.data,
-            'message': 'Payment setting updated successfully'
-        }, status=status.HTTP_200_OK)
+                'success': True,
+                'data': response_serializer.data,
+                'message': 'Payment setting updated successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except MerchantPaymentSetting.DoesNotExist:
+            # Payment setting doesn't exist, create it instead
+            create_serializer = MerchantPaymentSettingCreateSerializer(
+                data=request.data, 
+                context={'request': request}
+            )
+            
+            if not create_serializer.is_valid():
+                return Response(create_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            new_setting = create_serializer.save()
+            response_serializer = MerchantPaymentSettingSerializer(new_setting, context={'request': request})
+            
+            return Response({
+                'success': True,
+                'data': response_serializer.data,
+                'message': 'Payment setting created successfully'
+            }, status=status.HTTP_201_CREATED)
     
-    except MerchantPaymentSetting.DoesNotExist:
-        return Response({
-            'error': 'Payment setting not found'
-        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         print(f"[ERROR] Error updating payment setting: {str(e)}")
         traceback.print_exc()
