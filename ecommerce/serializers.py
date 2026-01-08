@@ -347,6 +347,16 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     paid_by=paid_by
                 )
             
+            # Send push notification to merchant
+            try:
+                from core.services.fcm_service import FCMService
+                if store.owner:
+                    FCMService.send_order_notification(store.owner, order)
+            except Exception as e:
+                import sys
+                print(f"[ERROR] Failed to send order notification: {str(e)}")
+                sys.stdout.flush()
+            
             created_orders.append(order)
         
         # Store created orders in serializer instance for view to access

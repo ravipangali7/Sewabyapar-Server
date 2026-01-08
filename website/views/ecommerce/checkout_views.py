@@ -150,6 +150,15 @@ def split_order_by_vendor(temp_order):
                     paid_by=paid_by
                 )
             
+            # Send push notification to merchant
+            try:
+                from core.services.fcm_service import FCMService
+                if store.owner:
+                    FCMService.send_order_notification(store.owner, order)
+            except Exception as e:
+                print(f"[ERROR] Failed to send order notification: {str(e)}")
+                sys.stdout.flush()
+            
             created_orders.append(order)
         
         # Delete temporary order
@@ -368,6 +377,15 @@ def process_checkout(request):
                         shipping_charge=shipping_cost,
                         paid_by=paid_by
                     )
+                
+                # Send push notification to merchant
+                try:
+                    from core.services.fcm_service import FCMService
+                    if store.owner:
+                        FCMService.send_order_notification(store.owner, order)
+                except Exception as e:
+                    print(f"[ERROR] Failed to send order notification: {str(e)}")
+                    sys.stdout.flush()
                 
                 created_orders.append(order)
             

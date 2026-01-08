@@ -274,6 +274,13 @@ SHIPDAAK_API_PASSWORD = 'Bikash@1234'  # Set this in environment or .env file
 SHIPDAAK_TOKEN_CACHE_KEY = 'shipdaak_access_token'
 SHIPDAAK_TOKEN_EXPIRY_CACHE_KEY = 'shipdaak_token_expiry'
 
+# Firebase Cloud Messaging (FCM) Configuration
+# Option 1: Path to Firebase service account JSON file
+FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'firebase-service.json')
+# Option 2: Firebase credentials as JSON string (for environment variables)
+# FIREBASE_CREDENTIALS_JSON = os.environ.get('FIREBASE_CREDENTIALS_JSON', '')
+# Note: Set one of the above in your environment or .env file
+
 # CKEditor 5 Configuration
 customColorPalette = [
     {
