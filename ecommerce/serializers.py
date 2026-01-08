@@ -437,7 +437,7 @@ class MerchantPaymentSettingSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     payment_method_type_display = serializers.CharField(source='get_payment_method_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    can_edit = serializers.BooleanField(read_only=True)
+    can_edit = serializers.SerializerMethodField()
     
     class Meta:
         model = MerchantPaymentSetting
@@ -445,6 +445,10 @@ class MerchantPaymentSettingSerializer(serializers.ModelSerializer):
                  'status', 'status_display', 'rejection_reason', 'payment_details',
                  'approved_at', 'rejected_at', 'can_edit', 'created_at', 'updated_at']
         read_only_fields = ['id', 'user', 'approved_at', 'rejected_at', 'created_at', 'updated_at']
+    
+    def get_can_edit(self, obj):
+        """Return whether the payment setting can be edited"""
+        return obj.can_edit()
 
 
 class MerchantPaymentSettingCreateSerializer(serializers.ModelSerializer):
