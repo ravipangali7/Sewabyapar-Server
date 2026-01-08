@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, GlobalCourier, ShippingChargeHistory
+    Review, Wishlist, Coupon, GlobalCourier, ShippingChargeHistory,
+    MerchantPaymentSetting
 )
 
 
@@ -130,4 +131,28 @@ class ShippingChargeHistoryAdmin(admin.ModelAdmin):
     list_filter = ['paid_by', 'created_at']
     search_fields = ['order__order_number', 'merchant__name', 'customer__name']
     readonly_fields = ['created_at']
+    ordering = ['-created_at']
+
+
+@admin.register(MerchantPaymentSetting)
+class MerchantPaymentSettingAdmin(admin.ModelAdmin):
+    list_display = ['user', 'payment_method_type', 'status', 'rejection_reason', 'created_at', 'approved_at', 'rejected_at']
+    list_filter = ['status', 'payment_method_type', 'created_at', 'approved_at', 'rejected_at']
+    search_fields = ['user__username', 'user__name', 'user__email', 'rejection_reason']
+    readonly_fields = ['created_at', 'updated_at', 'approved_at', 'rejected_at']
+    fieldsets = (
+        ('Merchant Information', {
+            'fields': ('user',)
+        }),
+        ('Payment Method', {
+            'fields': ('payment_method_type', 'payment_details')
+        }),
+        ('Verification Status', {
+            'fields': ('status', 'rejection_reason')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'approved_at', 'rejected_at'),
+            'classes': ('collapse',)
+        }),
+    )
     ordering = ['-created_at']
