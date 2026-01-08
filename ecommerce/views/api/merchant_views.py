@@ -10,10 +10,10 @@ import json
 import sys
 import traceback
 from ...models import Product, Store, Order, OrderItem, Category, ProductImage, Withdrawal
-from core.models import Transaction
-from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer, TransactionSerializer
+from core.models import Transaction, SuperSetting
+from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer, TransactionSerializer, RevenueHistorySerializer
 from core.models import User
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 
 def check_merchant_permission(user):
@@ -23,6 +23,54 @@ def check_merchant_permission(user):
         sys.stdout.flush()
         return False
     return True
+
+
+def calculate_order_revenue(order):
+    """Calculate revenue for an order: Order Total - Sales Commission %"""
+    try:
+        # Get SuperSetting for sales commission percentage
+        super_setting = SuperSetting.objects.first()
+        if not super_setting:
+            super_setting = SuperSetting.objects.create()
+        
+        sales_commission_percentage = Decimal(str(super_setting.sales_commission))
+        subtotal = Decimal(str(order.subtotal))
+        shipping_cost = Decimal(str(order.shipping_cost))
+        total_amount = Decimal(str(order.total_amount))
+        
+        # Check if merchant takes shipping responsibility
+        store = order.merchant
+        if store and store.take_shipping_responsibility:
+            # Merchant pays shipping: commission on (subtotal - shipping_cost)
+            net_for_commission = subtotal - shipping_cost
+            commission = (net_for_commission * sales_commission_percentage) / Decimal('100')
+        else:
+            # Customer pays shipping: commission on subtotal only
+            commission = (subtotal * sales_commission_percentage) / Decimal('100')
+        
+        # Round commission to 2 decimal places
+        commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        # Revenue = total_amount - commission
+        revenue = total_amount - commission
+        revenue = revenue.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        return {
+            'revenue': float(revenue),
+            'commission': float(commission),
+            'shipping_cost': float(shipping_cost),
+            'order_total': float(total_amount)
+        }
+    except Exception as e:
+        print(f'[ERROR] Error calculating revenue for order {order.id}: {str(e)}')
+        sys.stdout.flush()
+        # Fallback: return order total as revenue if calculation fails
+        return {
+            'revenue': float(order.total_amount),
+            'commission': 0.0,
+            'shipping_cost': float(order.shipping_cost),
+            'order_total': float(order.total_amount)
+        }
 
 
 @api_view(['GET', 'POST'])
@@ -577,7 +625,13 @@ def merchant_stats(request):
     orders = Order.objects.filter(id__in=order_ids)
     
     total_orders = orders.count()
-    total_revenue = order_items.aggregate(total=Sum('total'))['total'] or 0
+    
+    # Calculate total revenue: Order Total - Sales Commission %
+    total_revenue = Decimal('0')
+    for order in orders:
+        revenue_data = calculate_order_revenue(order)
+        total_revenue += Decimal(str(revenue_data['revenue']))
+    total_revenue = float(total_revenue.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
     
     # Get orders by status
     orders_by_status = orders.values('status').annotate(count=Count('id'))
@@ -586,9 +640,14 @@ def merchant_stats(request):
     # Get recent orders (last 30 days)
     thirty_days_ago = timezone.now() - timedelta(days=30)
     recent_orders = orders.filter(created_at__gte=thirty_days_ago).count()
-    recent_revenue = order_items.filter(order__created_at__gte=thirty_days_ago).aggregate(
-        total=Sum('total')
-    )['total'] or 0
+    recent_orders_list = orders.filter(created_at__gte=thirty_days_ago)
+    
+    # Calculate recent revenue: Order Total - Sales Commission %
+    recent_revenue = Decimal('0')
+    for order in recent_orders_list:
+        revenue_data = calculate_order_revenue(order)
+        recent_revenue += Decimal(str(revenue_data['revenue']))
+    recent_revenue = float(recent_revenue.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
     
     # Get low stock products (stock < 10)
     low_stock_products = Product.objects.filter(
@@ -637,9 +696,14 @@ def merchant_stats(request):
             except ValueError:
                 pass
         filtered_order_ids = filtered_orders.values_list('id', flat=True)
-        date_filtered_revenue = order_items.filter(order_id__in=filtered_order_ids).aggregate(
-            total=Sum('total')
-        )['total'] or 0
+        filtered_orders_list = Order.objects.filter(id__in=filtered_order_ids)
+        
+        # Calculate date filtered revenue: Order Total - Sales Commission %
+        date_filtered_revenue = Decimal('0')
+        for order in filtered_orders_list:
+            revenue_data = calculate_order_revenue(order)
+            date_filtered_revenue += Decimal(str(revenue_data['revenue']))
+        date_filtered_revenue = float(date_filtered_revenue.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
     
     # Get wallet information
     balance = Decimal(str(request.user.balance))
@@ -669,13 +733,13 @@ def merchant_stats(request):
         'stores_count': stores.count(),
         'products_count': products_count,
         'total_orders': total_orders,
-        'total_revenue': float(total_revenue),
+        'total_revenue': total_revenue,
         'orders_by_status': status_counts,
         'recent_orders_30_days': recent_orders,
-        'recent_revenue_30_days': float(recent_revenue),
+        'recent_revenue_30_days': recent_revenue,
         'low_stock_products': low_stock_products,
         'best_selling_products': best_sellers_data,
-        'date_filtered_revenue': float(date_filtered_revenue) if (start_date or end_date) else None,
+        'date_filtered_revenue': date_filtered_revenue if (start_date or end_date) else None,
         # Wallet information
         'wallet': {
             'balance': float(balance),
@@ -684,6 +748,105 @@ def merchant_stats(request):
             'available_balance': float(available_balance),
             'recent_transactions': transaction_serializer.data
         }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_revenue_history(request):
+    """Get merchant revenue history with pending/success status"""
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get all stores owned by the merchant
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    
+    # Get all orders for this merchant
+    orders = Order.objects.filter(merchant__in=stores).order_by('-created_at')
+    
+    # Apply filters
+    status_filter = request.query_params.get('status')  # 'pending' or 'success'
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+    
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d').date()
+            orders = orders.filter(created_at__gte=timezone.make_aware(
+                datetime.combine(start, datetime.min.time())
+            ))
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+            orders = orders.filter(created_at__lte=timezone.make_aware(
+                datetime.combine(end, datetime.max.time())
+            ))
+        except ValueError:
+            pass
+    
+    # Build revenue history list
+    revenue_history = []
+    for order in orders:
+        # Determine status: success if delivered AND payment success, otherwise pending
+        is_success = (order.status == 'delivered' and 
+                     order.payment_status in ['success', 'paid'])
+        revenue_status = 'success' if is_success else 'pending'
+        
+        # Apply status filter if provided
+        if status_filter and revenue_status != status_filter:
+            continue
+        
+        # Calculate revenue for this order
+        revenue_data = calculate_order_revenue(order)
+        
+        revenue_history.append({
+            'order': order,
+            'order_id': order.id,
+            'order_number': order.order_number,
+            'created_at': order.created_at,
+            'order_status': order.status,
+            'payment_status': order.payment_status,
+            'order_total': Decimal(str(revenue_data['order_total'])),
+            'shipping_cost': Decimal(str(revenue_data['shipping_cost'])),
+            'commission': Decimal(str(revenue_data['commission'])),
+            'revenue': Decimal(str(revenue_data['revenue'])),
+            'status': revenue_status
+        })
+    
+    # Pagination
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    page = request.query_params.get('page', '1')
+    
+    try:
+        page_num = int(page)
+    except ValueError:
+        page_num = 1
+    
+    # Calculate pagination
+    total_count = len(revenue_history)
+    page_size = paginator.page_size
+    total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+    
+    start_idx = (page_num - 1) * page_size
+    end_idx = start_idx + page_size
+    paginated_history = revenue_history[start_idx:end_idx]
+    
+    # Serialize the data
+    serializer = RevenueHistorySerializer(paginated_history, many=True, context={'request': request})
+    
+    return Response({
+        'count': total_count,
+        'next': f"{request.build_absolute_uri()}?page={page_num + 1}" if page_num < total_pages else None,
+        'previous': f"{request.build_absolute_uri()}?page={page_num - 1}" if page_num > 1 else None,
+        'results': serializer.data,
+        'current_page': page_num,
+        'total_pages': total_pages
     })
 
 

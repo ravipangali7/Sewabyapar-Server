@@ -416,6 +416,35 @@ class TransactionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class RevenueHistorySerializer(serializers.Serializer):
+    """Serializer for revenue history entries"""
+    order = OrderSerializer(read_only=True, allow_null=True)
+    order_id = serializers.IntegerField()
+    order_number = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    order_status = serializers.CharField()
+    payment_status = serializers.CharField()
+    order_total = serializers.DecimalField(max_digits=10, decimal_places=2, coerce_to_string=False)
+    shipping_cost = serializers.DecimalField(max_digits=10, decimal_places=2, coerce_to_string=False)
+    commission = serializers.DecimalField(max_digits=10, decimal_places=2, coerce_to_string=False)
+    revenue = serializers.DecimalField(max_digits=10, decimal_places=2, coerce_to_string=False)
+    status = serializers.CharField()  # 'pending' or 'success'
+    
+    def to_representation(self, instance):
+        """Convert dict to serializer representation"""
+        if isinstance(instance, dict):
+            # If instance is a dict, convert order to serializer
+            data = instance.copy()
+            if 'order' in data and data['order']:
+                data['order'] = OrderSerializer(data['order'], context=self.context).data
+            # Convert Decimal to float for JSON serialization
+            for key in ['order_total', 'shipping_cost', 'commission', 'revenue']:
+                if key in data and isinstance(data[key], Decimal):
+                    data[key] = float(data[key])
+            return data
+        return super().to_representation(instance)
+
+
 class WithdrawalSerializer(serializers.ModelSerializer):
     merchant = UserSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)

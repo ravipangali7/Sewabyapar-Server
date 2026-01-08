@@ -64,6 +64,7 @@ urlpatterns = [
     path('merchant/orders/<int:pk>/accept/', merchant_views.merchant_accept_order, name='merchant-accept-order'),
     path('merchant/orders/<int:pk>/reject/', merchant_views.merchant_reject_order, name='merchant-reject-order'),
     path('merchant/stats/', merchant_views.merchant_stats, name='merchant-stats'),
+    path('merchant/revenue-history/', merchant_views.merchant_revenue_history, name='merchant-revenue-history'),
     path('merchant/stores/', merchant_views.merchant_stores, name='merchant-stores'),
     path('merchant/stores/<int:pk>/', merchant_views.merchant_store_detail, name='merchant-store-detail'),
     # Shipdaak shipment URLs
