@@ -4,6 +4,7 @@ Store management views
 import sys
 import traceback
 from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.db.models import Q
@@ -115,4 +116,25 @@ class StoreDeleteView(StaffRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Store deleted successfully.')
         return super().delete(request, *args, **kwargs)
+
+
+def toggle_is_opened(request, pk):
+    """Toggle is_opened for a store"""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to perform this action.')
+        return redirect('myadmin:ecommerce:store_list')
+    
+    if request.method == 'POST':
+        try:
+            store = get_object_or_404(Store, pk=pk)
+            store.is_opened = not store.is_opened
+            store.save()
+            status = 'opened' if store.is_opened else 'closed'
+            messages.success(request, f'Store "{store.name}" has been {status}.')
+        except Exception as e:
+            print(f'[ERROR] Error toggling is_opened: {str(e)}')
+            traceback.print_exc()
+            messages.error(request, 'An error occurred while toggling store status.')
+        return redirect('myadmin:ecommerce:store_list')
+    return redirect('myadmin:ecommerce:store_list')
 

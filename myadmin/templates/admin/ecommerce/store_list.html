@@ -85,6 +85,7 @@
                                 <th>Phone</th>
                                 <th>Email</th>
                                 <th>Status</th>
+                                <th>Opened</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
@@ -104,6 +105,15 @@
                                 <td>{{ store.phone }}</td>
                                 <td>{{ store.email }}</td>
                                 <td>{% if store.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td>
+                                <td>
+                                    {% if store.is_opened %}<span class="badge bg-success">Opened</span>{% else %}<span class="badge bg-danger">Closed</span>{% endif %}
+                                    <form method="post" action="{% url 'myadmin:ecommerce:store_toggle_is_opened' store.pk %}" class="d-inline ms-2">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm {% if store.is_opened %}btn-success{% else %}btn-secondary{% endif %}" title="{% if store.is_opened %}Close{% else %}Open{% endif %} Store">
+                                            <i class="align-middle" data-feather="{% if store.is_opened %}check-circle{% else %}x-circle{% endif %}" style="width: 14px; height: 14px;"></i> {% if store.is_opened %}Open{% else %}Closed{% endif %}
+                                        </button>
+                                    </form>
+                                </td>
                                 <td>{{ store.created_at|date:"M d, Y" }}</td>
                                 <td>
                                     <a href="{% url 'myadmin:ecommerce:store_detail' store.pk %}" class="btn btn-sm btn-info">View</a>
@@ -112,7 +122,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="8" class="text-center">No stores found</td>
+                                <td colspan="9" class="text-center">No stores found</td>
                             </tr>
                             {% endfor %}
                         </tbody>

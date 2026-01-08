@@ -35,6 +35,7 @@ urlpatterns = [
     path('stores/create/', store_views.StoreCreateView.as_view(), name='store_create'),
     path('stores/<int:pk>/update/', store_views.StoreUpdateView.as_view(), name='store_update'),
     path('stores/<int:pk>/delete/', store_views.StoreDeleteView.as_view(), name='store_delete'),
+    path('stores/<int:pk>/toggle-is-opened/', store_views.toggle_is_opened, name='store_toggle_is_opened'),
     
     # Order URLs
     path('orders/', order_views.OrderListView.as_view(), name='order_list'),
