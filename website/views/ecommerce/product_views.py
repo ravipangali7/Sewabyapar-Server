@@ -15,7 +15,7 @@ def products_view(request):
     menu_pages = CMSPages.objects.filter(on_menu=True)
     footer_pages = CMSPages.objects.filter(on_footer=True)
     
-    products = Product.objects.filter(is_active=True, is_approved=True)
+    products = Product.objects.filter(is_active=True, is_approved=True, store__is_opened=True)
     
     # Filter by category
     category_id = request.GET.get('category')
@@ -72,14 +72,15 @@ def product_detail_view(request, product_id):
     menu_pages = CMSPages.objects.filter(on_menu=True)
     footer_pages = CMSPages.objects.filter(on_footer=True)
     
-    product = get_object_or_404(Product, id=product_id, is_active=True, is_approved=True)
+    product = get_object_or_404(Product, id=product_id, is_active=True, is_approved=True, store__is_opened=True)
     reviews = Review.objects.filter(product=product).order_by('-created_at')[:10]
     
     # Get related products (same category)
     related_products = Product.objects.filter(
         category=product.category,
         is_active=True,
-        is_approved=True
+        is_approved=True,
+        store__is_opened=True
     ).exclude(id=product_id)[:4]
     
     # Check if user has this in wishlist

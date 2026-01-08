@@ -8,8 +8,8 @@ from .models import (
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'take_shipping_responsibility', 'minimum_order_value', 'shipdaak_pickup_warehouse_id', 'created_at']
-    list_filter = ['is_active', 'take_shipping_responsibility', 'created_at']
+    list_display = ['name', 'owner', 'email', 'phone', 'is_active', 'is_opened', 'take_shipping_responsibility', 'minimum_order_value', 'shipdaak_pickup_warehouse_id', 'created_at']
+    list_filter = ['is_active', 'is_opened', 'take_shipping_responsibility', 'created_at']
     search_fields = ['name', 'owner__username', 'email']
     readonly_fields = ['created_at', 'updated_at', 'shipdaak_pickup_warehouse_id', 
                       'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at']
@@ -24,7 +24,7 @@ class StoreAdmin(admin.ModelAdmin):
             'fields': ('take_shipping_responsibility', 'minimum_order_value')
         }),
         ('Status', {
-            'fields': ('is_active',)
+            'fields': ('is_active', 'is_opened')
         }),
         ('Shipdaak Integration', {
             'fields': ('shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 'shipdaak_warehouse_created_at'),

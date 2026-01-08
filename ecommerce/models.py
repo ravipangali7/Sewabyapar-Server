@@ -18,6 +18,7 @@ class Store(models.Model):
     phone = models.CharField(max_length=20)
     email = models.EmailField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    is_opened = models.BooleanField(default=True, help_text='Whether the store is open for business. Only admins can change this.')
     # Shipping responsibility and minimum order value
     take_shipping_responsibility = models.BooleanField(default=False, help_text='Whether this store takes responsibility for shipping charges')
     minimum_order_value = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)], help_text='Minimum order value required for this store')

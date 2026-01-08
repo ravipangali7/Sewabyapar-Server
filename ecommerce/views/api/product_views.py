@@ -13,7 +13,7 @@ from ...serializers import ProductSerializer, ProductCreateSerializer
 def product_list_create(request):
     """List all products or create a new product"""
     if request.method == 'GET':
-        queryset = Product.objects.filter(is_active=True, is_approved=True)
+        queryset = Product.objects.filter(is_active=True, is_approved=True, store__is_opened=True)
         category = request.query_params.get('category')
         store = request.query_params.get('store')
         search = request.query_params.get('search')
@@ -38,7 +38,8 @@ def product_list_create(request):
             item_code_match = Product.objects.filter(
                 item_code__iexact=search,
                 is_active=True,
-                is_approved=True
+                is_approved=True,
+                store__is_opened=True
             ).first()
             if item_code_match:
                 queryset = Product.objects.filter(id=item_code_match.id)
@@ -49,7 +50,7 @@ def product_list_create(request):
                 if merchant:
                     # Get all products from this merchant
                     from ...models import Store
-                    stores = Store.objects.filter(owner=merchant, is_active=True)
+                    stores = Store.objects.filter(owner=merchant, is_active=True, is_opened=True)
                     queryset = queryset.filter(store__in=stores)
                 else:
                     # Fall back to name/description search
@@ -84,9 +85,9 @@ def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
     
     if request.method == 'GET':
-        # For public access, only show approved products
+        # For public access, only show approved products from opened stores
         if not request.user.is_authenticated or not request.user.is_staff:
-            if not product.is_approved or not product.is_active:
+            if not product.is_approved or not product.is_active or not product.store.is_opened:
                 from rest_framework import status
                 return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = ProductSerializer(product, context={'request': request})
@@ -113,14 +114,15 @@ def search_products(request):
     min_price = request.query_params.get('min_price')
     max_price = request.query_params.get('max_price')
     
-    queryset = Product.objects.filter(is_active=True, is_approved=True)
+    queryset = Product.objects.filter(is_active=True, is_approved=True, store__is_opened=True)
     
     if query:
         # Check for exact match on item_code first
         item_code_match = Product.objects.filter(
             item_code__iexact=query,
             is_active=True,
-            is_approved=True
+            is_approved=True,
+            store__is_opened=True
         ).first()
         if item_code_match:
             serializer = ProductSerializer([item_code_match], many=True, context={'request': request})
@@ -132,7 +134,7 @@ def search_products(request):
         if merchant:
             # Get all products from this merchant
             from ...models import Store
-            stores = Store.objects.filter(owner=merchant, is_active=True)
+            stores = Store.objects.filter(owner=merchant, is_active=True, is_opened=True)
             queryset = queryset.filter(store__in=stores)
         else:
             # Fall back to name/description search

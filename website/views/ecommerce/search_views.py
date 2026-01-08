@@ -16,7 +16,7 @@ def search_view(request):
     footer_pages = CMSPages.objects.filter(on_footer=True)
     
     query = request.GET.get('q', '').strip()
-    products = Product.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True, is_approved=True, store__is_opened=True)
     
     if query:
         products = products.filter(

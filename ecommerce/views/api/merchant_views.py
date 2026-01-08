@@ -41,8 +41,8 @@ def merchant_products(request):
         }, status=status.HTTP_403_FORBIDDEN)
     
     if request.method == 'GET':
-        # Get all stores owned by the merchant
-        stores = Store.objects.filter(owner=request.user, is_active=True)
+        # Get all stores owned by the merchant that are opened
+        stores = Store.objects.filter(owner=request.user, is_active=True, is_opened=True)
         if not stores.exists():
             # Return empty result if merchant has no stores
             paginator = PageNumberPagination()
@@ -51,8 +51,8 @@ def merchant_products(request):
             serializer = ProductSerializer(paginated_products or [], many=True, context={'request': request})
             return paginator.get_paginated_response(serializer.data)
         
-        # Get products from merchant's stores
-        queryset = Product.objects.filter(store__in=stores, is_active=True)
+        # Get products from merchant's stores (only from opened stores)
+        queryset = Product.objects.filter(store__in=stores, is_active=True, store__is_opened=True)
         
         # Apply filters
         category = request.query_params.get('category')

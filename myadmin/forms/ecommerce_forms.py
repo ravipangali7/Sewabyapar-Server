@@ -45,7 +45,7 @@ class StoreForm(forms.ModelForm):
         model = Store
         fields = [
             'name', 'description', 'owner', 'logo', 'banner',
-            'address', 'phone', 'email', 'is_active',
+            'address', 'phone', 'email', 'is_active', 'is_opened',
             'take_shipping_responsibility', 'minimum_order_value'
         ]
         widgets = {
@@ -58,6 +58,7 @@ class StoreForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_opened': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'take_shipping_responsibility': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'minimum_order_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
