@@ -82,9 +82,10 @@ def shipment_documents_view(request, store_id, order_id):
         return render(request, 'website/ecommerce/shipment_documents.html', context, status=500)
 
 
-def _add_logo_to_pdf(pdf_url, logo_path):
+def _add_logo_to_label_pdf(pdf_url, logo_path):
     """
-    Download PDF from URL, add logo at top-left, and return PDF bytes
+    Download PDF from URL, add logo at top-right, and return PDF bytes
+    Logo positioned at top-right corner, max 100px width
     """
     try:
         # Download original PDF
@@ -111,16 +112,89 @@ def _add_logo_to_pdf(pdf_url, logo_path):
             packet = io.BytesIO()
             can = canvas.Canvas(packet, pagesize=(page_width, page_height))
             
-            # Calculate logo size (max 100x100, maintain aspect ratio)
+            # Calculate logo size (max 100px width, maintain aspect ratio)
             logo_width = min(100, page_width * 0.15)
             logo_aspect = logo_img.height / logo_img.width
             logo_height = logo_width * logo_aspect
             
-            # Position logo at top-left (with some margin)
+            # Position logo at top-right (with some margin)
+            x_position = page_width - logo_width - 20
+            y_position = page_height - logo_height - 20
+            
+            # Draw logo (fully opaque, 100% opacity)
+            can.drawImage(
+                ImageReader(logo_img),
+                x_position,
+                y_position,
+                width=logo_width,
+                height=logo_height,
+                preserveAspectRatio=True,
+                mask='auto'
+            )
+            
+            can.save()
+            
+            # Move to the beginning of the StringIO buffer
+            packet.seek(0)
+            logo_pdf = PdfReader(packet)
+            
+            # Merge logo page with original page
+            page.merge_page(logo_pdf.pages[0])
+            
+            # Add merged page to writer
+            pdf_writer.add_page(page)
+        
+        # Write merged PDF to bytes
+        output = io.BytesIO()
+        pdf_writer.write(output)
+        output.seek(0)
+        
+        return output.getvalue()
+        
+    except Exception as e:
+        raise Exception(f"Error processing PDF: {str(e)}")
+
+
+def _add_logo_to_manifest_pdf(pdf_url, logo_path):
+    """
+    Download PDF from URL, add logo at top-left (smaller size), and return PDF bytes
+    Logo positioned at top-left, smaller size (max 60px), typically above Courier area
+    """
+    try:
+        # Download original PDF
+        response = requests.get(pdf_url, timeout=30)
+        response.raise_for_status()
+        
+        # Read original PDF
+        original_pdf = PdfReader(io.BytesIO(response.content))
+        pdf_writer = PdfWriter()
+        
+        # Load logo image
+        if not os.path.exists(logo_path):
+            raise FileNotFoundError(f"Logo file not found: {logo_path}")
+        
+        logo_img = Image.open(logo_path)
+        
+        # Process each page
+        for page_num, page in enumerate(original_pdf.pages):
+            # Get page dimensions
+            page_width = float(page.mediabox.width)
+            page_height = float(page.mediabox.height)
+            
+            # Create a new PDF page with logo
+            packet = io.BytesIO()
+            can = canvas.Canvas(packet, pagesize=(page_width, page_height))
+            
+            # Calculate logo size (max 60px width, smaller than label, maintain aspect ratio)
+            logo_width = min(60, page_width * 0.10)
+            logo_aspect = logo_img.height / logo_img.width
+            logo_height = logo_width * logo_aspect
+            
+            # Position logo at top-left (with some margin, above Courier area)
             x_position = 20
             y_position = page_height - logo_height - 20
             
-            # Draw logo
+            # Draw logo (fully opaque, 100% opacity)
             can.drawImage(
                 ImageReader(logo_img),
                 x_position,
@@ -167,8 +241,8 @@ def download_shipment_label(request, store_id, order_id):
         # Get logo path
         logo_path = os.path.join(settings.STATIC_ROOT, 'logo.png')
         
-        # Add logo to PDF
-        pdf_bytes = _add_logo_to_pdf(order.shipdaak_label_url, logo_path)
+        # Add logo to PDF (top-right position)
+        pdf_bytes = _add_logo_to_label_pdf(order.shipdaak_label_url, logo_path)
         
         # Create response
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -193,8 +267,8 @@ def download_shipment_manifest(request, store_id, order_id):
         # Get logo path
         logo_path = os.path.join(settings.STATIC_ROOT, 'logo.png')
         
-        # Add logo to PDF
-        pdf_bytes = _add_logo_to_pdf(order.shipdaak_manifest_url, logo_path)
+        # Add logo to PDF (top-left position, smaller size)
+        pdf_bytes = _add_logo_to_manifest_pdf(order.shipdaak_manifest_url, logo_path)
         
         # Create response
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
