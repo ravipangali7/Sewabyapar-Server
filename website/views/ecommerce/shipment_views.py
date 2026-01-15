@@ -191,8 +191,9 @@ def _add_logo_to_manifest_pdf(pdf_url, logo_path):
             logo_height = logo_width * logo_aspect
             
             # Position logo at top-left (with some margin, above Courier area)
+            # Increased gap from top to position logo lower (more downside)
             x_position = 20
-            y_position = page_height - logo_height - 20
+            y_position = page_height - logo_height - 80
             
             # Draw logo (fully opaque, 100% opacity)
             can.drawImage(
