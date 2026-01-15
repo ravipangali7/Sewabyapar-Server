@@ -25,6 +25,11 @@ urlpatterns = [
     path('wishlist/', ecommerce.wishlist_view, name='wishlist'),
     path('search/', ecommerce.search_view, name='search'),
     
+    # Shipment documents routes (public, no auth required)
+    path('<int:store_id>/<int:order_id>/shipment/documents/', ecommerce.shipment_documents_view, name='shipment_documents'),
+    path('<int:store_id>/<int:order_id>/shipment/documents/label/', ecommerce.download_shipment_label, name='download_shipment_label'),
+    path('<int:store_id>/<int:order_id>/shipment/documents/manifest/', ecommerce.download_shipment_manifest, name='download_shipment_manifest'),
+    
     # Taxi routes
     path('taxi/', taxi_view.taxi_view, name='taxi'),
     path('taxi/new-booking/', taxi_view.new_booking_view, name='new_taxi_booking'),

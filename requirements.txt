@@ -29,3 +29,5 @@ tzdata==2025.2
 tzlocal==5.3.1
 urllib3==1.26.12
 firebase-admin>=6.0.0
+PyPDF2>=3.0.0
+reportlab>=4.0.0

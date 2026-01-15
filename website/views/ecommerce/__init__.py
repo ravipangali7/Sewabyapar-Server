@@ -6,6 +6,7 @@ from .checkout_views import checkout_view, process_checkout, payment_result_view
 from .order_views import orders_view, order_detail_view
 from .wishlist_views import wishlist_view
 from .search_views import search_view
+from .shipment_views import shipment_documents_view, download_shipment_label, download_shipment_manifest
 
 __all__ = [
     'shop_view',
@@ -20,5 +21,8 @@ __all__ = [
     'order_detail_view',
     'wishlist_view',
     'search_view',
+    'shipment_documents_view',
+    'download_shipment_label',
+    'download_shipment_manifest',
 ]
 
