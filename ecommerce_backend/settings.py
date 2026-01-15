@@ -212,7 +212,7 @@ FAST2SMS_ROUTE = 'q'  # Quick SMS route
 FAST2SMS_LANGUAGE = 'english'
 
 # OTP Configuration
-OTP_EXPIRY_MINUTES = 10
+OTP_EXPIRY_MINUTES = 2
 
 # PhonePe Payment Gateway Configuration
 PHONEPE_CLIENT_ID = 'SU2511191730406050273204'
