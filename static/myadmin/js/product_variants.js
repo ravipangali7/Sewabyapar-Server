@@ -420,7 +420,7 @@
         
         // If no primary set and combinations exist, set first as primary
         if (!primaryKey && combinations.length > 0) {
-            primaryKey = combinations[0].join('/');
+            primaryKey = combinations[0]; // combinations[0] is already a string key, not an array
             if (variantState.combinations[primaryKey]) {
                 variantState.combinations[primaryKey].is_primary = true;
             }
