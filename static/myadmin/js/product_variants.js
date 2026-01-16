@@ -10,7 +10,7 @@
     let variantState = {
         enabled: false,
         variants: [], // [{name: "Color", values: ["White", "Blue"]}]
-        combinations: {} // {"White/XL": {price: 500, stock: 10, image: ""}}
+        combinations: {} // {"White/XL": {price: 500, stock: 10, image: "", is_primary: false}}
     };
 
     // Initialize on page load
@@ -49,8 +49,12 @@
             });
             generateCombinations();
         } else {
-            // Add one empty variant type by default
-            addVariantType();
+            // Don't add default variant type - let user enable variants first
+        }
+        
+        // Update price/stock fields based on initial state
+        if (variantState.enabled) {
+            disablePriceStockFields(true);
         }
 
         // Setup form submission
@@ -87,6 +91,8 @@
                 inputs.forEach(input => {
                     input.disabled = false;
                 });
+                // Disable price and stock fields when variants enabled
+                disablePriceStockFields(true);
             } else {
                 variantSection.style.display = 'none';
                 // Disable inputs when hidden to prevent validation
@@ -95,7 +101,38 @@
                     input.disabled = true;
                     input.removeAttribute('required');
                 });
+                // Enable price and stock fields when variants disabled
+                disablePriceStockFields(false);
             }
+        }
+    }
+
+    function disablePriceStockFields(disable) {
+        const priceField = document.getElementById('id_price');
+        const stockField = document.getElementById('id_stock_quantity');
+        const priceInfo = document.getElementById('price-stock-info');
+        
+        if (priceField) {
+            priceField.disabled = disable;
+            if (disable) {
+                priceField.classList.add('bg-light');
+            } else {
+                priceField.classList.remove('bg-light');
+            }
+        }
+        
+        if (stockField) {
+            stockField.disabled = disable;
+            if (disable) {
+                stockField.classList.add('bg-light');
+            } else {
+                stockField.classList.remove('bg-light');
+            }
+        }
+        
+        // Show/hide info message
+        if (priceInfo) {
+            priceInfo.style.display = disable ? 'block' : 'none';
         }
     }
 
@@ -255,7 +292,8 @@
                 newCombinations[key] = {
                     price: '',
                     stock: '',
-                    image: ''
+                    image: '',
+                    is_primary: false
                 };
             }
         });
@@ -296,8 +334,25 @@
         const combinations = Object.keys(variantState.combinations).sort();
         
         if (combinations.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No combinations available. Add variant types above.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No combinations available. Add variant types above.</td></tr>';
             return;
+        }
+        
+        // Find primary combination if any
+        let primaryKey = null;
+        for (const key in variantState.combinations) {
+            if (variantState.combinations[key].is_primary) {
+                primaryKey = key;
+                break;
+            }
+        }
+        
+        // If no primary set and combinations exist, set first as primary
+        if (!primaryKey && combinations.length > 0) {
+            primaryKey = combinations[0].join('/');
+            if (variantState.combinations[primaryKey]) {
+                variantState.combinations[primaryKey].is_primary = true;
+            }
         }
 
         combinations.forEach(comboKey => {
@@ -308,6 +363,9 @@
             const imagePreview = combo.image ? 
                 `<img src="${escapeHtml(combo.image)}" class="img-thumbnail me-2" style="max-width: 50px; max-height: 50px;">` : 
                 '';
+            
+            const isPrimary = combo.is_primary || false;
+            const primaryChecked = isPrimary ? 'checked' : '';
 
             row.innerHTML = `
                 <td>${escapeHtml(comboKey)}</td>
@@ -328,6 +386,12 @@
                                accept="image/*" style="max-width: 150px;">
                         <input type="hidden" class="combination-image-url" value="${escapeHtml(combo.image || '')}">
                     </div>
+                </td>
+                <td class="text-center">
+                    <input type="radio" class="form-check-input combination-primary" 
+                           name="primary_combination" 
+                           value="${escapeHtml(comboKey)}"
+                           ${primaryChecked}>
                 </td>
             `;
 
@@ -350,6 +414,19 @@
             imageInput.addEventListener('change', function(e) {
                 handleImageUpload(e.target, comboKey, imageUrlInput, row);
             });
+            
+            // Setup primary radio button handler
+            const primaryRadio = row.querySelector('.combination-primary');
+            primaryRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    // Unset all other primary flags
+                    Object.keys(variantState.combinations).forEach(key => {
+                        variantState.combinations[key].is_primary = false;
+                    });
+                    // Set this one as primary
+                    variantState.combinations[comboKey].is_primary = true;
+                }
+            });
         });
     }
 
@@ -369,8 +446,12 @@
         preview.src = '';
         preview.alt = 'Loading...';
 
-        // Upload image (you may need to adjust this endpoint)
-        fetch('/admin/ecommerce/upload-variant-image/', {
+        // Get upload URL from page
+        const uploadUrlEl = document.getElementById('variant-upload-url');
+        const uploadUrl = uploadUrlEl ? uploadUrlEl.textContent.trim() : '/myadmin/ecommerce/upload-variant-image/';
+        
+        // Upload image
+        fetch(uploadUrl, {
             method: 'POST',
             body: formData
         })
@@ -468,11 +549,13 @@
             const priceInput = row.querySelector('.combination-price');
             const stockInput = row.querySelector('.combination-stock');
             const imageUrlInput = row.querySelector('.combination-image-url');
+            const primaryRadio = row.querySelector('.combination-primary');
 
             if (variantState.combinations[comboKey]) {
                 variantState.combinations[comboKey].price = priceInput.value;
                 variantState.combinations[comboKey].stock = stockInput.value;
                 variantState.combinations[comboKey].image = imageUrlInput.value;
+                variantState.combinations[comboKey].is_primary = primaryRadio ? primaryRadio.checked : false;
             }
         });
     }

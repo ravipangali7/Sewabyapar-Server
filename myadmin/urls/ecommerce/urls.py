@@ -4,7 +4,7 @@ from myadmin.views.ecommerce import (
     product_views, category_views, store_views, order_views,
     review_views, cart_views, wishlist_views, coupon_views,
     product_image_views, order_item_views, banner_views, popup_views,
-    shipping_charge_history_views, payment_setting_views
+    shipping_charge_history_views, payment_setting_views, variant_image_views
 )
 
 app_name = 'ecommerce'
@@ -85,6 +85,9 @@ urlpatterns = [
     path('product-images/create/', product_image_views.ProductImageCreateView.as_view(), name='product_image_create'),
     path('product-images/<int:pk>/update/', product_image_views.ProductImageUpdateView.as_view(), name='product_image_update'),
     path('product-images/<int:pk>/delete/', product_image_views.ProductImageDeleteView.as_view(), name='product_image_delete'),
+    
+    # Variant Image Upload URL
+    path('upload-variant-image/', variant_image_views.upload_variant_image, name='upload_variant_image'),
     
     # Banner URLs
     path('banners/', banner_views.BannerListView.as_view(), name='banner_list'),

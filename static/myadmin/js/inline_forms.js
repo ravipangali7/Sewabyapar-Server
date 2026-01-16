@@ -88,6 +88,11 @@
                 window.initImageCropper(input);
             });
         }
+
+        // Setup primary image selection for new rows (if images formset)
+        if (formsetPrefix === 'images' && typeof window.setupPrimaryImageSelection === 'function') {
+            window.setupPrimaryImageSelection();
+        }
     }
 
     function addStackedForm(formsetPrefix) {
@@ -229,6 +234,82 @@
                 }
             });
         });
+
+        // Handle primary image selection for product images
+        setupPrimaryImageSelection();
     });
+
+    function setupPrimaryImageSelection() {
+        const imagesFormset = document.getElementById('images-tbody');
+        if (!imagesFormset) return;
+
+        // Handle primary checkbox changes
+        const primaryCheckboxes = imagesFormset.querySelectorAll('input[name*="-is_primary"]');
+        primaryCheckboxes.forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    // Uncheck all other primary checkboxes
+                    primaryCheckboxes.forEach(function(otherCheckbox) {
+                        if (otherCheckbox !== checkbox) {
+                            otherCheckbox.checked = false;
+                            updatePrimaryBadge(otherCheckbox, false);
+                        }
+                    });
+                    // Add primary badge to this row
+                    updatePrimaryBadge(checkbox, true);
+                } else {
+                    // Remove primary badge
+                    updatePrimaryBadge(checkbox, false);
+                }
+            });
+
+            // Initialize badge state
+            updatePrimaryBadge(checkbox, checkbox.checked);
+        });
+
+        // Handle image preview clicks to set primary
+        const imagePreviews = imagesFormset.querySelectorAll('.product-image-preview');
+        imagePreviews.forEach(function(preview) {
+            preview.addEventListener('click', function() {
+                const formIndex = this.getAttribute('data-form-index');
+                const primaryCheckbox = imagesFormset.querySelector(`input[name="images-${formIndex}-is_primary"]`);
+                if (primaryCheckbox) {
+                    primaryCheckbox.checked = true;
+                    primaryCheckbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    }
+
+    function updatePrimaryBadge(checkbox, isPrimary) {
+        const row = checkbox.closest('.form-row');
+        if (!row) return;
+
+        // Remove existing badge
+        const existingBadge = row.querySelector('.primary-image-badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        // Add badge if primary
+        if (isPrimary) {
+            const imagePreview = row.querySelector('.product-image-preview');
+            if (imagePreview) {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary position-absolute top-0 start-0 m-1 primary-image-badge';
+                badge.style.cssText = 'font-size: 0.7rem; z-index: 10;';
+                badge.textContent = 'Primary';
+                
+                const parent = imagePreview.parentElement;
+                if (parent && !parent.classList.contains('position-relative')) {
+                    parent.classList.add('position-relative', 'd-inline-block');
+                }
+                parent.appendChild(badge);
+            }
+        }
+    }
+
+    // Expose function for dynamically added rows
+    window.setupPrimaryImageSelection = setupPrimaryImageSelection;
 })();
 

@@ -3,6 +3,7 @@ from django import forms
 from django.forms.models import inlineformset_factory
 from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem, Banner, Popup, MerchantPaymentSetting
 from core.models import Address, User
+from myadmin.widgets.category_widget import HierarchicalCategoryWidget
 
 
 class ProductForm(forms.ModelForm):
@@ -16,15 +17,77 @@ class ProductForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'store': forms.Select(attrs={'class': 'form-select'}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'category': HierarchicalCategoryWidget(attrs={'class': 'form-select'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price'}),
             'discount_type': forms.Select(attrs={'class': 'form-select'}),
             'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_stock_quantity'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_approved': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter categories to only active ones
+        self.fields['category'].queryset = Category.objects.filter(is_active=True)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        variants_json = self.data.get('variants_json', '{}')
+        
+        # Parse variants if provided
+        variants_enabled = False
+        if variants_json:
+            try:
+                import json
+                variants_data = json.loads(variants_json) if variants_json else {}
+                variants_enabled = variants_data.get('enabled', False)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        # If variants are enabled, price and stock_quantity are optional
+        # They will be calculated from variant combinations
+        if variants_enabled:
+            # Price and stock_quantity are optional when variants enabled
+            # But we still validate that variants have valid data
+            if variants_json:
+                try:
+                    import json
+                    variants_data = json.loads(variants_json) if variants_json else {}
+                    if variants_data.get('enabled', False):
+                        variants = variants_data.get('variants', [])
+                        combinations = variants_data.get('combinations', {})
+                        
+                        # Validate that variants have names and values
+                        for variant in variants:
+                            if not variant.get('name') or not variant.get('values'):
+                                raise forms.ValidationError({
+                                    'category': 'When variants are enabled, all variant types must have names and values.'
+                                })
+                        
+                        # Validate that combinations have price and stock
+                        for combo_key, combo_data in combinations.items():
+                            if not combo_data.get('price') or not combo_data.get('stock'):
+                                raise forms.ValidationError({
+                                    'category': f'Variant combination "{combo_key}" must have both price and stock.'
+                                })
+                except (json.JSONDecodeError, ValueError) as e:
+                    raise forms.ValidationError({
+                        'category': f'Invalid variant data: {str(e)}'
+                    })
+        else:
+            # When variants are not enabled, price and stock_quantity are required
+            if not cleaned_data.get('price'):
+                raise forms.ValidationError({
+                    'price': 'Price is required when variants are not enabled.'
+                })
+            if cleaned_data.get('stock_quantity') is None:
+                raise forms.ValidationError({
+                    'stock_quantity': 'Stock quantity is required when variants are not enabled.'
+                })
+        
+        return cleaned_data
 
 
 class CategoryForm(forms.ModelForm):

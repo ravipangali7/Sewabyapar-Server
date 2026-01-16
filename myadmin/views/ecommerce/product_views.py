@@ -74,6 +74,19 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
     form_class = ProductForm
     template_name = 'admin/ecommerce/product_form.html'
     
+    def dispatch(self, request, *args, **kwargs):
+        """Check KYC verification for merchants before allowing product creation"""
+        # Only check KYC for merchants, not admin/staff users
+        if request.user.is_merchant and not request.user.is_kyc_verified:
+            messages.warning(
+                request,
+                'Please complete KYC verification before adding products. '
+                'Your KYC must be approved by an administrator.'
+            )
+            # Redirect to KYC submission or product list
+            return redirect('myadmin:ecommerce:product_list')
+        return super().dispatch(request, *args, **kwargs)
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
@@ -129,6 +142,19 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
     model = Product
     form_class = ProductForm
     template_name = 'admin/ecommerce/product_form.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check KYC verification for merchants before allowing product update"""
+        # Only check KYC for merchants, not admin/staff users
+        if request.user.is_merchant and not request.user.is_kyc_verified:
+            messages.warning(
+                request,
+                'Please complete KYC verification before updating products. '
+                'Your KYC must be approved by an administrator.'
+            )
+            # Redirect to product list
+            return redirect('myadmin:ecommerce:product_list')
+        return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

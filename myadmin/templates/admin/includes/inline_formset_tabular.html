@@ -42,10 +42,24 @@
                                             <div class="mt-2">
                                                 <small class="text-muted d-block mb-1">Current image:</small>
                                                 {% if form.instance.image.url %}
-                                                    <img src="{{ form.instance.image.url }}" alt="Current image" style="max-width: 100px; max-height: 100px; width: 100px; height: 75px; object-fit: fill; border: 1px solid #ddd; border-radius: 4px; padding: 2px; aspect-ratio: 4/3;" onerror="this.style.display='none';">
+                                                    <div class="position-relative d-inline-block">
+                                                        <img src="{{ form.instance.image.url }}" alt="Current image" class="product-image-preview" style="max-width: 100px; max-height: 100px; width: 100px; height: 75px; object-fit: fill; border: 1px solid #ddd; border-radius: 4px; padding: 2px; aspect-ratio: 4/3; cursor: pointer;" onerror="this.style.display='none';" data-form-index="{{ forloop.counter0 }}">
+                                                        {% if form.instance.is_primary %}
+                                                            <span class="badge bg-primary position-absolute top-0 start-0 m-1" style="font-size: 0.7rem;">Primary</span>
+                                                        {% endif %}
+                                                    </div>
                                                 {% endif %}
                                             </div>
                                         {% endif %}
+                                    {% endif %}
+                                    {% if formset.prefix == 'images' and field.name == 'is_primary' %}
+                                        <div class="form-check">
+                                            {{ field }}
+                                            <label class="form-check-label" for="{{ field.id_for_label }}">
+                                                Set as Primary Image
+                                            </label>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Click to set this image as the primary product image</small>
                                     {% endif %}
                                 </td>
                             {% endif %}
