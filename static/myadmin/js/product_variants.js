@@ -53,11 +53,15 @@
         // Update price/stock fields based on initial state
         if (variantState.enabled) {
             disablePriceStockFields(true);
-            // Show variant section if enabled
-            const variantSection = document.getElementById('product-variants-section');
-            if (variantSection) {
-                variantSection.style.display = 'block';
-            }
+            // Show variant form content if enabled
+            const variantFormContent = document.getElementById('variant-form-content');
+            const variantTypesSection = document.getElementById('variant-types-section');
+            const variantCombinationsSection = document.getElementById('variant-combinations-section');
+            const variantInfoMessage = document.getElementById('variant-info-message');
+            if (variantFormContent) variantFormContent.style.display = 'block';
+            if (variantTypesSection) variantTypesSection.style.display = 'block';
+            if (variantCombinationsSection) variantCombinationsSection.style.display = 'block';
+            if (variantInfoMessage) variantInfoMessage.style.display = 'block';
         } else {
             disablePriceStockFields(false);
         }
@@ -88,27 +92,47 @@
 
     function updateVariantSectionVisibility() {
         const variantSection = document.getElementById('product-variants-section');
+        const variantFormContent = document.getElementById('variant-form-content');
+        const variantTypesSection = document.getElementById('variant-types-section');
+        const variantCombinationsSection = document.getElementById('variant-combinations-section');
+        const variantInfoMessage = document.getElementById('variant-info-message');
+        
         if (variantSection) {
+            // Card is always visible, only show/hide form content
             if (variantState.enabled) {
-                variantSection.style.display = 'block';
+                // Show variant form content
+                if (variantFormContent) variantFormContent.style.display = 'block';
+                if (variantTypesSection) variantTypesSection.style.display = 'block';
+                if (variantCombinationsSection) variantCombinationsSection.style.display = 'block';
+                if (variantInfoMessage) variantInfoMessage.style.display = 'block';
+                
                 // Remove disabled attribute from inputs when visible (only variant section inputs)
                 const inputs = variantSection.querySelectorAll('input, select, textarea');
                 inputs.forEach(input => {
-                    input.disabled = false;
+                    // Don't disable the toggle itself
+                    if (input.id !== 'enable-variants-toggle') {
+                        input.disabled = false;
+                    }
                 });
                 // Disable price and stock fields when variants enabled
-                // Note: Image and discount fields are NOT affected (they're in separate cards)
                 disablePriceStockFields(true);
             } else {
-                variantSection.style.display = 'none';
+                // Hide variant form content (but keep card visible)
+                if (variantFormContent) variantFormContent.style.display = 'none';
+                if (variantTypesSection) variantTypesSection.style.display = 'none';
+                if (variantCombinationsSection) variantCombinationsSection.style.display = 'none';
+                if (variantInfoMessage) variantInfoMessage.style.display = 'none';
+                
                 // Disable inputs when hidden to prevent validation (only variant section inputs)
                 const inputs = variantSection.querySelectorAll('input, select, textarea');
                 inputs.forEach(input => {
-                    input.disabled = true;
-                    input.removeAttribute('required');
+                    // Don't disable the toggle itself
+                    if (input.id !== 'enable-variants-toggle') {
+                        input.disabled = true;
+                        input.removeAttribute('required');
+                    }
                 });
                 // Enable price and stock fields when variants disabled
-                // Note: Image and discount fields remain unaffected
                 disablePriceStockFields(false);
             }
         }
