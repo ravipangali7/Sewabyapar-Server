@@ -14,17 +14,17 @@ class ProductForm(forms.ModelForm):
             'discount', 'stock_quantity', 'is_active', 'is_featured', 'is_approved'
         ]
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter product name'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Enter product description'}),
             'store': forms.Select(attrs={'class': 'form-select'}),
             'category': HierarchicalCategoryWidget(attrs={'class': 'form-select'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price'}),
-            'discount_type': forms.Select(attrs={'class': 'form-select'}),
-            'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_stock_quantity'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_approved': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price', 'placeholder': '0.00'}),
+            'discount_type': forms.Select(attrs={'class': 'form-select', 'id': 'id_discount_type'}),
+            'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_discount', 'placeholder': '0'}),
+            'stock_quantity': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_stock_quantity', 'placeholder': '0'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_active'}),
+            'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_featured'}),
+            'is_approved': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_is_approved'}),
         }
     
     def __init__(self, *args, **kwargs):

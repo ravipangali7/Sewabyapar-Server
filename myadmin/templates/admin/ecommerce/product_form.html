@@ -10,29 +10,254 @@
         <div class="col-12">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="card">
+                
+                <!-- Basic Information Card -->
+                <div class="card mb-3">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Product Information</h5>
+                        <h5 class="card-title mb-0">
+                            <i class="align-middle" data-feather="info" style="width: 18px; height: 18px;"></i>
+                            Basic Information
+                        </h5>
                     </div>
                     <div class="card-body">
-                        {% include 'admin/includes/form_fields.html' with form=form %}
+                        <!-- Name Field -->
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.name.id_for_label }}">
+                                {{ form.name.label }}
+                                {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}
+                                <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                            {% endif %}
+                            {% if form.name.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                         
-                        <!-- Info message for variants -->
-                        <div id="price-stock-info" class="alert alert-info mt-3" style="display: none;">
-                            <i class="align-middle" data-feather="info"></i>
-                            <strong>Note:</strong> Price and stock are managed through variants when variants are enabled.
+                        <!-- Category Field -->
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.category.id_for_label }}">
+                                {{ form.category.label }}
+                                {% if form.category.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.help_text %}
+                                <small class="form-text text-muted">{{ form.category.help_text }}</small>
+                            {% endif %}
+                            {% if form.category.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.category.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Description Field -->
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.description.id_for_label }}">
+                                {{ form.description.label }}
+                                {% if form.description.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.help_text %}
+                                <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                            {% endif %}
+                            {% if form.description.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.description.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
                 
+                <!-- Product Images Card -->
                 {% if formset %}
-                    {% include 'admin/includes/inline_formset_tabular.html' with formset=formset %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="align-middle" data-feather="image" style="width: 18px; height: 18px;"></i>
+                                Product Images
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% include 'admin/includes/inline_formset_tabular.html' with formset=formset %}
+                        </div>
+                    </div>
                 {% endif %}
                 
-                <!-- Product Variations Section -->
-                <div class="card mt-3" id="product-variants-section" style="display: none;">
+                <!-- Pricing & Inventory Card -->
+                <div class="card mb-3">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Product Variations</h5>
+                        <h5 class="card-title mb-0">
+                            <i class="align-middle" data-feather="dollar-sign" style="width: 18px; height: 18px;"></i>
+                            Pricing & Inventory
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Info message for variants -->
+                        <div id="price-stock-info" class="alert alert-info mb-3" style="display: none;">
+                            <i class="align-middle" data-feather="info" style="width: 16px; height: 16px;"></i>
+                            <strong>Note:</strong> Price and stock are managed through variants when variants are enabled.
+                        </div>
+                        
+                        <div class="row">
+                            <!-- Price Field -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.price.id_for_label }}">
+                                    {{ form.price.label }}
+                                    {% if form.price.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.price }}
+                                {% if form.price.help_text %}
+                                    <small class="form-text text-muted">{{ form.price.help_text }}</small>
+                                {% endif %}
+                                {% if form.price.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.price.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Stock Quantity Field -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.stock_quantity.id_for_label }}">
+                                    {{ form.stock_quantity.label }}
+                                    {% if form.stock_quantity.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.stock_quantity }}
+                                {% if form.stock_quantity.help_text %}
+                                    <small class="form-text text-muted">{{ form.stock_quantity.help_text }}</small>
+                                {% endif %}
+                                {% if form.stock_quantity.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.stock_quantity.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Discount Card -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="align-middle" data-feather="tag" style="width: 18px; height: 18px;"></i>
+                            Discount
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Discount Type Field -->
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.discount_type.id_for_label }}">
+                                {{ form.discount_type.label }}
+                            </label>
+                            {{ form.discount_type }}
+                            {% if form.discount_type.help_text %}
+                                <small class="form-text text-muted">{{ form.discount_type.help_text }}</small>
+                            {% endif %}
+                            {% if form.discount_type.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.discount_type.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Discount Amount Field (shown conditionally) -->
+                        <div class="mb-3" id="discount-amount-container" style="display: none;">
+                            <label class="form-label" for="{{ form.discount.id_for_label }}" id="discount-label">
+                                Discount Amount
+                            </label>
+                            {{ form.discount }}
+                            {% if form.discount.help_text %}
+                                <small class="form-text text-muted">{{ form.discount.help_text }}</small>
+                            {% endif %}
+                            {% if form.discount.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.discount.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Details Card -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="align-middle" data-feather="more-horizontal" style="width: 18px; height: 18px;"></i>
+                            Additional Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Featured Field -->
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    {{ form.is_featured }}
+                                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                                        {{ form.is_featured.label }}
+                                    </label>
+                                    {% if form.is_featured.help_text %}
+                                        <small class="form-text text-muted d-block">{{ form.is_featured.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.is_featured.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.is_featured.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Active Field -->
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        {{ form.is_active.label }}
+                                    </label>
+                                    {% if form.is_active.help_text %}
+                                        <small class="form-text text-muted d-block">{{ form.is_active.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.is_active.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.is_active.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product Variations Card -->
+                <div class="card mb-3" id="product-variants-section" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="align-middle" data-feather="layers" style="width: 18px; height: 18px;"></i>
+                            Product Variations
+                        </h5>
                     </div>
                     <div class="card-body">
                         <!-- Enable Product Variants Toggle -->
@@ -102,6 +327,58 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Admin Settings Card (only for admin users) -->
+                {% if user.is_staff or user.is_superuser %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="align-middle" data-feather="settings" style="width: 18px; height: 18px;"></i>
+                                Admin Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Store Field -->
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ form.store.id_for_label }}">
+                                    {{ form.store.label }}
+                                    {% if form.store.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.store }}
+                                {% if form.store.help_text %}
+                                    <small class="form-text text-muted">{{ form.store.help_text }}</small>
+                                {% endif %}
+                                {% if form.store.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.store.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Is Approved Field -->
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.is_approved }}
+                                    <label class="form-check-label" for="{{ form.is_approved.id_for_label }}">
+                                        {{ form.is_approved.label }}
+                                    </label>
+                                    {% if form.is_approved.help_text %}
+                                        <small class="form-text text-muted d-block">{{ form.is_approved.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.is_approved.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.is_approved.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
 
                 <!-- Hidden input for variant data -->
                 <script id="variants-data" type="application/json">{{ variants_data|safe }}</script>
@@ -122,6 +399,42 @@
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
 <style>
+    /* Card Styling to Match App */
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        margin-bottom: 12px;
+    }
+    
+    .card-header {
+        background-color: white;
+        border-bottom: 1px solid #e9ecef;
+        padding: 14px 16px;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    /* Form Field Styling */
+    .form-control, .form-select {
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #ced4da;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #212529;
+    }
+    
     /* Variant Types Styling */
     .variant-type-item {
         transition: all 0.3s ease;
@@ -155,10 +468,20 @@
         border-color: #0d6efd;
     }
     
+    .form-switch .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+    }
+    
     /* Badge/Pill Styling */
     .badge.rounded-pill {
         display: inline-flex;
         align-items: center;
+    }
+    
+    /* Description textarea */
+    #id_description {
+        min-height: 100px;
     }
 </style>
 {% endblock %}
@@ -181,6 +504,44 @@
         if (typeof feather !== 'undefined') {
             feather.replace();
         }
+        
+        // Handle discount type change to show/hide discount amount and update label
+        const discountTypeSelect = document.getElementById('id_discount_type');
+        const discountAmountContainer = document.getElementById('discount-amount-container');
+        const discountLabel = document.getElementById('discount-label');
+        const discountInput = document.getElementById('id_discount');
+        
+        function updateDiscountField() {
+            if (discountTypeSelect && discountAmountContainer && discountLabel) {
+                const discountType = discountTypeSelect.value;
+                if (discountType) {
+                    discountAmountContainer.style.display = 'block';
+                    if (discountType === 'flat') {
+                        discountLabel.textContent = 'Discount Amount (₹) *';
+                    } else if (discountType === 'percentage') {
+                        discountLabel.textContent = 'Discount Percentage (%) *';
+                    }
+                    // Make discount field required when type is selected
+                    if (discountInput) {
+                        discountInput.setAttribute('required', 'required');
+                    }
+                } else {
+                    discountAmountContainer.style.display = 'none';
+                    // Remove required when type is cleared
+                    if (discountInput) {
+                        discountInput.removeAttribute('required');
+                        discountInput.value = '';
+                    }
+                }
+            }
+        }
+        
+        if (discountTypeSelect) {
+            discountTypeSelect.addEventListener('change', updateDiscountField);
+            // Initialize on page load
+            updateDiscountField();
+        }
+        
         // Check if variants are enabled from initial data
         const variantsDataEl = document.getElementById('variants-data');
         if (variantsDataEl) {
@@ -211,4 +572,3 @@
     });
 </script>
 {% endblock %}
-
