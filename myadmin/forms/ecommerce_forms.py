@@ -72,6 +72,40 @@ class ProductForm(forms.ModelForm):
                                 raise forms.ValidationError({
                                     'category': f'Variant combination "{combo_key}" must have both price and stock.'
                                 })
+                            
+                            # Validate discount fields if provided
+                            discount_type = combo_data.get('discount_type', '').strip()
+                            discount = combo_data.get('discount', '').strip()
+                            
+                            if discount_type:
+                                # If discount_type is provided, discount must also be provided
+                                if not discount:
+                                    raise forms.ValidationError({
+                                        'category': f'Variant combination "{combo_key}" has discount type but no discount value.'
+                                    })
+                                
+                                try:
+                                    discount_value = float(discount)
+                                    if discount_value < 0:
+                                        raise forms.ValidationError({
+                                            'category': f'Variant combination "{combo_key}" discount cannot be negative.'
+                                        })
+                                    
+                                    # Validate percentage discount doesn't exceed 100
+                                    if discount_type == 'percentage' and discount_value > 100:
+                                        raise forms.ValidationError({
+                                            'category': f'Variant combination "{combo_key}" percentage discount cannot exceed 100%.'
+                                        })
+                                except (ValueError, TypeError):
+                                    raise forms.ValidationError({
+                                        'category': f'Variant combination "{combo_key}" has invalid discount value.'
+                                    })
+                            
+                            # If discount is provided without type, that's also invalid
+                            if discount and not discount_type:
+                                raise forms.ValidationError({
+                                    'category': f'Variant combination "{combo_key}" has discount value but no discount type.'
+                                })
                 except (json.JSONDecodeError, ValueError) as e:
                     raise forms.ValidationError({
                         'category': f'Invalid variant data: {str(e)}'

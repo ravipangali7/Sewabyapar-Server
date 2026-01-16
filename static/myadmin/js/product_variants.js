@@ -10,7 +10,7 @@
     let variantState = {
         enabled: false,
         variants: [], // [{name: "Color", values: ["White", "Blue"]}]
-        combinations: {} // {"White/XL": {price: 500, stock: 10, image: "", is_primary: false}}
+        combinations: {} // {"White/XL": {price: 500, stock: 10, image: "", is_primary: false, discount_type: "", discount: ""}}
     };
 
     // Initialize on page load
@@ -48,8 +48,6 @@
                 addVariantTypeUI(variant.name, variant.values, index);
             });
             generateCombinations();
-        } else {
-            // Don't add default variant type - let user enable variants first
         }
         
         // Update price/stock fields based on initial state
@@ -155,36 +153,51 @@
         variantDiv.className = 'variant-type-item mb-3 p-3 border rounded';
         variantDiv.dataset.index = index;
 
-        const valuesDisplay = values.map(v => 
-            `<span class="badge bg-primary me-1 mb-1">${escapeHtml(v)}</span>`
-        ).join('');
+        const valuesDisplay = values.length > 0 ? values.map(v => 
+            `<span class="badge bg-primary rounded-pill me-2 mb-2 px-3 py-1" style="font-size: 0.875rem; cursor: default;">
+                ${escapeHtml(v)}
+            </span>`
+        ).join('') : '';
 
         variantDiv.innerHTML = `
-            <div class="row">
-                <div class="col-md-4">
-                    <label class="form-label">Variant Name *</label>
-                    <input type="text" class="form-control variant-name" 
-                           name="variant_name_${index}"
-                           value="${escapeHtml(name)}" 
-                           placeholder="e.g., Color">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Variant Values *</label>
-                    <input type="text" class="form-control variant-values" 
-                           name="variant_values_${index}"
-                           value="${escapeHtml(values.join(', '))}" 
-                           placeholder="Enter values separated by commas">
-                    <small class="form-text text-muted">Enter values separated by commas.</small>
-                    <div class="variant-values-display mt-2">${valuesDisplay}</div>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" class="btn btn-danger btn-sm remove-variant" 
-                            ${variantState.variants.length <= 1 ? 'disabled' : ''}>
-                        Remove
-                    </button>
+            <div class="card border shadow-sm">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Variant Name *</label>
+                            <input type="text" class="form-control variant-name" 
+                                   name="variant_name_${index}"
+                                   value="${escapeHtml(name)}" 
+                                   placeholder="e.g., Color, Size">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Variant Values *</label>
+                            <input type="text" class="form-control variant-values" 
+                                   name="variant_values_${index}"
+                                   value="${escapeHtml(values.join(', '))}" 
+                                   placeholder="Enter values separated by commas (e.g., Red, Blue, Green)">
+                            <small class="form-text text-muted d-block mt-1">
+                                <i class="align-middle" data-feather="info" style="width: 14px; height: 14px;"></i>
+                                Enter values separated by commas.
+                            </small>
+                            <div class="variant-values-display mt-3">${valuesDisplay}</div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-danger btn-sm w-100 remove-variant" 
+                                    ${variantState.variants.length <= 1 ? 'disabled' : ''}>
+                                <i class="align-middle" data-feather="trash-2" style="width: 14px; height: 14px;"></i>
+                                Remove
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
+        
+        // Reinitialize feather icons for new content
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
 
         // Update container
         const existing = container.querySelector(`[data-index="${index}"]`);
@@ -222,8 +235,15 @@
         if (!displayDiv) return;
 
         const values = parseVariantValues(valuesStr);
+        if (values.length === 0) {
+            displayDiv.innerHTML = '';
+            return;
+        }
+        
         displayDiv.innerHTML = values.map(v => 
-            `<span class="badge bg-primary me-1 mb-1">${escapeHtml(v)}</span>`
+            `<span class="badge bg-primary rounded-pill me-2 mb-2 px-3 py-1" style="font-size: 0.875rem; cursor: default;">
+                ${escapeHtml(v)}
+            </span>`
         ).join('');
     }
 
@@ -293,7 +313,9 @@
                     price: '',
                     stock: '',
                     image: '',
-                    is_primary: false
+                    is_primary: false,
+                    discount_type: '',
+                    discount: ''
                 };
             }
         });
@@ -334,7 +356,7 @@
         const combinations = Object.keys(variantState.combinations).sort();
         
         if (combinations.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No combinations available. Add variant types above.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No combinations available. Add variant types above.</td></tr>';
             return;
         }
         
@@ -361,37 +383,56 @@
             row.dataset.combination = comboKey;
 
             const imagePreview = combo.image ? 
-                `<img src="${escapeHtml(combo.image)}" class="img-thumbnail me-2" style="max-width: 50px; max-height: 50px;">` : 
+                `<img src="${escapeHtml(combo.image)}" class="combination-image-preview img-thumbnail me-2" style="max-width: 60px; max-height: 60px; border-radius: 4px; object-fit: cover;">` : 
                 '';
             
             const isPrimary = combo.is_primary || false;
             const primaryChecked = isPrimary ? 'checked' : '';
+            
+            const discountType = combo.discount_type || '';
+            const discountValue = combo.discount || '';
 
             row.innerHTML = `
-                <td>${escapeHtml(comboKey)}</td>
+                <td><strong>${escapeHtml(comboKey)}</strong></td>
                 <td>
                     <input type="number" class="form-control form-control-sm combination-price" 
                            value="${escapeHtml(combo.price || '')}" 
-                           placeholder="Price" step="0.01" min="0">
+                           placeholder="0.00" step="0.01" min="0">
                 </td>
                 <td>
                     <input type="number" class="form-control form-control-sm combination-stock" 
                            value="${escapeHtml(combo.stock || '')}" 
-                           placeholder="Stock" min="0">
-                </td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        ${imagePreview}
-                        <input type="file" class="form-control form-control-sm combination-image" 
-                               accept="image/*" style="max-width: 150px;">
-                        <input type="hidden" class="combination-image-url" value="${escapeHtml(combo.image || '')}">
-                    </div>
+                           placeholder="0" min="0">
                 </td>
                 <td class="text-center">
                     <input type="radio" class="form-check-input combination-primary" 
                            name="primary_combination" 
                            value="${escapeHtml(comboKey)}"
                            ${primaryChecked}>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm combination-discount-type">
+                        <option value="">---------</option>
+                        <option value="flat" ${discountType === 'flat' ? 'selected' : ''}>Flat</option>
+                        <option value="percentage" ${discountType === 'percentage' ? 'selected' : ''}>Percentage</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm combination-discount" 
+                           value="${escapeHtml(discountValue)}" 
+                           placeholder="0" step="0.01" min="0">
+                </td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        ${imagePreview}
+                        <button type="button" class="btn btn-sm btn-outline-secondary combination-image-btn" 
+                                style="min-width: 100px;">
+                            ${combo.image ? 'Change Image' : 'Add Image'}
+                        </button>
+                        <input type="file" class="d-none combination-image" 
+                               accept="image/*">
+                        <input type="hidden" class="combination-image-url" value="${escapeHtml(combo.image || '')}">
+                    </div>
                 </td>
             `;
 
@@ -400,6 +441,9 @@
             // Setup event listeners
             const priceInput = row.querySelector('.combination-price');
             const stockInput = row.querySelector('.combination-stock');
+            const discountTypeSelect = row.querySelector('.combination-discount-type');
+            const discountInput = row.querySelector('.combination-discount');
+            const imageBtn = row.querySelector('.combination-image-btn');
             const imageInput = row.querySelector('.combination-image');
             const imageUrlInput = row.querySelector('.combination-image-url');
 
@@ -411,8 +455,21 @@
                 variantState.combinations[comboKey].stock = this.value;
             });
 
+            discountTypeSelect.addEventListener('change', function() {
+                variantState.combinations[comboKey].discount_type = this.value;
+            });
+
+            discountInput.addEventListener('input', function() {
+                variantState.combinations[comboKey].discount = this.value;
+            });
+
+            // Setup image button to trigger file input
+            imageBtn.addEventListener('click', function() {
+                imageInput.click();
+            });
+
             imageInput.addEventListener('change', function(e) {
-                handleImageUpload(e.target, comboKey, imageUrlInput, row);
+                handleImageUpload(e.target, comboKey, imageUrlInput, row, imageBtn);
             });
             
             // Setup primary radio button handler
@@ -430,7 +487,7 @@
         });
     }
 
-    function handleImageUpload(input, comboKey, imageUrlInput, row) {
+    function handleImageUpload(input, comboKey, imageUrlInput, row, imageBtn) {
         const file = input.files[0];
         if (!file) return;
 
@@ -440,11 +497,17 @@
         formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 
         // Show loading
-        const preview = row.querySelector('img') || document.createElement('img');
-        preview.className = 'img-thumbnail me-2';
-        preview.style.cssText = 'max-width: 50px; max-height: 50px;';
+        const existingPreview = row.querySelector('.combination-image-preview');
+        const preview = existingPreview || document.createElement('img');
+        preview.className = 'combination-image-preview img-thumbnail me-2';
+        preview.style.cssText = 'max-width: 60px; max-height: 60px; border-radius: 4px; object-fit: cover;';
         preview.src = '';
         preview.alt = 'Loading...';
+        
+        if (!existingPreview && imageBtn) {
+            imageBtn.textContent = 'Uploading...';
+            imageBtn.disabled = true;
+        }
 
         // Get upload URL from page
         const uploadUrlEl = document.getElementById('variant-upload-url');
@@ -462,15 +525,36 @@
                 variantState.combinations[comboKey].image = data.url;
                 preview.src = data.url;
                 preview.alt = comboKey;
-                if (!row.querySelector('img')) {
-                    imageInput.parentElement.insertBefore(preview, imageInput);
+                
+                // Update button text and enable
+                if (imageBtn) {
+                    imageBtn.textContent = 'Change Image';
+                    imageBtn.disabled = false;
                 }
+                
+                // Insert preview if not exists
+                const existingPreview = row.querySelector('.combination-image-preview');
+                if (existingPreview && existingPreview !== preview) {
+                    existingPreview.replaceWith(preview);
+                } else if (!existingPreview) {
+                    const imageContainer = imageBtn.parentElement;
+                    imageContainer.insertBefore(preview, imageBtn);
+                }
+                preview.classList.add('combination-image-preview');
             } else {
+                if (imageBtn) {
+                    imageBtn.textContent = 'Add Image';
+                    imageBtn.disabled = false;
+                }
                 alert('Failed to upload image: ' + (data.error || 'Unknown error'));
             }
         })
         .catch(error => {
             console.error('Error uploading image:', error);
+            if (imageBtn) {
+                imageBtn.textContent = 'Add Image';
+                imageBtn.disabled = false;
+            }
             alert('Error uploading image. Please try again.');
         });
     }
@@ -548,13 +632,17 @@
             const comboKey = row.dataset.combination;
             const priceInput = row.querySelector('.combination-price');
             const stockInput = row.querySelector('.combination-stock');
+            const discountTypeSelect = row.querySelector('.combination-discount-type');
+            const discountInput = row.querySelector('.combination-discount');
             const imageUrlInput = row.querySelector('.combination-image-url');
             const primaryRadio = row.querySelector('.combination-primary');
 
             if (variantState.combinations[comboKey]) {
-                variantState.combinations[comboKey].price = priceInput.value;
-                variantState.combinations[comboKey].stock = stockInput.value;
-                variantState.combinations[comboKey].image = imageUrlInput.value;
+                variantState.combinations[comboKey].price = priceInput ? priceInput.value : '';
+                variantState.combinations[comboKey].stock = stockInput ? stockInput.value : '';
+                variantState.combinations[comboKey].discount_type = discountTypeSelect ? discountTypeSelect.value : '';
+                variantState.combinations[comboKey].discount = discountInput ? discountInput.value : '';
+                variantState.combinations[comboKey].image = imageUrlInput ? imageUrlInput.value : '';
                 variantState.combinations[comboKey].is_primary = primaryRadio ? primaryRadio.checked : false;
             }
         });

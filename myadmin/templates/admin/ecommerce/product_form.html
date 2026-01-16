@@ -36,47 +36,65 @@
                     </div>
                     <div class="card-body">
                         <!-- Enable Product Variants Toggle -->
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="enable-variants-toggle" name="enable_variants">
-                                <label class="form-check-label" for="enable-variants-toggle">
-                                    <strong>Enable Product Variants</strong>
+                        <div class="mb-4 p-3 bg-light rounded">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="enable-variants-toggle" name="enable_variants" style="width: 3rem; height: 1.5rem;">
+                                <label class="form-check-label ms-3" for="enable-variants-toggle" style="font-size: 1.1rem; font-weight: 600;">
+                                    Enable Product Variants
                                 </label>
                             </div>
-                            <div class="mt-2">
-                                <small class="text-muted d-block">Whenever you have multiple color/sizes/specs for any product.</small>
-                                <small class="text-muted d-block">When using variations, the stock will be automatically calculated from the sum of all combination stocks.</small>
+                            <div class="ms-5">
+                                <div class="d-flex align-items-start mb-2">
+                                    <i class="align-middle me-2" data-feather="info" style="width: 16px; height: 16px; margin-top: 2px;"></i>
+                                    <small class="text-muted">Whenever you have multiple color/sizes/specs for any product.</small>
+                                </div>
+                                <div class="d-flex align-items-start">
+                                    <i class="align-middle me-2" data-feather="info" style="width: 16px; height: 16px; margin-top: 2px;"></i>
+                                    <small class="text-muted">When using variations, the stock will be automatically calculated from the sum of all combination stocks.</small>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Variant Types -->
                         <div class="mb-4">
-                            <h6 class="mb-3">Variant Types</h6>
+                            <h6 class="mb-3 fw-bold">
+                                <i class="align-middle" data-feather="layers" style="width: 18px; height: 18px;"></i>
+                                Variant Types
+                            </h6>
                             <div id="variant-types-container">
                                 <!-- Variant types will be added here by JavaScript -->
                             </div>
-                            <button type="button" class="btn btn-success btn-sm mt-2" onclick="addVariantType()">
-                                <i class="align-middle" data-feather="plus"></i> Add Variant Type
+                            <button type="button" class="btn btn-success btn-sm mt-3" onclick="addVariantType()">
+                                <i class="align-middle" data-feather="plus" style="width: 16px; height: 16px;"></i>
+                                Add Variant Type
                             </button>
                         </div>
 
                         <!-- Product Variant Details -->
                         <div class="mb-4">
-                            <h6 class="mb-3">Product Variant Details</h6>
+                            <h6 class="mb-3 fw-bold">
+                                <i class="align-middle" data-feather="grid" style="width: 18px; height: 18px;"></i>
+                                Product Variant Details
+                            </h6>
                             <div class="table-responsive">
-                                <table class="table table-bordered table-sm">
-                                    <thead>
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-light">
                                         <tr>
-                                            <th>Variant</th>
-                                            <th>Price</th>
-                                            <th>Stock</th>
-                                            <th>Image (Optional)</th>
-                                            <th>Primary</th>
+                                            <th class="fw-bold">Variant</th>
+                                            <th class="fw-bold">Price</th>
+                                            <th class="fw-bold">Stock</th>
+                                            <th class="fw-bold text-center">Primary</th>
+                                            <th class="fw-bold">Discount Type</th>
+                                            <th class="fw-bold">Discount</th>
+                                            <th class="fw-bold">Image (Optional)</th>
                                         </tr>
                                     </thead>
                                     <tbody id="combinations-table-body">
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted">Enable variants and add variant types to see combinations</td>
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="align-middle" data-feather="info" style="width: 20px; height: 20px;"></i>
+                                                Enable variants and add variant types to see combinations
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -102,6 +120,47 @@
 <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet">
 <!-- SweetAlert2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+<style>
+    /* Variant Types Styling */
+    .variant-type-item {
+        transition: all 0.3s ease;
+    }
+    
+    .variant-type-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .variant-values-display {
+        min-height: 40px;
+    }
+    
+    /* Combinations Table Styling */
+    #combinations-table-body tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    #combinations-table-body td {
+        vertical-align: middle;
+    }
+    
+    .combination-image-preview {
+        border-radius: 4px;
+        object-fit: cover;
+    }
+    
+    /* Form Switch Styling */
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    /* Badge/Pill Styling */
+    .badge.rounded-pill {
+        display: inline-flex;
+        align-items: center;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -116,12 +175,12 @@
 <script src="{% static 'myadmin/js/inline_forms.js' %}"></script>
 <script src="{% static 'myadmin/js/product_variants.js' %}"></script>
 <script>
-    if (typeof feather !== 'undefined') {
-        feather.replace();
-    }
-    
     // Initialize variant section visibility and price/stock fields on page load
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
         // Check if variants are enabled from initial data
         const variantsDataEl = document.getElementById('variants-data');
         if (variantsDataEl) {
