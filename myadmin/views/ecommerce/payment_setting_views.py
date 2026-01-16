@@ -5,11 +5,14 @@ import sys
 import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.views.generic import ListView, DetailView, View
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View
+from django.urls import reverse_lazy
 from django.utils import timezone
 from django.db.models import Q
+from django.db import IntegrityError
 from myadmin.mixins import StaffRequiredMixin
 from ecommerce.models import MerchantPaymentSetting
+from myadmin.forms.ecommerce_forms import PaymentSettingForm
 
 
 class PaymentSettingListView(StaffRequiredMixin, ListView):
@@ -152,3 +155,80 @@ class PaymentSettingBulkApproveView(StaffRequiredMixin, View):
             messages.error(request, 'An error occurred while approving payment settings.')
         
         return redirect('myadmin:ecommerce:payment_setting_list')
+
+
+class PaymentSettingCreateView(StaffRequiredMixin, CreateView):
+    """Create new payment setting"""
+    model = MerchantPaymentSetting
+    form_class = PaymentSettingForm
+    template_name = 'admin/ecommerce/payment_setting_form.html'
+    
+    def form_valid(self, form):
+        # Check if merchant already has a payment setting
+        user = form.cleaned_data['user']
+        if MerchantPaymentSetting.objects.filter(user=user).exists():
+            form.add_error('user', f'This merchant ({user.name}) already has a payment setting. Please edit the existing one instead.')
+            return self.form_invalid(form)
+        
+        try:
+            messages.success(self.request, f'Payment setting created successfully for {user.name}.')
+            return super().form_valid(form)
+        except IntegrityError:
+            form.add_error('user', 'This merchant already has a payment setting.')
+            return self.form_invalid(form)
+        except Exception as e:
+            print(f'[ERROR] Error creating payment setting: {str(e)}')
+            traceback.print_exc()
+            messages.error(self.request, 'An error occurred while creating payment setting.')
+            return self.form_invalid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('myadmin:ecommerce:payment_setting_detail', kwargs={'pk': self.object.pk})
+
+
+class PaymentSettingUpdateView(StaffRequiredMixin, UpdateView):
+    """Update payment setting"""
+    model = MerchantPaymentSetting
+    form_class = PaymentSettingForm
+    template_name = 'admin/ecommerce/payment_setting_form.html'
+    
+    def form_valid(self, form):
+        try:
+            messages.success(self.request, f'Payment setting updated successfully for {self.object.user.name}.')
+            return super().form_valid(form)
+        except Exception as e:
+            print(f'[ERROR] Error updating payment setting: {str(e)}')
+            traceback.print_exc()
+            messages.error(self.request, 'An error occurred while updating payment setting.')
+            return self.form_invalid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('myadmin:ecommerce:payment_setting_detail', kwargs={'pk': self.object.pk})
+
+
+class PaymentSettingDeleteView(StaffRequiredMixin, DeleteView):
+    """Delete payment setting"""
+    model = MerchantPaymentSetting
+    template_name = 'admin/ecommerce/payment_setting_confirm_delete.html'
+    success_url = reverse_lazy('myadmin:ecommerce:payment_setting_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Check if there are related withdrawals
+        payment_setting = self.get_object()
+        related_withdrawals = payment_setting.withdrawals.all() if hasattr(payment_setting, 'withdrawals') else []
+        context['related_withdrawals'] = related_withdrawals
+        context['withdrawals_count'] = related_withdrawals.count()
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        payment_setting = self.get_object()
+        user_name = payment_setting.user.name
+        try:
+            messages.success(request, f'Payment setting deleted successfully for {user_name}.')
+            return super().delete(request, *args, **kwargs)
+        except Exception as e:
+            print(f'[ERROR] Error deleting payment setting: {str(e)}')
+            traceback.print_exc()
+            messages.error(request, 'An error occurred while deleting payment setting.')
+            return redirect('myadmin:ecommerce:payment_setting_detail', pk=payment_setting.pk)

@@ -5,6 +5,9 @@
 <div class="container-fluid p-0">
     <div class="mb-3">
         <h1 class="h3 d-inline align-middle">Merchant Payout Method Verification</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:payment_setting_create' %}">
+            <i class="align-middle" data-feather="plus"></i> Create New
+        </a>
         <a class="btn btn-secondary ms-2" href="{% url 'myadmin:dashboard' %}">
             <i class="align-middle" data-feather="arrow-left"></i> Back to Dashboard
         </a>
@@ -137,22 +140,32 @@
                                         <small class="text-muted">{{ payment_setting.created_at|date:"H:i" }}</small>
                                     </td>
                                     <td>
-                                        <a href="{% url 'myadmin:ecommerce:payment_setting_detail' payment_setting.pk %}" class="btn btn-sm btn-primary">
-                                            <i class="align-middle" data-feather="eye"></i> Review
-                                        </a>
-                                        {% if payment_setting.status == 'pending' %}
-                                        <form method="post" action="{% url 'myadmin:ecommerce:payment_setting_approve' payment_setting.pk %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-success" onclick="event.preventDefault(); const form = this.closest('form'); if (form) { confirmQuestion('Approve Payment Setting', 'Approve payment setting for {{ payment_setting.user.name }}?').then(() => form.submit()).catch(() => {}); }">
-                                                <i class="align-middle" data-feather="check"></i> Approve
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'myadmin:ecommerce:payment_setting_detail' payment_setting.pk %}" class="btn btn-sm btn-primary" title="View Details">
+                                                <i class="align-middle" data-feather="eye"></i>
+                                            </a>
+                                            <a href="{% url 'myadmin:ecommerce:payment_setting_update' payment_setting.pk %}" class="btn btn-sm btn-info" title="Edit">
+                                                <i class="align-middle" data-feather="edit"></i>
+                                            </a>
+                                            <a href="{% url 'myadmin:ecommerce:payment_setting_delete' payment_setting.pk %}" class="btn btn-sm btn-danger" title="Delete" onclick="event.preventDefault(); confirmQuestion('Delete Payment Setting', 'Are you sure you want to delete this payment setting?').then(() => window.location.href = this.href).catch(() => {});">
+                                                <i class="align-middle" data-feather="trash-2"></i>
+                                            </a>
+                                        </div>
+                                        <div class="mt-1">
+                                            {% if payment_setting.status == 'pending' %}
+                                            <form method="post" action="{% url 'myadmin:ecommerce:payment_setting_approve' payment_setting.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success" onclick="event.preventDefault(); const form = this.closest('form'); if (form) { confirmQuestion('Approve Payment Setting', 'Approve payment setting for {{ payment_setting.user.name }}?').then(() => form.submit()).catch(() => {}); }">
+                                                    <i class="align-middle" data-feather="check"></i> Approve
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            {% if payment_setting.status != 'approved' %}
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ payment_setting.pk }}">
+                                                <i class="align-middle" data-feather="x-circle"></i> Reject
                                             </button>
-                                        </form>
-                                        {% endif %}
-                                        {% if payment_setting.status != 'approved' %}
-                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ payment_setting.pk }}">
-                                            <i class="align-middle" data-feather="x-circle"></i> Reject
-                                        </button>
-                                        {% endif %}
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                                 {% empty %}

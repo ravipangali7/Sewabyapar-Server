@@ -1,0 +1,379 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Payment Setting</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:payment_setting_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="credit-card"></i> Payment Setting Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="paymentSettingForm">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Fields -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.user.id_for_label }}">
+                                    {{ form.user.label }}
+                                    {% if form.user.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.user }}
+                                {% if form.user.help_text %}
+                                    <small class="form-text text-muted">{{ form.user.help_text }}</small>
+                                {% endif %}
+                                {% if form.user.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.user.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.payment_method_type.id_for_label }}">
+                                    {{ form.payment_method_type.label }}
+                                    {% if form.payment_method_type.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.payment_method_type }}
+                                {% if form.payment_method_type.help_text %}
+                                    <small class="form-text text-muted">{{ form.payment_method_type.help_text }}</small>
+                                {% endif %}
+                                {% if form.payment_method_type.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.payment_method_type.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.status.id_for_label }}">
+                                    {{ form.status.label }}
+                                    {% if form.status.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.status }}
+                                {% if form.status.help_text %}
+                                    <small class="form-text text-muted">{{ form.status.help_text }}</small>
+                                {% endif %}
+                                {% if form.status.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.status.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Dynamic Payment Details Fields -->
+                        <!-- Bank Account Fields -->
+                        <div id="bank_account_fields" class="payment-method-fields" style="display: none;">
+                            <h5 class="mb-3">
+                                <i class="align-middle" data-feather="bank"></i> Bank Account Details
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.account_number.id_for_label }}">
+                                        {{ form.account_number.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.account_number }}
+                                    {% if form.account_number.help_text %}
+                                        <small class="form-text text-muted">{{ form.account_number.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.account_number.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.account_number.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.ifsc.id_for_label }}">
+                                        {{ form.ifsc.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.ifsc }}
+                                    {% if form.ifsc.help_text %}
+                                        <small class="form-text text-muted">{{ form.ifsc.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ifsc.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.ifsc.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.bank_name.id_for_label }}">
+                                        {{ form.bank_name.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.bank_name }}
+                                    {% if form.bank_name.help_text %}
+                                        <small class="form-text text-muted">{{ form.bank_name.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.bank_name.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.bank_name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.account_holder_name.id_for_label }}">
+                                        {{ form.account_holder_name.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.account_holder_name }}
+                                    {% if form.account_holder_name.help_text %}
+                                        <small class="form-text text-muted">{{ form.account_holder_name.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.account_holder_name.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.account_holder_name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- UPI Fields -->
+                        <div id="upi_fields" class="payment-method-fields" style="display: none;">
+                            <h5 class="mb-3">
+                                <i class="align-middle" data-feather="smartphone"></i> UPI Details
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.vpa.id_for_label }}">
+                                        {{ form.vpa.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.vpa }}
+                                    {% if form.vpa.help_text %}
+                                        <small class="form-text text-muted">{{ form.vpa.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.vpa.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.vpa.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.upi_id.id_for_label }}">
+                                        {{ form.upi_id.label }}
+                                    </label>
+                                    {{ form.upi_id }}
+                                    {% if form.upi_id.help_text %}
+                                        <small class="form-text text-muted">{{ form.upi_id.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.upi_id.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.upi_id.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wallet Fields -->
+                        <div id="wallet_fields" class="payment-method-fields" style="display: none;">
+                            <h5 class="mb-3">
+                                <i class="align-middle" data-feather="wallet"></i> Wallet Details
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.wallet_type.id_for_label }}">
+                                        {{ form.wallet_type.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.wallet_type }}
+                                    {% if form.wallet_type.help_text %}
+                                        <small class="form-text text-muted">{{ form.wallet_type.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.wallet_type.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.wallet_type.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.wallet_id.id_for_label }}">
+                                        {{ form.wallet_id.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.wallet_id }}
+                                    {% if form.wallet_id.help_text %}
+                                        <small class="form-text text-muted">{{ form.wallet_id.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.wallet_id.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.wallet_id.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="{{ form.wallet_provider.id_for_label }}">
+                                        {{ form.wallet_provider.label }}
+                                    </label>
+                                    {{ form.wallet_provider }}
+                                    {% if form.wallet_provider.help_text %}
+                                        <small class="form-text text-muted">{{ form.wallet_provider.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.wallet_provider.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.wallet_provider.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Rejection Reason Field -->
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.rejection_reason.id_for_label }}">
+                                {{ form.rejection_reason.label }}
+                            </label>
+                            {{ form.rejection_reason }}
+                            {% if form.rejection_reason.help_text %}
+                                <small class="form-text text-muted">{{ form.rejection_reason.help_text }}</small>
+                            {% endif %}
+                            {% if form.rejection_reason.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.rejection_reason.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="align-middle" data-feather="save"></i> Save
+                            </button>
+                            <a href="{% url 'myadmin:ecommerce:payment_setting_list' %}" class="btn btn-secondary">
+                                <i class="align-middle" data-feather="x"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+
+    const paymentMethodTypeField = document.getElementById('id_payment_method_type');
+    const bankAccountFields = document.getElementById('bank_account_fields');
+    const upiFields = document.getElementById('upi_fields');
+    const walletFields = document.getElementById('wallet_fields');
+
+    function togglePaymentFields() {
+        // Hide all fields first
+        bankAccountFields.style.display = 'none';
+        upiFields.style.display = 'none';
+        walletFields.style.display = 'none';
+
+        // Show relevant fields based on selection
+        const selectedValue = paymentMethodTypeField.value;
+        if (selectedValue === 'bank_account') {
+            bankAccountFields.style.display = 'block';
+        } else if (selectedValue === 'upi') {
+            upiFields.style.display = 'block';
+        } else if (selectedValue === 'wallet') {
+            walletFields.style.display = 'block';
+        }
+    }
+
+    // Initial toggle on page load
+    togglePaymentFields();
+
+    // Toggle on change
+    if (paymentMethodTypeField) {
+        paymentMethodTypeField.addEventListener('change', togglePaymentFields);
+    }
+
+    // Handle rejection reason visibility based on status
+    const statusField = document.getElementById('id_status');
+    const rejectionReasonField = document.getElementById('id_rejection_reason');
+    const rejectionReasonLabel = rejectionReasonField ? rejectionReasonField.closest('.mb-3') : null;
+
+    function toggleRejectionReason() {
+        if (statusField && rejectionReasonLabel) {
+            if (statusField.value === 'rejected') {
+                rejectionReasonLabel.style.display = 'block';
+                if (rejectionReasonField) {
+                    rejectionReasonField.required = true;
+                }
+            } else {
+                rejectionReasonLabel.style.display = 'block'; // Always show, but make optional
+                if (rejectionReasonField) {
+                    rejectionReasonField.required = false;
+                }
+            }
+        }
+    }
+
+    if (statusField) {
+        statusField.addEventListener('change', toggleRejectionReason);
+        toggleRejectionReason(); // Initial call
+    }
+});
+</script>
+{% endblock %}

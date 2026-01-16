@@ -102,7 +102,10 @@ urlpatterns = [
     
     # Payment Setting URLs
     path('payment-settings/', payment_setting_views.PaymentSettingListView.as_view(), name='payment_setting_list'),
+    path('payment-settings/create/', payment_setting_views.PaymentSettingCreateView.as_view(), name='payment_setting_create'),
     path('payment-settings/<int:pk>/', payment_setting_views.PaymentSettingDetailView.as_view(), name='payment_setting_detail'),
+    path('payment-settings/<int:pk>/update/', payment_setting_views.PaymentSettingUpdateView.as_view(), name='payment_setting_update'),
+    path('payment-settings/<int:pk>/delete/', payment_setting_views.PaymentSettingDeleteView.as_view(), name='payment_setting_delete'),
     path('payment-settings/<int:pk>/approve/', payment_setting_views.PaymentSettingApproveView.as_view(), name='payment_setting_approve'),
     path('payment-settings/<int:pk>/reject/', payment_setting_views.PaymentSettingRejectView.as_view(), name='payment_setting_reject'),
     path('payment-settings/bulk-approve/', payment_setting_views.PaymentSettingBulkApproveView.as_view(), name='payment_setting_bulk_approve'),

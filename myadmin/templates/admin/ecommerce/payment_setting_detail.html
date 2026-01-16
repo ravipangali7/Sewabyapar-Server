@@ -5,6 +5,12 @@
 <div class="container-fluid p-0">
     <div class="mb-3">
         <h1 class="h3 d-inline align-middle">Payment Setting Verification</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:ecommerce:payment_setting_update' payment_setting.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:ecommerce:payment_setting_delete' payment_setting.pk %}" onclick="event.preventDefault(); confirmQuestion('Delete Payment Setting', 'Are you sure you want to delete this payment setting?').then(() => window.location.href = this.href).catch(() => {});">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
         <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:payment_setting_list' %}">
             <i class="align-middle" data-feather="arrow-left"></i> Back to Payment Settings
         </a>
