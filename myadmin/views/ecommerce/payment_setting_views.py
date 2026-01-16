@@ -210,15 +210,22 @@ class PaymentSettingDeleteView(StaffRequiredMixin, DeleteView):
     """Delete payment setting"""
     model = MerchantPaymentSetting
     template_name = 'admin/ecommerce/payment_setting_confirm_delete.html'
+    context_object_name = 'payment_setting'
     success_url = reverse_lazy('myadmin:ecommerce:payment_setting_list')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Check if there are related withdrawals
-        payment_setting = self.get_object()
-        related_withdrawals = payment_setting.withdrawals.all() if hasattr(payment_setting, 'withdrawals') else []
-        context['related_withdrawals'] = related_withdrawals
-        context['withdrawals_count'] = related_withdrawals.count()
+        # Ensure payment_setting is in context (it should be from context_object_name, but ensure it)
+        payment_setting = context.get('payment_setting') or self.object
+        if payment_setting:
+            context['payment_setting'] = payment_setting
+            # Check if there are related withdrawals
+            related_withdrawals = payment_setting.withdrawals.all() if hasattr(payment_setting, 'withdrawals') else []
+            context['related_withdrawals'] = related_withdrawals
+            context['withdrawals_count'] = related_withdrawals.count()
+        else:
+            context['related_withdrawals'] = []
+            context['withdrawals_count'] = 0
         return context
     
     def delete(self, request, *args, **kwargs):
