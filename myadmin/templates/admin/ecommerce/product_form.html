@@ -1,7 +1,7 @@
 {% extends 'admin/layouts/base.html' %}
 {% load static %}
 {% block content %}
-<div class="container-fluid p-0">
+<div class="container-fluid p-0" style="background-color: #f5f5f5; min-height: 100vh; padding: 16px;"> <!-- App grey[100] background, matching app padding -->
     <div class="mb-3">
         <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Product</h1>
         <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:product_list' %}">Back</a>
@@ -21,7 +21,7 @@
                     </div>
                     <div class="card-body">
                         <!-- Name Field -->
-                        <div class="mb-3">
+                        <div class="form-field-spacing">
                             <label class="form-label" for="{{ form.name.id_for_label }}">
                                 {{ form.name.label }}
                                 {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -40,7 +40,7 @@
                         </div>
                         
                         <!-- Category Field -->
-                        <div class="mb-3">
+                        <div class="form-field-spacing">
                             <label class="form-label" for="{{ form.category.id_for_label }}">
                                 {{ form.category.label }}
                                 {% if form.category.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -59,7 +59,7 @@
                         </div>
                         
                         <!-- Description Field -->
-                        <div class="mb-3">
+                        <div class="form-field-spacing">
                             <label class="form-label" for="{{ form.description.id_for_label }}">
                                 {{ form.description.label }}
                                 {% if form.description.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -115,7 +115,7 @@
                         
                         <div class="row">
                             <!-- Price Field -->
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 form-field-spacing">
                                 <label class="form-label" for="{{ form.price.id_for_label }}">
                                     {{ form.price.label }}
                                     {% if form.price.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -134,7 +134,7 @@
                             </div>
                             
                             <!-- Stock Quantity Field -->
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 form-field-spacing">
                                 <label class="form-label" for="{{ form.stock_quantity.id_for_label }}">
                                     {{ form.stock_quantity.label }}
                                     {% if form.stock_quantity.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -183,7 +183,7 @@
                         </div>
                         
                         <!-- Discount Amount Field (shown conditionally) -->
-                        <div class="mb-3" id="discount-amount-container" style="display: none;">
+                        <div class="form-field-spacing" id="discount-amount-container" style="display: none;">
                             <label class="form-label" for="{{ form.discount.id_for_label }}" id="discount-label">
                                 Discount Amount
                             </label>
@@ -343,7 +343,7 @@
                         </div>
                         <div class="card-body">
                             <!-- Store Field -->
-                            <div class="mb-3">
+                            <div class="form-field-spacing">
                                 <label class="form-label" for="{{ form.store.id_for_label }}">
                                     {{ form.store.label }}
                                     {% if form.store.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -362,7 +362,7 @@
                             </div>
                             
                             <!-- Is Approved Field -->
-                            <div class="mb-3">
+                            <div class="form-field-spacing">
                                 <div class="form-check form-switch">
                                     {{ form.is_approved }}
                                     <label class="form-check-label" for="{{ form.is_approved.id_for_label }}">
@@ -414,11 +414,18 @@
     .card-header {
         background-color: white;
         border-bottom: 1px solid #e9ecef;
-        padding: 14px 16px;
+        padding: 14px 16px 12px 16px; /* top right bottom left - matching app */
     }
     
     .card-body {
-        padding: 16px;
+        padding: 0 16px 16px 16px; /* top right bottom left - matching app */
+    }
+    
+    /* Card Title Typography to Match App */
+    .card-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: rgba(0, 0, 0, 0.87); /* black87 equivalent */
     }
     
     /* Form Field Styling */
@@ -437,6 +444,21 @@
         font-weight: 500;
         margin-bottom: 8px;
         color: #212529;
+    }
+    
+    /* Field Spacing to Match App (12px instead of 16px) */
+    .form-field-spacing {
+        margin-bottom: 12px;
+    }
+    
+    /* Override mb-3 for form field containers to use 12px */
+    .card-body .mb-3:not(.alert):not(.row) {
+        margin-bottom: 12px !important;
+    }
+    
+    /* Icon Colors to Match App Primary Color (Red #EF4444) */
+    .card-header [data-feather] {
+        color: #EF4444; /* App primary red (primaryPurple variable) */
     }
     
     /* Variant Types Styling */
