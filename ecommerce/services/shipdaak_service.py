@@ -777,4 +777,84 @@ class ShipdaakService:
             print(f"[ERROR] Error generating bulk manifest: {str(e)}")
             traceback.print_exc()
             return None
+    
+    def get_rate_serviceability(
+        self,
+        origin_pincode: str,
+        destination_pincode: str,
+        weight: float,
+        length: float,
+        breadth: float,
+        height: float,
+        order_amount: float,
+        payment_type: str = "cod",
+        filter_type: str = "rate"
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get courier rates and serviceability for given parameters
+        
+        Args:
+            origin_pincode: Origin pincode (6 digits)
+            destination_pincode: Destination pincode (6 digits)
+            weight: Package weight in grams
+            length: Package length in cm
+            breadth: Package breadth in cm
+            height: Package height in cm
+            order_amount: Order amount
+            payment_type: Payment type ('cod' or 'prepaid')
+            filter_type: Filter type ('rate' or 'serviceability')
+        
+        Returns:
+            Dict with courier rates and serviceability data or None if fails
+        """
+        try:
+            # Validate and normalize pincodes
+            origin_pincode = re.sub(r'\D', '', str(origin_pincode))
+            if len(origin_pincode) >= 6:
+                origin_pincode = origin_pincode[:6]
+            elif len(origin_pincode) > 0:
+                origin_pincode = origin_pincode.zfill(6)
+            else:
+                print(f"[ERROR] Invalid origin pincode: {origin_pincode}")
+                sys.stdout.flush()
+                return None
+            
+            destination_pincode = re.sub(r'\D', '', str(destination_pincode))
+            if len(destination_pincode) >= 6:
+                destination_pincode = destination_pincode[:6]
+            elif len(destination_pincode) > 0:
+                destination_pincode = destination_pincode.zfill(6)
+            else:
+                print(f"[ERROR] Invalid destination pincode: {destination_pincode}")
+                sys.stdout.flush()
+                return None
+            
+            # Prepare request data
+            request_data = {
+                "filterType": filter_type,
+                "origin": int(origin_pincode),
+                "destination": int(destination_pincode),
+                "paymentType": payment_type,
+                "weight": float(weight),
+                "length": float(length),
+                "breadth": float(breadth),
+                "height": float(height),
+                "orderAmount": float(order_amount)
+            }
+            
+            response = self._make_request('POST', '/v1/courier/get-rate-serviceability', data=request_data)
+            
+            if response:
+                print(f"[INFO] Successfully fetched courier rates: origin={origin_pincode}, destination={destination_pincode}")
+                sys.stdout.flush()
+                return response
+            else:
+                print(f"[ERROR] Failed to get courier rates from Shipdaak API")
+                sys.stdout.flush()
+                return None
+                
+        except Exception as e:
+            print(f"[ERROR] Error getting courier rates: {str(e)}")
+            traceback.print_exc()
+            return None
 

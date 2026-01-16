@@ -1126,3 +1126,171 @@ def merchant_get_available_couriers(request):
     
     return Response({'couriers': couriers})
 
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def merchant_get_courier_rates(request, pk):
+    """
+    Get courier rates with pricing for an order
+    Requires: weight, length, breadth, height in request body
+    """
+    if not check_merchant_permission(request.user):
+        return Response({
+            'error': 'Only merchants can access this endpoint. Please upgrade your account to merchant status.'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get stores owned by merchant
+    stores = Store.objects.filter(owner=request.user, is_active=True)
+    
+    # Get order that belongs to one of merchant's stores
+    order = get_object_or_404(Order, pk=pk, merchant__in=stores)
+    
+    # Validate required fields
+    errors = {}
+    
+    weight = request.data.get('weight')
+    length = request.data.get('length')
+    breadth = request.data.get('breadth')
+    height = request.data.get('height')
+    
+    if weight is None:
+        errors['weight'] = 'weight is required'
+    else:
+        try:
+            weight = float(weight)
+            if weight <= 0:
+                errors['weight'] = 'weight must be a positive number'
+        except (ValueError, TypeError):
+            errors['weight'] = 'weight must be a valid number'
+    
+    if length is None:
+        errors['length'] = 'length is required'
+    else:
+        try:
+            length = float(length)
+            if length <= 0:
+                errors['length'] = 'length must be a positive number'
+        except (ValueError, TypeError):
+            errors['length'] = 'length must be a valid number'
+    
+    if breadth is None:
+        errors['breadth'] = 'breadth is required'
+    else:
+        try:
+            breadth = float(breadth)
+            if breadth <= 0:
+                errors['breadth'] = 'breadth must be a positive number'
+        except (ValueError, TypeError):
+            errors['breadth'] = 'breadth must be a valid number'
+    
+    if height is None:
+        errors['height'] = 'height is required'
+    else:
+        try:
+            height = float(height)
+            if height <= 0:
+                errors['height'] = 'height must be a positive number'
+        except (ValueError, TypeError):
+            errors['height'] = 'height must be a valid number'
+    
+    if errors:
+        return Response({
+            'success': False,
+            'errors': errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        import re
+        
+        # Get store for origin pincode
+        store = order.merchant
+        if not store:
+            return Response({
+                'success': False,
+                'error': 'Order has no associated store'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Extract origin pincode from store address
+        origin_pincode = "110001"  # Default pincode
+        if store.address:
+            # Try multiple methods to extract pincode
+            pincode_match = re.search(r'\b(\d{6})\b', store.address)
+            if pincode_match:
+                origin_pincode = pincode_match.group(1)
+            else:
+                # Look in address lines (split by newline or comma)
+                address_parts = re.split(r'[,\n]', store.address)
+                for part in reversed(address_parts):
+                    part = part.strip()
+                    pincode_match = re.search(r'\b(\d{6})\b', part)
+                    if pincode_match:
+                        origin_pincode = pincode_match.group(1)
+                        break
+        
+        # Get destination pincode from shipping address
+        shipping_address = order.shipping_address
+        if not shipping_address:
+            return Response({
+                'success': False,
+                'error': 'Order has no shipping address'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        destination_pincode = None
+        if hasattr(shipping_address, 'zip_code') and shipping_address.zip_code:
+            # Clean and validate pincode
+            destination_pincode = re.sub(r'\D', '', str(shipping_address.zip_code))
+            if len(destination_pincode) >= 6:
+                destination_pincode = destination_pincode[:6]
+            elif len(destination_pincode) > 0:
+                destination_pincode = destination_pincode.zfill(6)
+            else:
+                destination_pincode = None
+        
+        if not destination_pincode or len(destination_pincode) != 6:
+            return Response({
+                'success': False,
+                'error': 'Invalid or missing destination pincode in shipping address'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get payment type from order
+        payment_type = order.payment_method or 'cod'
+        if payment_type.lower() not in ['cod', 'prepaid']:
+            payment_type = 'prepaid' if payment_type.lower() != 'cod' else 'cod'
+        
+        # Get order amount
+        order_amount = float(order.total_amount)
+        
+        # Call Shipdaak API
+        from ecommerce.services.shipdaak_service import ShipdaakService
+        shipdaak = ShipdaakService()
+        rates_data = shipdaak.get_rate_serviceability(
+            origin_pincode=origin_pincode,
+            destination_pincode=destination_pincode,
+            weight=weight,
+            length=length,
+            breadth=breadth,
+            height=height,
+            order_amount=order_amount,
+            payment_type=payment_type,
+            filter_type='rate'
+        )
+        
+        if rates_data:
+            return Response({
+                'success': True,
+                'data': rates_data
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Failed to fetch courier rates from Shipdaak API'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    except Exception as e:
+        print(f"[ERROR] Error fetching courier rates: {str(e)}")
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': 'An error occurred while fetching courier rates'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

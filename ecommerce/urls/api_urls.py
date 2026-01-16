@@ -63,6 +63,7 @@ urlpatterns = [
     path('merchant/orders/<int:pk>/update-status/', merchant_views.merchant_order_update_status, name='merchant-order-update-status'),
     path('merchant/orders/<int:pk>/accept/', merchant_views.merchant_accept_order, name='merchant-accept-order'),
     path('merchant/orders/<int:pk>/reject/', merchant_views.merchant_reject_order, name='merchant-reject-order'),
+    path('merchant/orders/<int:pk>/courier-rates/', merchant_views.merchant_get_courier_rates, name='merchant-get-courier-rates'),
     path('merchant/stats/', merchant_views.merchant_stats, name='merchant-stats'),
     path('merchant/revenue-history/', merchant_views.merchant_revenue_history, name='merchant-revenue-history'),
     path('merchant/stores/', merchant_views.merchant_stores, name='merchant-stores'),
