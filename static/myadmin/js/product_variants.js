@@ -53,6 +53,13 @@
         // Update price/stock fields based on initial state
         if (variantState.enabled) {
             disablePriceStockFields(true);
+            // Show variant section if enabled
+            const variantSection = document.getElementById('product-variants-section');
+            if (variantSection) {
+                variantSection.style.display = 'block';
+            }
+        } else {
+            disablePriceStockFields(false);
         }
 
         // Setup form submission
@@ -84,22 +91,24 @@
         if (variantSection) {
             if (variantState.enabled) {
                 variantSection.style.display = 'block';
-                // Remove disabled attribute from inputs when visible
-                const inputs = variantSection.querySelectorAll('input');
+                // Remove disabled attribute from inputs when visible (only variant section inputs)
+                const inputs = variantSection.querySelectorAll('input, select, textarea');
                 inputs.forEach(input => {
                     input.disabled = false;
                 });
                 // Disable price and stock fields when variants enabled
+                // Note: Image and discount fields are NOT affected (they're in separate cards)
                 disablePriceStockFields(true);
             } else {
                 variantSection.style.display = 'none';
-                // Disable inputs when hidden to prevent validation
-                const inputs = variantSection.querySelectorAll('input');
+                // Disable inputs when hidden to prevent validation (only variant section inputs)
+                const inputs = variantSection.querySelectorAll('input, select, textarea');
                 inputs.forEach(input => {
                     input.disabled = true;
                     input.removeAttribute('required');
                 });
                 // Enable price and stock fields when variants disabled
+                // Note: Image and discount fields remain unaffected
                 disablePriceStockFields(false);
             }
         }
@@ -113,22 +122,38 @@
         if (priceField) {
             priceField.disabled = disable;
             if (disable) {
+                // Gray out when disabled (matching app's Colors.grey.shade100)
                 priceField.classList.add('bg-light');
+                priceField.style.cursor = 'not-allowed';
+                priceField.removeAttribute('required');
+                // Remove any validation classes
+                priceField.classList.remove('is-invalid', 'is-valid');
             } else {
+                // White background when enabled (matching app's Colors.white)
                 priceField.classList.remove('bg-light');
+                priceField.style.cursor = 'text';
+                priceField.setAttribute('required', 'required');
             }
         }
         
         if (stockField) {
             stockField.disabled = disable;
             if (disable) {
+                // Gray out when disabled (matching app's Colors.grey.shade100)
                 stockField.classList.add('bg-light');
+                stockField.style.cursor = 'not-allowed';
+                stockField.removeAttribute('required');
+                // Remove any validation classes
+                stockField.classList.remove('is-invalid', 'is-valid');
             } else {
+                // White background when enabled (matching app's Colors.white)
                 stockField.classList.remove('bg-light');
+                stockField.style.cursor = 'text';
+                stockField.setAttribute('required', 'required');
             }
         }
         
-        // Show/hide info message
+        // Show/hide info message (matching app's blue info box)
         if (priceInfo) {
             priceInfo.style.display = disable ? 'block' : 'none';
         }
@@ -560,8 +585,20 @@
     }
 
     function handleFormSubmit(e) {
-        // If variants are enabled, validate variant inputs
+        // If variants are enabled, validate variant inputs and skip price/stock validation
         if (variantState.enabled) {
+            // Ensure price and stock are not required when variants enabled
+            const priceField = document.getElementById('id_price');
+            const stockField = document.getElementById('id_stock_quantity');
+            if (priceField) {
+                priceField.removeAttribute('required');
+                priceField.removeAttribute('aria-required');
+            }
+            if (stockField) {
+                stockField.removeAttribute('required');
+                stockField.removeAttribute('aria-required');
+            }
+            
             const containers = document.querySelectorAll('.variant-type-item');
             let isValid = true;
             
@@ -593,6 +630,16 @@
                 e.preventDefault();
                 alert('Please fill in all required variant fields.');
                 return false;
+            }
+        } else {
+            // When variants disabled, ensure price and stock are required
+            const priceField = document.getElementById('id_price');
+            const stockField = document.getElementById('id_stock_quantity');
+            if (priceField && !priceField.disabled) {
+                priceField.setAttribute('required', 'required');
+            }
+            if (stockField && !stockField.disabled) {
+                stockField.setAttribute('required', 'required');
             }
         }
         
