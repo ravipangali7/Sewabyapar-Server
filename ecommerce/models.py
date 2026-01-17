@@ -200,6 +200,7 @@ class Order(models.Model):
         ('cod', 'Cash on Delivery'),
         ('online', 'Online Payment'),  # SabPaisa
         ('phonepe', 'PhonePe Payment'),
+        ('razorpay', 'Razorpay Payment'),
     ]
     
     PAYMENT_STATUS_CHOICES = [

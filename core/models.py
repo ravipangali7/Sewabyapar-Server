@@ -267,6 +267,7 @@ class SuperSetting(models.Model):
     is_phone_pe = models.BooleanField(default=True, help_text='Enable PhonePe payment method')
     is_sabpaisa = models.BooleanField(default=True, help_text='Enable SabPaisa payment method')
     is_cod = models.BooleanField(default=True, help_text='Enable Cash on Delivery payment method')
+    is_razorpay = models.BooleanField(default=True, help_text='Enable Razorpay payment method')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
