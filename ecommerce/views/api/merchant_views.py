@@ -1260,6 +1260,15 @@ def merchant_get_courier_rates(request, pk):
         # Get order amount
         order_amount = float(order.total_amount)
         
+        # Log request parameters
+        print(f"[INFO] === MERCHANT GET COURIER RATES API ===")
+        print(f"[INFO] Order ID: {pk}")
+        print(f"[INFO] Origin Pincode: {origin_pincode}")
+        print(f"[INFO] Destination Pincode: {destination_pincode}")
+        print(f"[INFO] Weight: {weight}, Length: {length}, Breadth: {breadth}, Height: {height}")
+        print(f"[INFO] Order Amount: {order_amount}, Payment Type: {payment_type}")
+        sys.stdout.flush()
+        
         # Call Shipdaak API
         from ecommerce.services.shipdaak_service import ShipdaakService
         shipdaak = ShipdaakService()
@@ -1276,6 +1285,10 @@ def merchant_get_courier_rates(request, pk):
         )
         
         if rates_data:
+            print(f"[INFO] Shipdaak rates_data structure: {json.dumps(rates_data, indent=2, default=str)}")
+            sys.stdout.flush()
+            print(f"[INFO] Returning response to Flutter with success=True")
+            sys.stdout.flush()
             return Response({
                 'success': True,
                 'data': rates_data

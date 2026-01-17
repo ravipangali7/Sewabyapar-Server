@@ -842,9 +842,15 @@ class ShipdaakService:
                 "orderAmount": float(order_amount)
             }
             
+            print(f"[INFO] Shipdaak API Request - get-rate-serviceability:")
+            print(f"[INFO] Request Data: {json.dumps(request_data, indent=2)}")
+            sys.stdout.flush()
+            
             response = self._make_request('POST', '/v1/courier/get-rate-serviceability', data=request_data)
             
             if response:
+                print(f"[INFO] Shipdaak API Response (raw): {json.dumps(response, indent=2, default=str)}")
+                sys.stdout.flush()
                 print(f"[INFO] Successfully fetched courier rates: origin={origin_pincode}, destination={destination_pincode}")
                 sys.stdout.flush()
                 return response
