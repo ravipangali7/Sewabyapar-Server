@@ -254,6 +254,11 @@ class SuperSetting(models.Model):
     basic_shipping_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0,
                                                validators=[MinValueValidator(0)],
                                                help_text='Basic shipping charge per vendor')
+    shipping_charge_commission = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Shipping charge commission percentage (added to courier rates)'
+    )
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0,
                                  validators=[MinValueValidator(0)],
                                  help_text='Platform balance')
