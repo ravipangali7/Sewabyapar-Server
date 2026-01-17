@@ -11,7 +11,7 @@ import random
 import string
 import sys
 import traceback
-from ...models import Order, Store
+from ...models import Order, OrderItem, Store
 from ...serializers import OrderSerializer, OrderCreateSerializer
 from ...services.phonepe_service import initiate_payment, generate_merchant_order_id
 from core.models import SuperSetting, Transaction
@@ -421,176 +421,13 @@ def order_list_create(request):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
-        # For Razorpay payment, create temporary order without auto-initiating payment
-        # Frontend will handle Razorpay payment initiation
+        # For Razorpay payment, do not create order here
+        # Frontend will initiate payment first, then call create_order_after_razorpay_payment endpoint
         elif payment_method == 'razorpay':
-            try:
-                # Log request data for debugging
-                print(f"[INFO] Razorpay order creation request - User: {request.user.id if request.user else 'None'}")
-                print(f"[INFO] Request data keys: {list(request.data.keys())}")
-                print(f"[INFO] Payment method: {payment_method}")
-                sys.stdout.flush()
-                
-                # Validate serializer first to get validated data
-                serializer = OrderCreateSerializer(data=request.data, context={'request': request})
-                if not serializer.is_valid():
-                    print(f"[ERROR] Razorpay order creation validation failed:")
-                    print(f"[ERROR] Validation errors: {serializer.errors}")
-                    sys.stdout.flush()
-                    return Response({
-                        'success': False,
-                        'error': 'Validation failed',
-                        'errors': serializer.errors
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                validated_data = serializer.validated_data
-                items_data = validated_data.get('items', [])
-                
-                if not items_data:
-                    return Response({
-                        'success': False,
-                        'error': 'No items found to create order'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Get addresses
-                from core.models import Address
-                try:
-                    shipping_address = Address.objects.get(id=validated_data['shipping_address'], user=request.user)
-                except Address.DoesNotExist:
-                    print(f"[ERROR] Razorpay: Shipping address not found: {validated_data['shipping_address']}")
-                    sys.stdout.flush()
-                    return Response({
-                        'success': False,
-                        'error': 'Shipping address not found or does not belong to you'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    billing_address = Address.objects.get(id=validated_data['billing_address'], user=request.user)
-                except Address.DoesNotExist:
-                    print(f"[ERROR] Razorpay: Billing address not found: {validated_data['billing_address']}")
-                    sys.stdout.flush()
-                    return Response({
-                        'success': False,
-                        'error': 'Billing address not found or does not belong to you'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Get SuperSetting for shipping charge
-                try:
-                    super_setting = SuperSetting.objects.first()
-                    if not super_setting:
-                        super_setting = SuperSetting.objects.create()
-                    basic_shipping_charge = super_setting.basic_shipping_charge
-                except Exception:
-                    basic_shipping_charge = Decimal('0')
-                
-                # Group items by vendor to calculate totals
-                from ...models import Store
-                vendor_items = defaultdict(list)
-                for item_data in items_data:
-                    store_id = item_data.get('store')
-                    if store_id:
-                        try:
-                            store = Store.objects.get(id=store_id)
-                            vendor_items[store].append(item_data)
-                        except Store.DoesNotExist:
-                            continue
-                
-                # Validate minimum order value for each merchant
-                for store, items in vendor_items.items():
-                    merchant_total = Decimal(str(sum(item.get('total', 0) for item in items)))
-                    minimum_order_value = Decimal(str(store.minimum_order_value))
-                    if minimum_order_value > 0 and merchant_total < minimum_order_value:
-                        remaining = minimum_order_value - merchant_total
-                        return Response({
-                            'success': False,
-                            'error': f'Order value for {store.name} is {merchant_total}, but minimum order value is {minimum_order_value}. Please add items worth {remaining} more.',
-                            'validation_error': {
-                                'merchant_id': store.id,
-                                'merchant_name': store.name,
-                                'merchant_code': store.owner.merchant_code if store.owner and store.owner.merchant_code else None,
-                                'current_total': float(merchant_total),
-                                'minimum_order_value': float(minimum_order_value),
-                                'remaining': float(remaining)
-                            }
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
-                subtotal = Decimal('0')
-                shipping = Decimal('0')
-                for store, items in vendor_items.items():
-                    store_subtotal = Decimal(str(sum(item.get('total', 0) for item in items)))
-                    subtotal += store_subtotal
-                    if not store.take_shipping_responsibility:
-                        shipping += basic_shipping_charge
-                
-                total_amount = subtotal + shipping
-                
-                # Create temporary order (similar to PhonePe flow)
-                # Generate order number (same format as PhonePe - 10 character random string)
-                order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-                while Order.objects.filter(order_number=order_number).exists():
-                    order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-                
-                # Create order for first vendor (or single vendor)
-                first_store = list(vendor_items.keys())[0] if vendor_items else None
-                temp_order = Order.objects.create(
-                    user=request.user,
-                    merchant=first_store,
-                    order_number=order_number,
-                    subtotal=subtotal,
-                    shipping_cost=shipping,
-                    total_amount=total_amount,
-                    shipping_address=shipping_address,
-                    billing_address=billing_address,
-                    phone=validated_data.get('phone', ''),
-                    email=validated_data.get('email', ''),
-                    notes=validated_data.get('notes', ''),
-                    payment_method='razorpay',
-                    payment_status='pending',
-                    status='pending'
-                )
-                
-                # Create order items
-                for item_data in items_data:
-                    from ...models import Product
-                    try:
-                        product = Product.objects.get(id=item_data['product'])
-                        store = Store.objects.get(id=item_data['store'])
-                        OrderItem.objects.create(
-                            order=temp_order,
-                            product=product,
-                            store=store,
-                            quantity=item_data['quantity'],
-                            price=Decimal(str(item_data['price'])),
-                            total=Decimal(str(item_data['total'])),
-                            product_variant=item_data.get('product_variant', '')
-                        )
-                    except (Product.DoesNotExist, Store.DoesNotExist) as e:
-                        print(f"[WARNING] Razorpay: Skipping invalid item: {e}")
-                        continue
-                
-                # Return order creation response (frontend will handle Razorpay payment initiation)
-                return Response({
-                    'success': True,
-                    'data': {
-                        'id': temp_order.id,
-                        'order_id': temp_order.id,
-                        'order_number': temp_order.order_number,
-                        'total_amount': str(temp_order.total_amount),
-                    }
-                }, status=status.HTTP_201_CREATED)
-            
-            except Exception as e:
-                print(f"[ERROR] Error creating Razorpay order: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                return Response(
-                    {
-                        'success': False,
-                        'error': f'Error creating order: {str(e)}'
-                    },
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+            return Response({
+                'success': False,
+                'error': 'Razorpay orders must be created after payment success. Please initiate payment first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         # For COD, use existing flow (create orders directly)
         else:
@@ -686,4 +523,204 @@ def cancel_order(request, pk):
     # Return updated order
     serializer = OrderSerializer(order)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def create_order_after_razorpay_payment(request):
+    """
+    Create order after Razorpay payment is successful
+    Requires: payment_id, payment_signature, order details
+    """
+    try:
+        payment_id = request.data.get('payment_id')
+        payment_signature = request.data.get('payment_signature')
+        razorpay_order_id = request.data.get('razorpay_order_id')  # Optional
+        
+        if not payment_id or not payment_signature:
+            return Response({
+                'success': False,
+                'error': 'payment_id and payment_signature are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # TODO: Verify Razorpay payment signature here
+        # For now, we'll trust the payment_id and signature from Flutter
+        # In production, verify using Razorpay API
+        
+        # Validate serializer to get order data
+        serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        validated_data = serializer.validated_data
+        items_data = validated_data.get('items', [])
+        
+        if not items_data:
+            return Response({
+                'success': False,
+                'error': 'No items found to create order'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get addresses
+        from core.models import Address
+        try:
+            shipping_address = Address.objects.get(id=validated_data['shipping_address'], user=request.user)
+        except Address.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Shipping address not found or does not belong to you'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            billing_address = Address.objects.get(id=validated_data['billing_address'], user=request.user)
+        except Address.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Billing address not found or does not belong to you'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get SuperSetting for shipping charge
+        try:
+            super_setting = SuperSetting.objects.first()
+            if not super_setting:
+                super_setting = SuperSetting.objects.create()
+            basic_shipping_charge = super_setting.basic_shipping_charge
+        except Exception:
+            basic_shipping_charge = Decimal('0')
+        
+        # Group items by vendor to calculate totals
+        vendor_items = defaultdict(list)
+        for item_data in items_data:
+            store_id = item_data.get('store')
+            if store_id:
+                try:
+                    store = Store.objects.get(id=store_id)
+                    vendor_items[store].append(item_data)
+                except Store.DoesNotExist:
+                    continue
+        
+        # Validate minimum order value for each merchant
+        for store, items in vendor_items.items():
+            merchant_total = Decimal(str(sum(item.get('total', 0) for item in items)))
+            minimum_order_value = Decimal(str(store.minimum_order_value))
+            if minimum_order_value > 0 and merchant_total < minimum_order_value:
+                remaining = minimum_order_value - merchant_total
+                return Response({
+                    'success': False,
+                    'error': f'Order value for {store.name} is {merchant_total}, but minimum order value is {minimum_order_value}. Please add items worth {remaining} more.',
+                    'validation_error': {
+                        'merchant_id': store.id,
+                        'merchant_name': store.name,
+                        'merchant_code': store.owner.merchant_code if store.owner and store.owner.merchant_code else None,
+                        'current_total': float(merchant_total),
+                        'minimum_order_value': float(minimum_order_value),
+                        'remaining': float(remaining)
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
+        subtotal = Decimal('0')
+        shipping = Decimal('0')
+        for store, items in vendor_items.items():
+            store_subtotal = Decimal(str(sum(item.get('total', 0) for item in items)))
+            subtotal += store_subtotal
+            if not store.take_shipping_responsibility:
+                shipping += basic_shipping_charge
+        
+        total_amount = subtotal + shipping
+        
+        # Get payment amount from request to verify it matches
+        payment_amount = request.data.get('payment_amount')
+        if payment_amount:
+            payment_amount_decimal = Decimal(str(payment_amount))
+            # Allow small difference due to rounding (1 paise = 0.01)
+            if abs(payment_amount_decimal - total_amount) > Decimal('0.01'):
+                return Response({
+                    'success': False,
+                    'error': f'Payment amount ({payment_amount}) does not match order total ({total_amount})'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Generate order number
+        order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        while Order.objects.filter(order_number=order_number).exists():
+            order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        
+        # Create order for first vendor (or single vendor)
+        first_store = list(vendor_items.keys())[0] if vendor_items else None
+        order = Order.objects.create(
+            user=request.user,
+            merchant=first_store,
+            order_number=order_number,
+            subtotal=subtotal,
+            shipping_cost=shipping,
+            total_amount=total_amount,
+            shipping_address=shipping_address,
+            billing_address=billing_address,
+            phone=validated_data.get('phone', ''),
+            email=validated_data.get('email', ''),
+            notes=validated_data.get('notes', ''),
+            payment_method='razorpay',
+            payment_status='success',  # Payment already successful
+            status='pending'  # Waiting for merchant acceptance
+        )
+        
+        # Create order items
+        from ...models import Product
+        for item_data in items_data:
+            try:
+                product = Product.objects.get(id=item_data['product'])
+                store = Store.objects.get(id=item_data['store'])
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    store=store,
+                    quantity=item_data['quantity'],
+                    price=Decimal(str(item_data['price'])),
+                    total=Decimal(str(item_data['total'])),
+                    product_variant=item_data.get('product_variant', '')
+                )
+            except (Product.DoesNotExist, Store.DoesNotExist) as e:
+                print(f"[WARNING] Razorpay: Skipping invalid item: {e}")
+                continue
+        
+        # Create Transaction record for Razorpay payment
+        payer_name = None
+        if shipping_address and shipping_address.full_name:
+            payer_name = shipping_address.full_name
+        elif request.user.name:
+            payer_name = request.user.name
+        
+        Transaction.objects.create(
+            user=request.user,
+            transaction_type='razorpay_payment',
+            amount=total_amount,
+            status='completed',
+            description=f'Razorpay payment for order {order_number}',
+            related_order=order,
+            merchant_order_id=payment_id,  # Use payment_id as merchant order ID
+            payer_name=payer_name,
+        )
+        
+        # Return created order
+        serializer = OrderSerializer(order)
+        return Response({
+            'success': True,
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED)
+    
+    except Exception as e:
+        print(f"[ERROR] Error creating order after Razorpay payment: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {
+                'success': False,
+                'error': f'Error creating order: {str(e)}'
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 

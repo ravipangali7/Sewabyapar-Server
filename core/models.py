@@ -293,6 +293,7 @@ class Transaction(models.Model):
         ('withdrawal_processed', 'Withdrawal Processed'),
         ('phonepe_payment', 'PhonePe Payment'),
         ('sabpaisa_payment', 'SabPaisa Payment'),
+        ('razorpay_payment', 'Razorpay Payment'),
         ('payout', 'Merchant Payout'),
     ]
     

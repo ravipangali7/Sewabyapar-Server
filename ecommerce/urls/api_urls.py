@@ -28,6 +28,7 @@ urlpatterns = [
     # Order URLs
     path('orders/validate/', order_views.validate_cart_for_order, name='validate-cart-for-order'),
     path('orders/', order_views.order_list_create, name='order-list-create'),
+    path('orders/create-after-razorpay/', order_views.create_order_after_razorpay_payment, name='create-order-after-razorpay'),
     path('orders/<int:pk>/', order_views.order_detail, name='order-detail'),
     path('orders/<int:pk>/cancel/', order_views.cancel_order, name='cancel-order'),
     
