@@ -834,7 +834,7 @@ class ShipdaakService:
                 "filterType": filter_type,
                 "origin": int(origin_pincode),
                 "destination": int(destination_pincode),
-                "paymentType": payment_type,
+                "paymentType": "prepaid",
                 "weight": float(weight),
                 "length": float(length),
                 "breadth": float(breadth),
