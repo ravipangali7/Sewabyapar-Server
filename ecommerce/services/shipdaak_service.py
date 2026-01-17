@@ -787,7 +787,7 @@ class ShipdaakService:
         breadth: float,
         height: float,
         order_amount: float,
-        payment_type: str = "cod",
+        payment_type: str = "prepaid",
         filter_type: str = "rate"
     ) -> Optional[Dict[str, Any]]:
         """
