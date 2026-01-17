@@ -526,8 +526,10 @@ def order_list_create(request):
                 total_amount = subtotal + shipping
                 
                 # Create temporary order (similar to PhonePe flow)
-                # Generate order number
-                order_number = f"ORD{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
+                # Generate order number (same format as PhonePe - 10 character random string)
+                order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+                while Order.objects.filter(order_number=order_number).exists():
+                    order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
                 
                 # Create order for first vendor (or single vendor)
                 first_store = list(vendor_items.keys())[0] if vendor_items else None
