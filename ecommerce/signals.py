@@ -67,19 +67,10 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 super_setting.balance = super_setting.balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 super_setting.save()
                 
-                # Get vendor and store wallet_before
+                # Get vendor and initial wallet balance
                 vendor = instance.merchant.owner
-                wallet_before = Decimal(str(vendor.balance))
-                wallet_before = wallet_before.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                
-                # Update vendor balance with payout
-                vendor.balance = wallet_before + vendor_payout
-                # Round vendor balance to 2 decimal places
-                vendor.balance = vendor.balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                vendor.save()
-                
-                # Get wallet_after
-                wallet_after = vendor.balance
+                current_wallet = Decimal(str(vendor.balance))
+                current_wallet = current_wallet.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
                 # Get payment transaction details from Transaction model if available
                 # Check for both PhonePe and SabPaisa transactions
@@ -88,11 +79,53 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     transaction_type__in=['phonepe_payment', 'sabpaisa_payment']
                 ).first()
                 
-                # Create transaction record for merchant payout with wallet tracking
+                # Transaction 1: Commission Deduction (negative amount)
+                wallet_before_commission = current_wallet
+                current_wallet = current_wallet - commission
+                current_wallet = current_wallet.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                wallet_after_commission = current_wallet
+                
+                Transaction.objects.create(
+                    user=vendor,
+                    transaction_type='commission_deduction',
+                    amount=-commission,  # Negative amount for deduction
+                    status='completed',
+                    description=f'Sales commission deducted from order {instance.order_number} ({sales_commission_percentage}% of ₹{subtotal})',
+                    related_order=instance,
+                    payer_name=vendor.name if vendor.name else None,
+                    wallet_before=wallet_before_commission,
+                    wallet_after=wallet_after_commission,
+                )
+                
+                # Transaction 2: Shipping Charge Deduction (negative amount)
+                wallet_before_shipping = current_wallet
+                if shipping_charge > 0:
+                    current_wallet = current_wallet - shipping_charge
+                    current_wallet = current_wallet.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    wallet_after_shipping = current_wallet
+                    
+                    Transaction.objects.create(
+                        user=vendor,
+                        transaction_type='shipping_charge_deduction',
+                        amount=-shipping_charge,  # Negative amount for deduction
+                        status='completed',
+                        description=f'Shipping charge deducted from order {instance.order_number}',
+                        related_order=instance,
+                        payer_name=vendor.name if vendor.name else None,
+                        wallet_before=wallet_before_shipping,
+                        wallet_after=wallet_after_shipping,
+                    )
+                
+                # Transaction 3: Payout (positive amount)
+                wallet_before_payout = current_wallet
+                current_wallet = current_wallet + vendor_payout
+                current_wallet = current_wallet.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                wallet_after_payout = current_wallet
+                
                 Transaction.objects.create(
                     user=vendor,
                     transaction_type='payout',
-                    amount=vendor_payout,
+                    amount=vendor_payout,  # Positive amount for payout
                     status='completed',
                     description=f'Payout from order {instance.order_number}',
                     related_order=instance,
@@ -100,9 +133,13 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     bank_id=payment_transaction.bank_id if payment_transaction and payment_transaction.bank_id else None,
                     vpa=payment_transaction.vpa if payment_transaction and payment_transaction.vpa else None,
                     payer_name=vendor.name if vendor.name else None,
-                    wallet_before=wallet_before,
-                    wallet_after=wallet_after,
+                    wallet_before=wallet_before_payout,
+                    wallet_after=wallet_after_payout,
                 )
+                
+                # Update vendor balance to final amount
+                vendor.balance = current_wallet
+                vendor.save()
                 
                 # Mark commission as processed (use update to avoid triggering signal again)
                 Order.objects.filter(pk=instance.pk).update(commission_processed=True)

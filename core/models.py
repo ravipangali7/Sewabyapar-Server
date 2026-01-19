@@ -286,6 +286,8 @@ class Transaction(models.Model):
     """Transaction model to track all financial transactions"""
     TRANSACTION_TYPE_CHOICES = [
         ('commission', 'Commission'),
+        ('commission_deduction', 'Commission Deduction'),
+        ('shipping_charge_deduction', 'Shipping Charge Deduction'),
         ('withdrawal', 'Withdrawal Request'),
         ('withdrawal_processed', 'Withdrawal Processed'),
         ('phonepe_payment', 'PhonePe Payment'),
@@ -303,7 +305,7 @@ class Transaction(models.Model):
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Transaction amount (can be negative for deductions)')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     description = models.TextField(blank=True, help_text='Transaction description')
     related_order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe transactions')
