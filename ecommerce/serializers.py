@@ -109,6 +109,29 @@ class ProductSerializer(serializers.ModelSerializer):
                 if image_data.get('image'):
                     image_data['image'] = request.build_absolute_uri(image_data['image'])
         
+        # Process variant combination images
+        if data.get('variants') and request:
+            variants_data = data['variants']
+            if isinstance(variants_data, dict) and variants_data.get('combinations'):
+                combinations = variants_data['combinations']
+                if isinstance(combinations, dict):
+                    for combo_key, combo_data in combinations.items():
+                        if isinstance(combo_data, dict) and combo_data.get('image'):
+                            image_path = combo_data['image']
+                            # Only convert if it's a relative path (starts with /media/ or /)
+                            # Skip local file paths (like /data/...) as they can't be accessed
+                            if image_path and not image_path.startswith('http://') and not image_path.startswith('https://'):
+                                if image_path.startswith('/media/') or (image_path.startswith('/') and not image_path.startswith('/data/')):
+                                    # Convert relative path to full URL
+                                    try:
+                                        combo_data['image'] = request.build_absolute_uri(image_path)
+                                    except Exception:
+                                        # If conversion fails, set to empty string
+                                        combo_data['image'] = ''
+                                elif image_path.startswith('/data/'):
+                                    # Local cache path - can't be accessed, set to empty
+                                    combo_data['image'] = ''
+        
         return data
     
     def get_average_rating(self, obj):
