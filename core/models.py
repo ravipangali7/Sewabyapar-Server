@@ -251,9 +251,6 @@ class SuperSetting(models.Model):
     sales_commission = models.DecimalField(max_digits=5, decimal_places=2, default=0,
                                           validators=[MinValueValidator(0), MaxValueValidator(100)],
                                           help_text='Sales commission percentage')
-    basic_shipping_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0,
-                                               validators=[MinValueValidator(0)],
-                                               help_text='Basic shipping charge per vendor')
     shipping_charge_commission = models.IntegerField(
         default=10,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -317,6 +314,8 @@ class Transaction(models.Model):
     bank_id = models.CharField(max_length=20, blank=True, null=True, help_text='Bank ID for PhonePe transactions')
     vpa = models.CharField(max_length=100, blank=True, null=True, help_text='Virtual Payment Address (VPA) for PhonePe transactions')
     payer_name = models.CharField(max_length=200, blank=True, null=True, help_text='Name of the payer/account holder for this transaction')
+    wallet_before = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Wallet balance before this transaction')
+    wallet_after = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Wallet balance after this transaction')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

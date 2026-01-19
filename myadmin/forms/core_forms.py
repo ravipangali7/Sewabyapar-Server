@@ -167,10 +167,9 @@ class SuperSettingForm(forms.ModelForm):
     """Form for SuperSetting"""
     class Meta:
         model = SuperSetting
-        fields = ['sales_commission', 'basic_shipping_charge', 'shipping_charge_commission', 'balance', 'merchant_agreement_file', 'is_phone_pe', 'is_sabpaisa', 'is_cod']
+        fields = ['sales_commission', 'shipping_charge_commission', 'balance', 'merchant_agreement_file', 'is_phone_pe', 'is_sabpaisa', 'is_cod']
         widgets = {
             'sales_commission': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
-            'basic_shipping_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'shipping_charge_commission': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100'}),
             'balance': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'merchant_agreement_file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx'}),
@@ -186,13 +185,6 @@ class SuperSettingForm(forms.ModelForm):
             if sales_commission < 0 or sales_commission > 100:
                 raise forms.ValidationError('Sales commission must be between 0 and 100.')
         return sales_commission
-    
-    def clean_basic_shipping_charge(self):
-        """Validate basic_shipping_charge is >= 0"""
-        basic_shipping_charge = self.cleaned_data.get('basic_shipping_charge')
-        if basic_shipping_charge is not None and basic_shipping_charge < 0:
-            raise forms.ValidationError('Basic shipping charge must be greater than or equal to 0.')
-        return basic_shipping_charge
     
     def clean_shipping_charge_commission(self):
         """Validate shipping_charge_commission is between 0 and 100"""

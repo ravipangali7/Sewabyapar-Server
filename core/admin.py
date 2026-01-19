@@ -73,8 +73,8 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(SuperSetting)
 class SuperSettingAdmin(admin.ModelAdmin):
     """SuperSetting admin"""
-    list_display = ['sales_commission', 'basic_shipping_charge', 'shipping_charge_commission', 'balance', 'created_at', 'updated_at']
-    fields = ['sales_commission', 'basic_shipping_charge', 'shipping_charge_commission', 'balance', 'created_at', 'updated_at']
+    list_display = ['sales_commission', 'shipping_charge_commission', 'balance', 'created_at', 'updated_at']
+    fields = ['sales_commission', 'shipping_charge_commission', 'balance', 'created_at', 'updated_at']
     readonly_fields = ['created_at', 'updated_at']
     
     def has_add_permission(self, request):

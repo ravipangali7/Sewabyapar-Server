@@ -119,15 +119,6 @@ def order_list_create(request):
                 shipping_address = Address.objects.get(id=validated_data['shipping_address'])
                 billing_address = Address.objects.get(id=validated_data['billing_address'])
                 
-                # Get SuperSetting for shipping charge
-                try:
-                    super_setting = SuperSetting.objects.first()
-                    if not super_setting:
-                        super_setting = SuperSetting.objects.create()
-                    basic_shipping_charge = super_setting.basic_shipping_charge
-                except Exception:
-                    basic_shipping_charge = Decimal('0')
-                
                 # Group items by vendor to calculate totals
                 from ...models import Store
                 vendor_items = defaultdict(list)
@@ -159,13 +150,10 @@ def order_list_create(request):
                             }
                         }, status=status.HTTP_400_BAD_REQUEST)
                 
-                # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
+                # Calculate total amounts - shipping is FREE for customers
                 total_subtotal = Decimal(str(sum(item.get('total', 0) for item in items_data)))
-                total_shipping = Decimal('0')
-                for store in vendor_items.keys():
-                    if not store.take_shipping_responsibility:
-                        total_shipping += basic_shipping_charge
-                total_amount = total_subtotal + total_shipping
+                total_shipping = Decimal('0')  # Shipping is always FREE for customers
+                total_amount = total_subtotal  # Total = subtotal (no shipping added)
                 
                 # Generate merchant order ID
                 merchant_order_id = generate_merchant_order_id()
@@ -297,15 +285,6 @@ def order_list_create(request):
                         'error': 'Billing address not found or does not belong to you'
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
-                # Get SuperSetting for shipping charge
-                try:
-                    super_setting = SuperSetting.objects.first()
-                    if not super_setting:
-                        super_setting = SuperSetting.objects.create()
-                    basic_shipping_charge = super_setting.basic_shipping_charge
-                except Exception:
-                    basic_shipping_charge = Decimal('0')
-                
                 # Group items by vendor to calculate totals
                 from ...models import Store
                 vendor_items = defaultdict(list)
@@ -337,13 +316,10 @@ def order_list_create(request):
                             }
                         }, status=status.HTTP_400_BAD_REQUEST)
                 
-                # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
+                # Calculate total amounts - shipping is FREE for customers
                 total_subtotal = Decimal(str(sum(item.get('total', 0) for item in items_data)))
-                total_shipping = Decimal('0')
-                for store in vendor_items.keys():
-                    if not store.take_shipping_responsibility:
-                        total_shipping += basic_shipping_charge
-                total_amount = total_subtotal + total_shipping
+                total_shipping = Decimal('0')  # Shipping is always FREE for customers
+                total_amount = total_subtotal  # Total = subtotal (no shipping added)
                 
                 # Generate merchant order ID (will be used when creating PhonePe order token)
                 merchant_order_id = generate_merchant_order_id()
@@ -583,15 +559,6 @@ def create_order_after_razorpay_payment(request):
                 'error': 'Billing address not found or does not belong to you'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get SuperSetting for shipping charge
-        try:
-            super_setting = SuperSetting.objects.first()
-            if not super_setting:
-                super_setting = SuperSetting.objects.create()
-            basic_shipping_charge = super_setting.basic_shipping_charge
-        except Exception:
-            basic_shipping_charge = Decimal('0')
-        
         # Group items by vendor to calculate totals
         vendor_items = defaultdict(list)
         for item_data in items_data:
@@ -622,16 +589,14 @@ def create_order_after_razorpay_payment(request):
                     }
                 }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Calculate total amounts - shipping only for merchants where take_shipping_responsibility=false
+        # Calculate total amounts - shipping is FREE for customers
         subtotal = Decimal('0')
-        shipping = Decimal('0')
         for store, items in vendor_items.items():
             store_subtotal = Decimal(str(sum(item.get('total', 0) for item in items)))
             subtotal += store_subtotal
-            if not store.take_shipping_responsibility:
-                shipping += basic_shipping_charge
         
-        total_amount = subtotal + shipping
+        shipping = Decimal('0')  # Shipping is always FREE for customers
+        total_amount = subtotal  # Total = subtotal (no shipping added)
         
         # Get payment amount from request to verify it matches
         payment_amount = request.data.get('payment_amount')

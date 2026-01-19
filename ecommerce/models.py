@@ -19,8 +19,7 @@ class Store(models.Model):
     email = models.EmailField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_opened = models.BooleanField(default=True, help_text='Whether the store is open for business. Only admins can change this.')
-    # Shipping responsibility and minimum order value
-    take_shipping_responsibility = models.BooleanField(default=False, help_text='Whether this store takes responsibility for shipping charges')
+    # Minimum order value
     minimum_order_value = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)], help_text='Minimum order value required for this store')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -489,8 +488,10 @@ class ShippingChargeHistory(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='shipping_charge_history')
     merchant = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='shipping_charge_history')
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shipping_charge_history')
-    shipping_charge = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], help_text='Shipping charge amount')
-    paid_by = models.CharField(max_length=20, choices=PAID_BY_CHOICES, help_text='Who paid the shipping charge')
+    shipping_charge = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], help_text='Shipping charge amount (courier_rate + commission)')
+    courier_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)], help_text='Base courier rate')
+    commission = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)], help_text='Shipping charge commission amount')
+    paid_by = models.CharField(max_length=20, choices=PAID_BY_CHOICES, default='merchant', help_text='Who paid the shipping charge')
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

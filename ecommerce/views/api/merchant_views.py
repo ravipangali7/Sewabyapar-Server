@@ -38,15 +38,8 @@ def calculate_order_revenue(order):
         shipping_cost = Decimal(str(order.shipping_cost))
         total_amount = Decimal(str(order.total_amount))
         
-        # Check if merchant takes shipping responsibility
-        store = order.merchant
-        if store and store.take_shipping_responsibility:
-            # Merchant pays shipping: commission on (subtotal - shipping_cost)
-            net_for_commission = subtotal - shipping_cost
-            commission = (net_for_commission * sales_commission_percentage) / Decimal('100')
-        else:
-            # Customer pays shipping: commission on subtotal only
-            commission = (subtotal * sales_commission_percentage) / Decimal('100')
+        # Commission is calculated on subtotal only (shipping is handled separately)
+        commission = (subtotal * sales_commission_percentage) / Decimal('100')
         
         # Round commission to 2 decimal places
         commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -519,12 +512,66 @@ def merchant_accept_order(request, pk):
             'errors': errors
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Get courier_rate from request data (required when merchant accepts)
+    courier_rate = request.data.get('courier_rate')
+    if courier_rate is None:
+        return Response({
+            'error': 'Validation failed',
+            'errors': {'courier_rate': 'courier_rate is required when accepting order'}
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        courier_rate = Decimal(str(courier_rate))
+        if courier_rate < 0:
+            return Response({
+                'error': 'Validation failed',
+                'errors': {'courier_rate': 'courier_rate must be a positive number'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except (ValueError, TypeError):
+        return Response({
+            'error': 'Validation failed',
+            'errors': {'courier_rate': 'courier_rate must be a valid number'}
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get SuperSetting for shipping charge commission
+    from core.models import SuperSetting
+    try:
+        super_setting = SuperSetting.objects.first()
+        if not super_setting:
+            super_setting = SuperSetting.objects.create()
+        shipping_charge_commission = Decimal(str(super_setting.shipping_charge_commission))
+    except Exception as e:
+        print(f"[ERROR] Error getting SuperSetting: {str(e)}")
+        sys.stdout.flush()
+        shipping_charge_commission = Decimal('0')
+    
+    # Calculate shipping charge: courier_rate + (courier_rate * shipping_charge_commission / 100)
+    commission_amount = (courier_rate * shipping_charge_commission) / Decimal('100')
+    shipping_charge = courier_rate + commission_amount
+    
+    # Round to 2 decimal places
+    shipping_charge = shipping_charge.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    commission_amount = commission_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    courier_rate = courier_rate.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
     # Accept the order
     order.status = 'accepted'
     order.reject_reason = None  # Clear any previous reject reason
     order.save()
     
-    print(f"[INFO] Order {order.id} accepted by merchant {request.user.id}")
+    # Create ShippingChargeHistory record
+    from ...models import ShippingChargeHistory
+    ShippingChargeHistory.objects.create(
+        order=order,
+        merchant=order.merchant,
+        customer=order.user,
+        shipping_charge=shipping_charge,
+        courier_rate=courier_rate,
+        commission=commission_amount,
+        paid_by='merchant',  # Merchant always pays shipping now
+    )
+    
+    print(f"[INFO] Order {order.id} accepted by merchant {request.user.id}, shipping_charge={shipping_charge} (courier_rate={courier_rate}, commission={commission_amount})")
     sys.stdout.flush()
     
     # Auto-create shipment in Shipdaak

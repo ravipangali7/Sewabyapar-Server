@@ -38,25 +38,27 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 # Calculate commission and round to 2 decimal places
                 # Ensure we're working with Decimal types
                 subtotal = Decimal(str(instance.subtotal))
-                shipping_cost = Decimal(str(instance.shipping_cost))
                 sales_commission_percentage = Decimal(str(super_setting.sales_commission))
                 
-                # Check if merchant takes shipping responsibility
-                store = instance.merchant
-                if store and store.take_shipping_responsibility:
-                    # Merchant pays shipping: commission on (subtotal - shipping_cost)
-                    net_for_commission = subtotal - shipping_cost
-                    commission = (net_for_commission * sales_commission_percentage) / Decimal('100')
-                    # Vendor payout = subtotal - shipping_cost - commission
-                    vendor_payout = net_for_commission - commission
-                else:
-                    # Customer pays shipping: commission on subtotal only
-                    commission = (subtotal * sales_commission_percentage) / Decimal('100')
-                    # Vendor payout = subtotal - commission
-                    vendor_payout = subtotal - commission
-                
-                # Round to 2 decimal places
+                # Calculate commission on subtotal only (shipping is handled separately)
+                commission = (subtotal * sales_commission_percentage) / Decimal('100')
                 commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                # Get shipping charge from ShippingChargeHistory
+                from .models import ShippingChargeHistory
+                shipping_charge_history = ShippingChargeHistory.objects.filter(
+                    order=instance,
+                    merchant=instance.merchant
+                ).first()
+                
+                shipping_charge = Decimal('0')
+                if shipping_charge_history:
+                    shipping_charge = Decimal(str(shipping_charge_history.shipping_charge))
+                    shipping_charge = shipping_charge.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                # Calculate vendor payout: (subtotal - commission) - shipping_charge
+                vendor_payout_before_shipping = subtotal - commission
+                vendor_payout = vendor_payout_before_shipping - shipping_charge
                 vendor_payout = vendor_payout.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
                 # Update SuperSetting balance with commission
@@ -65,16 +67,19 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 super_setting.balance = super_setting.balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 super_setting.save()
                 
-                # Update vendor balance with payout
+                # Get vendor and store wallet_before
                 vendor = instance.merchant.owner
-                vendor.balance = Decimal(str(vendor.balance)) + vendor_payout
+                wallet_before = Decimal(str(vendor.balance))
+                wallet_before = wallet_before.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                
+                # Update vendor balance with payout
+                vendor.balance = wallet_before + vendor_payout
                 # Round vendor balance to 2 decimal places
                 vendor.balance = vendor.balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 vendor.save()
                 
-                # Create transaction record for commission (for SuperSetting/platform)
-                # Note: Commission transaction is tracked at platform level, not user level
-                # We can create it with a system user or track it separately
+                # Get wallet_after
+                wallet_after = vendor.balance
                 
                 # Get payment transaction details from Transaction model if available
                 # Check for both PhonePe and SabPaisa transactions
@@ -83,7 +88,7 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     transaction_type__in=['phonepe_payment', 'sabpaisa_payment']
                 ).first()
                 
-                # Create transaction record for merchant payout
+                # Create transaction record for merchant payout with wallet tracking
                 Transaction.objects.create(
                     user=vendor,
                     transaction_type='payout',
@@ -95,6 +100,8 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     bank_id=payment_transaction.bank_id if payment_transaction and payment_transaction.bank_id else None,
                     vpa=payment_transaction.vpa if payment_transaction and payment_transaction.vpa else None,
                     payer_name=vendor.name if vendor.name else None,
+                    wallet_before=wallet_before,
+                    wallet_after=wallet_after,
                 )
                 
                 # Mark commission as processed (use update to avoid triggering signal again)

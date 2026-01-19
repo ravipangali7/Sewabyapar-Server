@@ -16,7 +16,7 @@ class StoreSerializer(serializers.ModelSerializer):
         model = Store
         fields = ['id', 'name', 'description', 'owner', 'logo', 'banner', 'address', 
                  'latitude', 'longitude', 'phone', 'email', 'is_active', 'is_opened',
-                 'take_shipping_responsibility', 'minimum_order_value',
+                 'minimum_order_value',
                  'shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 
                  'shipdaak_warehouse_created_at', 'created_at', 'updated_at']
         read_only_fields = ['id', 'is_opened', 'shipdaak_pickup_warehouse_id', 'shipdaak_rto_warehouse_id', 
@@ -285,15 +285,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         billing_address = Address.objects.get(id=billing_address_id)
         user = self.context['request'].user
         
-        # Get SuperSetting for shipping charge
-        try:
-            super_setting = SuperSetting.objects.first()
-            if not super_setting:
-                super_setting = SuperSetting.objects.create()
-            basic_shipping_charge = super_setting.basic_shipping_charge
-        except Exception:
-            basic_shipping_charge = Decimal('0')
-        
         # Group items by vendor (store)
         vendor_items = defaultdict(list)
         for item_data in items_data:
@@ -321,13 +312,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             # Calculate subtotal for this vendor (convert to Decimal)
             vendor_subtotal = Decimal(str(sum(item.get('total', 0) for item in vendor_items_list)))
             
-            # Calculate shipping cost: only charge if merchant doesn't take shipping responsibility
-            if store.take_shipping_responsibility:
-                shipping_cost = Decimal('0')
-            else:
-                shipping_cost = basic_shipping_charge
-            
-            vendor_total = vendor_subtotal + shipping_cost
+            # Shipping is FREE for customers
+            shipping_cost = Decimal('0')
+            vendor_total = vendor_subtotal  # Total = subtotal (no shipping added)
             
             # Generate unique order number
             order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -360,16 +347,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     product_variant=item_data.get('product_variant', '') or None
                 )
             
-            # Create shipping charge history record
-            if shipping_cost > 0:
-                paid_by = 'merchant' if store.take_shipping_responsibility else 'customer'
-                ShippingChargeHistory.objects.create(
-                    order=order,
-                    merchant=store,
-                    customer=user,
-                    shipping_charge=shipping_cost,
-                    paid_by=paid_by
-                )
+            # Shipping charge history will be created when merchant accepts order
             
             # Send push notification to merchant
             try:
@@ -674,6 +652,6 @@ class ShippingChargeHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ShippingChargeHistory
         fields = ['id', 'order', 'merchant', 'customer', 'shipping_charge', 
-                 'paid_by', 'paid_by_display', 'created_at']
+                 'courier_rate', 'commission', 'paid_by', 'paid_by_display', 'created_at']
         read_only_fields = ['id', 'created_at']
 
