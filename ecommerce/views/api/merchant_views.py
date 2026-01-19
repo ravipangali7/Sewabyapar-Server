@@ -505,6 +505,24 @@ def merchant_accept_order(request, pk):
         except (ValueError, TypeError):
             errors['package_weight'] = 'package_weight must be a valid number'
     
+    # Validate courier_rate (required when merchant accepts order)
+    courier_rate_raw = request.data.get('courier_rate')
+    courier_rate = None
+    if courier_rate_raw is None:
+        errors['courier_rate'] = 'courier_rate is required when accepting order. Please select a courier first.'
+    else:
+        try:
+            courier_rate = Decimal(str(courier_rate_raw))
+            if courier_rate < 0:
+                errors['courier_rate'] = 'courier_rate must be a positive number'
+                courier_rate = None  # Reset if invalid
+            elif courier_rate == 0:
+                errors['courier_rate'] = 'courier_rate cannot be zero. Please select a valid courier.'
+                courier_rate = None  # Reset if invalid
+        except (ValueError, TypeError):
+            errors['courier_rate'] = 'courier_rate must be a valid number'
+            courier_rate = None  # Reset if invalid
+    
     # Return errors if any validation failed
     if errors:
         return Response({
@@ -512,26 +530,7 @@ def merchant_accept_order(request, pk):
             'errors': errors
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Get courier_rate from request data (required when merchant accepts)
-    courier_rate = request.data.get('courier_rate')
-    if courier_rate is None:
-        return Response({
-            'error': 'Validation failed',
-            'errors': {'courier_rate': 'courier_rate is required when accepting order'}
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        courier_rate = Decimal(str(courier_rate))
-        if courier_rate < 0:
-            return Response({
-                'error': 'Validation failed',
-                'errors': {'courier_rate': 'courier_rate must be a positive number'}
-            }, status=status.HTTP_400_BAD_REQUEST)
-    except (ValueError, TypeError):
-        return Response({
-            'error': 'Validation failed',
-            'errors': {'courier_rate': 'courier_rate must be a valid number'}
-        }, status=status.HTTP_400_BAD_REQUEST)
+    # At this point, courier_rate is validated and is a Decimal
     
     # Get SuperSetting for shipping charge commission
     from core.models import SuperSetting
