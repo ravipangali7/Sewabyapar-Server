@@ -409,8 +409,6 @@ class Withdrawal(models.Model):
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
-        ('processing', 'Processing'),
-        ('completed', 'Completed'),
         ('failed', 'Failed'),
     ]
     
