@@ -139,11 +139,11 @@ def merchant_wallet(request):
             status='completed'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
         
-        # Get pending withdrawals
+        # Get pending withdrawals (only 'pending' status - 'approved' withdrawals have already been deducted from balance)
         from ...models import Withdrawal
         pending_withdrawals = Withdrawal.objects.filter(
             merchant=request.user,
-            status__in=['pending', 'approved', 'processing']
+            status='pending'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
         
         # Get recent transactions (last 5)
