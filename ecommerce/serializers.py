@@ -455,22 +455,29 @@ class RevenueHistorySerializer(serializers.Serializer):
 class WithdrawalSerializer(serializers.ModelSerializer):
     merchant = UserSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    payment_setting = MerchantPaymentSettingSerializer(read_only=True)
+    payment_details = serializers.SerializerMethodField()
     
     class Meta:
         model = Withdrawal
         fields = ['id', 'merchant', 'amount', 'status', 'status_display', 
-                 'bank_account_number', 'bank_ifsc', 'bank_name', 'account_holder_name',
-                 'utr', 'bank_id', 'vpa', 'rejection_reason', 'processed_at', 
+                 'payment_setting', 'payment_details', 'rejection_reason', 
                  'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'processed_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_payment_details(self, obj):
+        """Get payment details from payment_setting"""
+        if obj.payment_setting and obj.payment_setting.payment_details:
+            return obj.payment_setting.payment_details
+        return None
 
 
 class WithdrawalCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating withdrawal requests"""
+    """Serializer for creating withdrawal requests - only requires amount"""
     
     class Meta:
         model = Withdrawal
-        fields = ['amount', 'bank_account_number', 'bank_ifsc', 'bank_name', 'account_holder_name']
+        fields = ['amount']
     
     def validate_amount(self, value):
         """Validate withdrawal amount"""

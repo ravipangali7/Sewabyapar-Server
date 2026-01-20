@@ -1,0 +1,113 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Delete Withdrawal</h1>
+        {% if withdrawal and withdrawal.pk %}
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:withdrawal_detail' withdrawal.pk %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Detail
+        </a>
+        {% else %}
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:ecommerce:withdrawal_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="alert-triangle"></i> Confirm Delete
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="align-middle" data-feather="alert-triangle"></i>
+                        <strong>Warning:</strong> You are about to delete a withdrawal. This action cannot be undone.
+                    </div>
+
+                    <h5 class="mb-3">Withdrawal Details</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Withdrawal ID:</strong><br>
+                            <span class="text-muted">#{{ withdrawal.id }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Amount:</strong><br>
+                            <span class="text-muted"><strong>₹{{ withdrawal.amount }}</strong></span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Merchant:</strong><br>
+                            <span class="text-muted">{{ withdrawal.merchant.name }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Phone:</strong><br>
+                            <span class="text-muted">{{ withdrawal.merchant.phone }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Status:</strong><br>
+                            {% if withdrawal.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif withdrawal.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Created:</strong><br>
+                            <span class="text-muted">{{ withdrawal.created_at|date:"M d, Y H:i" }}</span>
+                        </div>
+                    </div>
+
+                    {% if withdrawal.status != 'pending' %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="align-middle" data-feather="alert-circle"></i>
+                        <strong>Important:</strong> Only pending withdrawals can be deleted. This withdrawal has status "{{ withdrawal.get_status_display }}".
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <p class="mb-3">
+                        Are you sure you want to delete withdrawal #{{ withdrawal.id }} for <strong>{{ withdrawal.merchant.name }}</strong>?
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="event.preventDefault(); confirmQuestion('Delete Withdrawal', 'Are you sure you want to delete this withdrawal? This action cannot be undone.').then(() => this.closest('form').submit()).catch(() => {});">
+                            <i class="align-middle" data-feather="trash-2"></i> Yes, Delete
+                        </button>
+                        {% if withdrawal and withdrawal.pk %}
+                        <a href="{% url 'myadmin:ecommerce:withdrawal_detail' withdrawal.pk %}" class="btn btn-secondary">
+                            <i class="align-middle" data-feather="x"></i> Cancel
+                        </a>
+                        {% else %}
+                        <a href="{% url 'myadmin:ecommerce:withdrawal_list' %}" class="btn btn-secondary">
+                            <i class="align-middle" data-feather="x"></i> Cancel
+                        </a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
+{% endblock %}

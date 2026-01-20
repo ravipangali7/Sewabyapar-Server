@@ -44,43 +44,26 @@ def create_withdrawal(request):
             status='approved'
         ).first()
         
-        # If payment setting exists and is approved, use it
-        if payment_setting:
-            if payment_setting.payment_method_type == 'bank_account':
-                # Extract bank details from payment_details
-                payment_details = payment_setting.payment_details
-                bank_account_number = payment_details.get('account_number', '')
-                bank_ifsc = payment_details.get('ifsc', '')
-                bank_name = payment_details.get('bank_name', '')
-                account_holder_name = payment_details.get('account_holder_name', '')
-            else:
-                # For UPI/Wallet, we still need bank account for withdrawal processing
-                # This is a limitation - withdrawals currently only support bank accounts
-                return Response({
-                    'error': 'Withdrawals currently only support bank account payment methods. Please add a bank account payment setting.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            # Fallback to old method - require bank details in request
-            serializer = WithdrawalCreateSerializer(data=request.data)
-            if not serializer.is_valid():
-                return Response({
-                    'error': 'No approved payment setting found. Please provide bank details or set up an approved payment setting.',
-                    'details': serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            bank_account_number = serializer.validated_data['bank_account_number']
-            bank_ifsc = serializer.validated_data['bank_ifsc']
-            bank_name = serializer.validated_data['bank_name']
-            account_holder_name = serializer.validated_data['account_holder_name']
-        
-        # Get amount from request
-        amount_str = request.data.get('amount')
-        if not amount_str:
+        if not payment_setting:
             return Response({
-                'error': 'Amount is required'
+                'error': 'No approved payment setting found. Please set up and get your payment method approved first.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        amount = Decimal(str(amount_str))
+        # Only bank account payment methods are supported for withdrawals
+        if payment_setting.payment_method_type != 'bank_account':
+            return Response({
+                'error': 'Withdrawals currently only support bank account payment methods. Please add a bank account payment setting.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate amount
+        serializer = WithdrawalCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'error': 'Invalid withdrawal request',
+                'details': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        amount = Decimal(str(serializer.validated_data['amount']))
         amount = amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
         if amount <= 0:
@@ -94,7 +77,7 @@ def create_withdrawal(request):
         # Get pending withdrawals
         pending_withdrawals = Withdrawal.objects.filter(
             merchant=request.user,
-            status__in=['pending', 'approved', 'processing']
+            status__in=['pending', 'approved']
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
         
         available_balance = merchant_balance - pending_withdrawals
@@ -104,16 +87,16 @@ def create_withdrawal(request):
                 'error': f'Insufficient balance. Available: ₹{available_balance}, Requested: ₹{amount}'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Get account holder name from payment details for transaction
+        payment_details = payment_setting.payment_details or {}
+        account_holder_name = payment_details.get('account_holder_name', request.user.name)
+        
         # Create withdrawal request
         with transaction.atomic():
             withdrawal = Withdrawal.objects.create(
                 merchant=request.user,
                 amount=amount,
-                bank_account_number=bank_account_number,
-                bank_ifsc=bank_ifsc,
-                bank_name=bank_name,
-                account_holder_name=account_holder_name,
-                payment_setting=payment_setting if payment_setting else None,
+                payment_setting=payment_setting,
                 status='pending'
             )
             
@@ -125,7 +108,8 @@ def create_withdrawal(request):
                 status='pending',
                 description=f'Withdrawal request #{withdrawal.id}',
                 related_withdrawal=withdrawal,
-                payer_name=account_holder_name
+                wallet_before=merchant_balance,
+                wallet_after=merchant_balance  # No change until approved
             )
         
         response_serializer = WithdrawalSerializer(withdrawal, context={'request': request})

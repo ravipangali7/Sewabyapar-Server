@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
     Review, Wishlist, Coupon, GlobalCourier, ShippingChargeHistory,
-    MerchantPaymentSetting
+    MerchantPaymentSetting, Withdrawal
 )
 
 
@@ -152,6 +152,28 @@ class MerchantPaymentSettingAdmin(admin.ModelAdmin):
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at', 'approved_at', 'rejected_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    ordering = ['-created_at']
+
+
+@admin.register(Withdrawal)
+class WithdrawalAdmin(admin.ModelAdmin):
+    list_display = ['id', 'merchant', 'amount', 'status', 'payment_setting', 'created_at', 'updated_at']
+    list_filter = ['status', 'created_at', 'updated_at']
+    search_fields = ['merchant__name', 'merchant__phone', 'merchant__email', 'id', 'rejection_reason']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('Withdrawal Information', {
+            'fields': ('merchant', 'amount', 'status', 'payment_setting')
+        }),
+        ('Rejection Information', {
+            'fields': ('rejection_reason',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )

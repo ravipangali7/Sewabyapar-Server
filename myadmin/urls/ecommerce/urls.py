@@ -4,7 +4,8 @@ from myadmin.views.ecommerce import (
     product_views, category_views, store_views, order_views,
     review_views, cart_views, wishlist_views, coupon_views,
     product_image_views, order_item_views, banner_views, popup_views,
-    shipping_charge_history_views, payment_setting_views, variant_image_views
+    shipping_charge_history_views, payment_setting_views, variant_image_views,
+    withdrawal_views
 )
 
 app_name = 'ecommerce'
@@ -112,5 +113,14 @@ urlpatterns = [
     path('payment-settings/<int:pk>/approve/', payment_setting_views.PaymentSettingApproveView.as_view(), name='payment_setting_approve'),
     path('payment-settings/<int:pk>/reject/', payment_setting_views.PaymentSettingRejectView.as_view(), name='payment_setting_reject'),
     path('payment-settings/bulk-approve/', payment_setting_views.PaymentSettingBulkApproveView.as_view(), name='payment_setting_bulk_approve'),
+    
+    # Withdrawal URLs
+    path('withdrawals/', withdrawal_views.WithdrawalListView.as_view(), name='withdrawal_list'),
+    path('withdrawals/<int:pk>/', withdrawal_views.WithdrawalDetailView.as_view(), name='withdrawal_detail'),
+    path('withdrawals/create/', withdrawal_views.WithdrawalCreateView.as_view(), name='withdrawal_create'),
+    path('withdrawals/<int:pk>/update/', withdrawal_views.WithdrawalUpdateView.as_view(), name='withdrawal_update'),
+    path('withdrawals/<int:pk>/delete/', withdrawal_views.WithdrawalDeleteView.as_view(), name='withdrawal_delete'),
+    path('withdrawals/<int:pk>/approve/', withdrawal_views.WithdrawalApproveView.as_view(), name='withdrawal_approve'),
+    path('withdrawals/<int:pk>/reject/', withdrawal_views.WithdrawalRejectView.as_view(), name='withdrawal_reject'),
 ]
 

@@ -1,7 +1,7 @@
 """Forms for ecommerce models"""
 from django import forms
 from django.forms.models import inlineformset_factory
-from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem, Banner, Popup, MerchantPaymentSetting
+from ecommerce.models import Product, Category, Store, Order, Review, Coupon, ProductImage, OrderItem, Banner, Popup, MerchantPaymentSetting, Withdrawal
 from core.models import Address, User
 from myadmin.widgets.category_widget import HierarchicalCategoryWidget
 
@@ -563,4 +563,95 @@ class PaymentSettingForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class WithdrawalForm(forms.ModelForm):
+    """Form for withdrawal - full CRUD support"""
+    merchant = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_merchant=True).order_by('name'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Select the merchant for this withdrawal'
+    )
+    
+    payment_setting = forms.ModelChoiceField(
+        queryset=MerchantPaymentSetting.objects.filter(status='approved').select_related('user'),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Select approved payment setting (optional - will auto-select if merchant has one)'
+    )
+    
+    class Meta:
+        model = Withdrawal
+        fields = ['merchant', 'amount', 'status', 'payment_setting', 'rejection_reason']
+        widgets = {
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'rejection_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Enter rejection reason if status is rejected'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filter payment_setting based on selected merchant
+        if 'merchant' in self.data:
+            try:
+                merchant_id = int(self.data.get('merchant'))
+                merchant = User.objects.get(pk=merchant_id, is_merchant=True)
+                self.fields['payment_setting'].queryset = MerchantPaymentSetting.objects.filter(
+                    user=merchant,
+                    status='approved'
+                ).select_related('user')
+                
+                # Auto-select payment setting if merchant has only one
+                approved_settings = self.fields['payment_setting'].queryset
+                if approved_settings.count() == 1:
+                    self.fields['payment_setting'].initial = approved_settings.first()
+            except (ValueError, User.DoesNotExist):
+                pass
+        elif self.instance and self.instance.pk and self.instance.merchant:
+            # When editing, filter by the withdrawal's merchant
+            self.fields['payment_setting'].queryset = MerchantPaymentSetting.objects.filter(
+                user=self.instance.merchant,
+                status='approved'
+            ).select_related('user')
+        
+        # Make merchant read-only when editing
+        if self.instance and self.instance.pk:
+            self.fields['merchant'].disabled = True
+            self.fields['merchant'].widget.attrs['readonly'] = True
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        merchant = cleaned_data.get('merchant')
+        payment_setting = cleaned_data.get('payment_setting')
+        status = cleaned_data.get('status')
+        rejection_reason = cleaned_data.get('rejection_reason', '').strip()
+        
+        # If no payment_setting selected, try to auto-select from merchant
+        if merchant and not payment_setting:
+            approved_setting = MerchantPaymentSetting.objects.filter(
+                user=merchant,
+                status='approved'
+            ).first()
+            if approved_setting:
+                cleaned_data['payment_setting'] = approved_setting
+            else:
+                raise forms.ValidationError({
+                    'payment_setting': 'Merchant must have an approved payment setting to create a withdrawal.'
+                })
+        
+        # Validate rejection_reason if status is rejected
+        if status == 'rejected' and not rejection_reason:
+            raise forms.ValidationError({
+                'rejection_reason': 'Rejection reason is required when status is rejected.'
+            })
+        
+        # Validate payment_setting belongs to merchant
+        if merchant and payment_setting:
+            if payment_setting.user != merchant:
+                raise forms.ValidationError({
+                    'payment_setting': 'Payment setting must belong to the selected merchant.'
+                })
+        
+        return cleaned_data
 
