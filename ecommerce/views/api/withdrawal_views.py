@@ -49,12 +49,6 @@ def create_withdrawal(request):
                 'error': 'No approved payment setting found. Please set up and get your payment method approved first.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Only bank account payment methods are supported for withdrawals
-        if payment_setting.payment_method_type != 'bank_account':
-            return Response({
-                'error': 'Withdrawals currently only support bank account payment methods. Please add a bank account payment setting.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         # Validate amount
         serializer = WithdrawalCreateSerializer(data=request.data)
         if not serializer.is_valid():
