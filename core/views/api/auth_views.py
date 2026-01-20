@@ -130,9 +130,19 @@ def user_login(request):
 def user_logout(request):
     """User logout endpoint"""
     try:
+        # Delete auth token
         request.user.auth_token.delete()
+        # Clear FCM token
+        request.user.fcm_token = None
+        request.user.save(update_fields=['fcm_token'])
         return Response({'message': 'Logout successful'})
     except:
+        # Even if token deletion fails, try to clear FCM token
+        try:
+            request.user.fcm_token = None
+            request.user.save(update_fields=['fcm_token'])
+        except:
+            pass
         return Response({'message': 'Logout successful'})
 
 
