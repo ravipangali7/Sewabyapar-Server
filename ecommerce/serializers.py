@@ -455,7 +455,7 @@ class RevenueHistorySerializer(serializers.Serializer):
 class WithdrawalSerializer(serializers.ModelSerializer):
     merchant = UserSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    payment_setting = MerchantPaymentSettingSerializer(read_only=True)
+    payment_setting = serializers.SerializerMethodField()
     payment_details = serializers.SerializerMethodField()
     
     class Meta:
@@ -464,6 +464,19 @@ class WithdrawalSerializer(serializers.ModelSerializer):
                  'payment_setting', 'payment_details', 'rejection_reason', 
                  'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_payment_setting(self, obj):
+        """Get payment setting details"""
+        if obj.payment_setting:
+            # Return basic payment setting info to avoid circular import
+            return {
+                'id': obj.payment_setting.id,
+                'payment_method_type': obj.payment_setting.payment_method_type,
+                'payment_method_type_display': obj.payment_setting.get_payment_method_type_display(),
+                'status': obj.payment_setting.status,
+                'status_display': obj.payment_setting.get_status_display(),
+            }
+        return None
     
     def get_payment_details(self, obj):
         """Get payment details from payment_setting"""
