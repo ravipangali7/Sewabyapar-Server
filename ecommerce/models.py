@@ -310,6 +310,7 @@ class OrderItem(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)  # Price at time of order
+    actual_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Merchant price before commission at time of order')
     total = models.DecimalField(max_digits=10, decimal_places=2)
     product_variant = models.CharField(max_length=255, blank=True, null=True, help_text='Selected product variant (e.g., "Size:Small,Color:Red")')
     

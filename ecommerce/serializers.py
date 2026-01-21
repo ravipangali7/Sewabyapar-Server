@@ -418,12 +418,38 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             
             # Create order items for this vendor
             for item_data in vendor_items_list:
+                # Get product to extract actual_price
+                product = Product.objects.get(id=item_data['product'])
+                actual_price_value = None
+                
+                # Extract actual_price based on variant or product
+                if item_data.get('product_variant'):
+                    # Has variant - extract from variant combination
+                    variant_key = item_data['product_variant']  # Format: "Size:Small,Color:Red"
+                    if product.variants and product.variants.get('enabled'):
+                        combinations = product.variants.get('combinations', {})
+                        # Convert variant key to combination key format (e.g., "Small/Red")
+                        variant_parts = [part.split(':')[1] if ':' in part else part for part in variant_key.split(',')]
+                        combo_key = '/'.join(variant_parts)
+                        combination = combinations.get(combo_key, {})
+                        if isinstance(combination, dict) and 'actual_price' in combination:
+                            actual_price_value = Decimal(str(combination['actual_price']))
+                else:
+                    # No variant - use product.actual_price
+                    if product.actual_price:
+                        actual_price_value = Decimal(str(product.actual_price))
+                
+                # Fallback: if actual_price not found, use price (backward compatibility)
+                if actual_price_value is None:
+                    actual_price_value = Decimal(str(item_data.get('price', 0)))
+                
                 OrderItem.objects.create(
                     order=order,
                     product_id=item_data['product'],
                     store=store,
                     quantity=item_data['quantity'],
                     price=Decimal(str(item_data.get('price', 0))),
+                    actual_price=actual_price_value,
                     total=Decimal(str(item_data.get('total', 0))),
                     product_variant=item_data.get('product_variant', '') or None
                 )

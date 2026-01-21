@@ -35,13 +35,26 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     sys.stdout.flush()
                     super_setting = SuperSetting.objects.create()
                 
-                # Calculate commission and round to 2 decimal places
-                # Ensure we're working with Decimal types
-                subtotal = Decimal(str(instance.subtotal))
+                # Calculate total price and total actual_price from order items
                 sales_commission_percentage = Decimal(str(super_setting.sales_commission))
+                total_price = Decimal('0')
+                total_actual_price = Decimal('0')
                 
-                # Calculate commission on subtotal only (shipping is handled separately)
-                commission = (subtotal * sales_commission_percentage) / Decimal('100')
+                for order_item in instance.items.all():
+                    item_price = Decimal(str(order_item.price)) * Decimal(str(order_item.quantity))
+                    total_price += item_price
+                    
+                    # Get actual_price from order item (or fallback to price if not set)
+                    if order_item.actual_price:
+                        item_actual_price = Decimal(str(order_item.actual_price)) * Decimal(str(order_item.quantity))
+                    else:
+                        # Backward compatibility: if actual_price not set, calculate from price
+                        # This assumes price includes commission, so reverse calculate
+                        item_actual_price = item_price / (Decimal('1') + (sales_commission_percentage / Decimal('100')))
+                    total_actual_price += item_actual_price
+                
+                # Commission = what customer paid (price) - what merchant should get (actual_price)
+                commission = total_price - total_actual_price
                 commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
                 # Get shipping charge from ShippingChargeHistory
@@ -56,9 +69,8 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     shipping_charge = Decimal(str(shipping_charge_history.shipping_charge))
                     shipping_charge = shipping_charge.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
-                # Calculate vendor payout: (subtotal - commission) - shipping_charge
-                vendor_payout_before_shipping = subtotal - commission
-                vendor_payout = vendor_payout_before_shipping - shipping_charge
+                # Merchant payout: actual_price - shipping_charge
+                vendor_payout = total_actual_price - shipping_charge
                 vendor_payout = vendor_payout.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
                 # Update SuperSetting balance with commission
@@ -79,22 +91,22 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                     transaction_type__in=['phonepe_payment', 'sabpaisa_payment']
                 ).first()
                 
-                # Transaction 1: Commission Deduction (negative amount)
-                wallet_before_commission = current_wallet
-                current_wallet = current_wallet - commission
+                # Transaction 1: Add actual_price to merchant wallet
+                wallet_before_actual_price = current_wallet
+                current_wallet = current_wallet + total_actual_price
                 current_wallet = current_wallet.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                wallet_after_commission = current_wallet
+                wallet_after_actual_price = current_wallet
                 
                 Transaction.objects.create(
                     user=vendor,
-                    transaction_type='commission_deduction',
-                    amount=-commission,  # Negative amount for deduction
+                    transaction_type='payout',
+                    amount=total_actual_price,  # Positive amount - actual_price goes to merchant
                     status='completed',
-                    description=f'Sales commission deducted from order {instance.order_number} ({sales_commission_percentage}% of ₹{subtotal})',
+                    description=f'Actual price from order {instance.order_number} (₹{total_actual_price})',
                     related_order=instance,
                     payer_name=vendor.name if vendor.name else None,
-                    wallet_before=wallet_before_commission,
-                    wallet_after=wallet_after_commission,
+                    wallet_before=wallet_before_actual_price,
+                    wallet_after=wallet_after_actual_price,
                 )
                 
                 # Transaction 2: Shipping Charge Deduction (negative amount)
@@ -109,33 +121,12 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                         transaction_type='shipping_charge_deduction',
                         amount=-shipping_charge,  # Negative amount for deduction
                         status='completed',
-                        description=f'Shipping charge deducted from order {instance.order_number}',
+                        description=f'Shipping charge deducted from order {instance.order_number} (₹{shipping_charge})',
                         related_order=instance,
                         payer_name=vendor.name if vendor.name else None,
                         wallet_before=wallet_before_shipping,
                         wallet_after=wallet_after_shipping,
                     )
-                
-                # Transaction 3: Payout (positive amount)
-                wallet_before_payout = current_wallet
-                current_wallet = current_wallet + vendor_payout
-                current_wallet = current_wallet.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                wallet_after_payout = current_wallet
-                
-                Transaction.objects.create(
-                    user=vendor,
-                    transaction_type='payout',
-                    amount=vendor_payout,  # Positive amount for payout
-                    status='completed',
-                    description=f'Payout from order {instance.order_number}',
-                    related_order=instance,
-                    utr=payment_transaction.utr if payment_transaction and payment_transaction.utr else None,
-                    bank_id=payment_transaction.bank_id if payment_transaction and payment_transaction.bank_id else None,
-                    vpa=payment_transaction.vpa if payment_transaction and payment_transaction.vpa else None,
-                    payer_name=vendor.name if vendor.name else None,
-                    wallet_before=wallet_before_payout,
-                    wallet_after=wallet_after_payout,
-                )
                 
                 # Update vendor balance to final amount
                 vendor.balance = current_wallet
@@ -144,7 +135,7 @@ def handle_order_delivery(sender, instance, created, **kwargs):
                 # Mark commission as processed (use update to avoid triggering signal again)
                 Order.objects.filter(pk=instance.pk).update(commission_processed=True)
                 
-                print(f"[INFO] Order {instance.id} delivered: Commission={commission} (added to SuperSetting), Payout={vendor_payout} (added to vendor), SuperSetting balance={super_setting.balance}, Vendor balance={vendor.balance}")
+                print(f"[INFO] Order {instance.id} delivered: Total Price={total_price}, Total Actual Price={total_actual_price}, Commission={commission} (added to SuperSetting), Shipping Charge={shipping_charge}, Payout={vendor_payout} (added to vendor), SuperSetting balance={super_setting.balance}, Vendor balance={vendor.balance}")
                 sys.stdout.flush()
             
         except Exception as e:
