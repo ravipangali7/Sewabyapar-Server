@@ -11,7 +11,7 @@ import sys
 import traceback
 from ...models import Product, Store, Order, OrderItem, Category, ProductImage, Withdrawal
 from core.models import Transaction, SuperSetting
-from ...serializers import ProductSerializer, ProductCreateSerializer, OrderSerializer, StoreSerializer, TransactionSerializer, RevenueHistorySerializer
+from ...serializers import ProductSerializer, ProductCreateSerializer, ProductMerchantSerializer, OrderSerializer, StoreSerializer, TransactionSerializer, RevenueHistorySerializer
 from core.models import User
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -89,7 +89,7 @@ def merchant_products(request):
             paginator = PageNumberPagination()
             empty_queryset = Product.objects.none()  # Create empty queryset
             paginated_products = paginator.paginate_queryset(empty_queryset, request)
-            serializer = ProductSerializer(paginated_products or [], many=True, context={'request': request})
+            serializer = ProductMerchantSerializer(paginated_products or [], many=True, context={'request': request})
             return paginator.get_paginated_response(serializer.data)
         
         # Get products from merchant's stores (only from opened stores)
@@ -120,7 +120,7 @@ def merchant_products(request):
         
         paginator = PageNumberPagination()
         paginated_products = paginator.paginate_queryset(queryset, request)
-        serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
+        serializer = ProductMerchantSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
     
     elif request.method == 'POST':
@@ -259,7 +259,7 @@ def merchant_product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk, store__in=stores)
     
     if request.method == 'GET':
-        serializer = ProductSerializer(product, context={'request': request})
+        serializer = ProductMerchantSerializer(product, context={'request': request})
         return Response(serializer.data)
     
     elif request.method in ['PUT', 'PATCH']:
@@ -271,7 +271,7 @@ def merchant_product_detail(request, pk):
                 store_id = serializer.validated_data['store'].id
                 store = get_object_or_404(Store, id=store_id, owner=request.user)
             serializer.save()
-            return Response(ProductSerializer(product, context={'request': request}).data)
+            return Response(ProductMerchantSerializer(product, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':

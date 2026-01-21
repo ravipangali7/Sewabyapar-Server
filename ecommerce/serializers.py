@@ -151,6 +151,70 @@ class ProductSerializer(serializers.ModelSerializer):
         return obj.reviews.count()
 
 
+class ProductMerchantSerializer(serializers.ModelSerializer):
+    store = StoreSerializer(read_only=True)
+    category = CategorySerializer(read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'description', 'store', 'category', 'actual_price', 'price', 
+                 'discount_type', 'discount', 'stock_quantity', 'is_active', 'is_featured', 
+                 'is_approved', 'variants', 'images', 'average_rating', 'review_count', 
+                 'item_code', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'item_code', 'price', 'created_at', 'updated_at']
+    
+    def to_representation(self, instance):
+        # Similar to ProductSerializer but keep actual_price in combinations
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        
+        # Update category with full image URL
+        if data.get('category') and request:
+            category_data = data['category']
+            if category_data.get('image'):
+                category_data['image'] = request.build_absolute_uri(category_data['image'])
+        
+        # Update images with full URLs
+        if data.get('images') and request:
+            for image_data in data['images']:
+                if image_data.get('image'):
+                    image_data['image'] = request.build_absolute_uri(image_data['image'])
+        
+        # Process variant combination images (keep actual_price, don't remove it)
+        if data.get('variants') and request:
+            variants_data = data['variants']
+            if isinstance(variants_data, dict) and variants_data.get('combinations'):
+                combinations = variants_data['combinations']
+                if isinstance(combinations, dict):
+                    for combo_key, combo_data in combinations.items():
+                        if isinstance(combo_data, dict):
+                            # Process image URLs (keep actual_price)
+                            if combo_data.get('image'):
+                                image_path = combo_data['image']
+                                if image_path and not image_path.startswith('http://') and not image_path.startswith('https://'):
+                                    if image_path.startswith('/media/') or (image_path.startswith('/') and not image_path.startswith('/data/')):
+                                        try:
+                                            combo_data['image'] = request.build_absolute_uri(image_path)
+                                        except Exception:
+                                            combo_data['image'] = ''
+                                    elif image_path.startswith('/data/'):
+                                        combo_data['image'] = ''
+        
+        return data
+    
+    def get_average_rating(self, obj):
+        reviews = obj.reviews.all()
+        if reviews:
+            return round(sum(review.rating for review in reviews) / len(reviews), 1)
+        return 0
+    
+    def get_review_count(self, obj):
+        return obj.reviews.count()
+
+
 class ProductCreateSerializer(serializers.ModelSerializer):
     # actual_price is what merchants input
     actual_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
