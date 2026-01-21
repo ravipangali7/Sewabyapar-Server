@@ -146,12 +146,13 @@ def merchant_products(request):
         product_data = {}
         if request.content_type and 'multipart/form-data' in request.content_type:
             # Extract product fields from POST data
+            # Use actual_price instead of price (price will be calculated)
             product_data = {
                 'name': request.POST.get('name'),
                 'description': request.POST.get('description'),
                 'store': request.POST.get('store'),
                 'category': request.POST.get('category'),
-                'price': request.POST.get('price'),
+                'actual_price': request.POST.get('actual_price') or request.POST.get('price'),  # Support both for backward compatibility
                 'discount_type': request.POST.get('discount_type') or None,
                 'discount': request.POST.get('discount') or None,
                 'stock_quantity': request.POST.get('stock_quantity'),
@@ -162,12 +163,32 @@ def merchant_products(request):
             variants_json = request.POST.get('variants')
             if variants_json:
                 try:
-                    product_data['variants'] = json.loads(variants_json)
+                    variants_data = json.loads(variants_json)
+                    # Process variant combinations to ensure actual_price is used
+                    if isinstance(variants_data, dict) and 'combinations' in variants_data:
+                        combinations = variants_data.get('combinations', {})
+                        for combo_key, combo_data in combinations.items():
+                            if isinstance(combo_data, dict):
+                                # If price exists but actual_price doesn't, use price as actual_price (backward compatibility)
+                                if 'actual_price' not in combo_data and 'price' in combo_data:
+                                    combo_data['actual_price'] = combo_data['price']
+                    product_data['variants'] = variants_data
                 except json.JSONDecodeError:
                     pass
         else:
             # JSON request
-            product_data = request.data
+            product_data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+            # If price is provided but actual_price is not, use price as actual_price (backward compatibility)
+            if 'actual_price' not in product_data and 'price' in product_data:
+                product_data['actual_price'] = product_data['price']
+            # Process variant combinations
+            if 'variants' in product_data and isinstance(product_data['variants'], dict):
+                combinations = product_data['variants'].get('combinations', {})
+                for combo_key, combo_data in combinations.items():
+                    if isinstance(combo_data, dict):
+                        # If price exists but actual_price doesn't, use price as actual_price
+                        if 'actual_price' not in combo_data and 'price' in combo_data:
+                            combo_data['actual_price'] = combo_data['price']
         
         serializer = ProductCreateSerializer(data=product_data)
         if serializer.is_valid():

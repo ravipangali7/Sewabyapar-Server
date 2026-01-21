@@ -95,6 +95,13 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
             context['formset'] = ProductImageFormSet()
         # Add variant data for JavaScript (default for new products)
         context['variants_data'] = json.dumps({"enabled": False, "variants": [], "combinations": {}})
+        # Add sales commission for price calculation
+        from core.models import SuperSetting
+        try:
+            super_setting = SuperSetting.objects.first()
+            context['sales_commission'] = float(super_setting.sales_commission) if super_setting else 0.0
+        except Exception:
+            context['sales_commission'] = 0.0
         return context
     
     def form_valid(self, form):
@@ -167,6 +174,13 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
             context['variants_data'] = json.dumps(self.object.variants)
         else:
             context['variants_data'] = json.dumps({"enabled": False, "variants": [], "combinations": {}})
+        # Add sales commission for price calculation
+        from core.models import SuperSetting
+        try:
+            super_setting = SuperSetting.objects.first()
+            context['sales_commission'] = float(super_setting.sales_commission) if super_setting else 0.0
+        except Exception:
+            context['sales_commission'] = 0.0
         return context
     
     def form_valid(self, form):

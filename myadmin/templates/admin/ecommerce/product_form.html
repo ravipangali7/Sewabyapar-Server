@@ -114,19 +114,37 @@
                         </div>
                         
                         <div class="row">
-                            <!-- Price Field -->
-                            <div class="col-md-6 form-field-spacing">
-                                <label class="form-label" for="{{ form.price.id_for_label }}">
-                                    {{ form.price.label }}
-                                    {% if form.price.field.required %}<span class="text-danger">*</span>{% endif %}
+                            <!-- Actual Price Field (Merchant Price) -->
+                            <div class="col-md-4 form-field-spacing">
+                                <label class="form-label" for="{{ form.actual_price.id_for_label }}">
+                                    Actual Price (Merchant Price)
+                                    {% if form.actual_price.field.required %}<span class="text-danger">*</span>{% endif %}
                                 </label>
-                                {{ form.price }}
-                                {% if form.price.help_text %}
-                                    <small class="form-text text-muted">{{ form.price.help_text }}</small>
+                                {{ form.actual_price }}
+                                {% if form.actual_price.help_text %}
+                                    <small class="form-text text-muted">{{ form.actual_price.help_text }}</small>
                                 {% endif %}
-                                {% if form.price.errors %}
+                                {% if form.actual_price.errors %}
                                     <div class="text-danger">
-                                        {% for error in form.price.errors %}
+                                        {% for error in form.actual_price.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Calculated Price Field (Selling Price) -->
+                            <div class="col-md-4 form-field-spacing">
+                                <label class="form-label" for="{{ form.calculated_price.id_for_label }}">
+                                    Selling Price (with Commission)
+                                </label>
+                                {{ form.calculated_price }}
+                                {% if form.calculated_price.help_text %}
+                                    <small class="form-text text-muted">{{ form.calculated_price.help_text }}</small>
+                                {% endif %}
+                                {% if form.calculated_price.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.calculated_price.errors %}
                                             <small>{{ error }}</small>
                                         {% endfor %}
                                     </div>
@@ -134,7 +152,7 @@
                             </div>
                             
                             <!-- Stock Quantity Field -->
-                            <div class="col-md-6 form-field-spacing">
+                            <div class="col-md-4 form-field-spacing">
                                 <label class="form-label" for="{{ form.stock_quantity.id_for_label }}">
                                     {{ form.stock_quantity.label }}
                                     {% if form.stock_quantity.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -152,6 +170,9 @@
                                 {% endif %}
                             </div>
                         </div>
+                        
+                        <!-- Hidden price field (for form submission) -->
+                        {{ form.price }}
                     </div>
                 </div>
                 
@@ -309,7 +330,8 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th class="fw-bold">Variant</th>
-                                            <th class="fw-bold">Price</th>
+                                            <th class="fw-bold">Actual Price</th>
+                                            <th class="fw-bold">Selling Price</th>
                                             <th class="fw-bold">Stock</th>
                                             <th class="fw-bold text-center">Primary</th>
                                             <th class="fw-bold">Discount Type</th>
@@ -319,7 +341,7 @@
                                     </thead>
                                     <tbody id="combinations-table-body">
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted py-4">
+                                            <td colspan="8" class="text-center text-muted py-4">
                                                 <i class="align-middle" data-feather="info" style="width: 20px; height: 20px;"></i>
                                                 Enable variants and add variant types to see combinations
                                             </td>
@@ -385,6 +407,7 @@
 
                 <!-- Hidden input for variant data -->
                 <script id="variants-data" type="application/json">{{ variants_data|safe }}</script>
+                <script id="sales-commission" type="application/json">{{ sales_commission|default:0 }}</script>
                 <script type="application/json" id="variant-upload-url">{% url 'myadmin:ecommerce:upload_variant_image' %}</script>
                 
                 <div class="mt-3">

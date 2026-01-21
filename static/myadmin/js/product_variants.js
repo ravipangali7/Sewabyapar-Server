@@ -10,8 +10,11 @@
     let variantState = {
         enabled: false,
         variants: [], // [{name: "Color", values: ["White", "Blue"]}]
-        combinations: {} // {"White/XL": {price: 500, stock: 10, image: "", is_primary: false, discount_type: "", discount: ""}}
+        combinations: {} // {"White/XL": {actual_price: 500, price: 550, stock: 10, image: "", is_primary: false, discount_type: "", discount: ""}}
     };
+    
+    // Sales commission percentage
+    let salesCommission = 0.0;
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -19,15 +22,40 @@
     });
 
     function initializeVariants() {
+        // Get sales commission
+        const salesCommissionEl = document.getElementById('sales-commission');
+        if (salesCommissionEl) {
+            try {
+                salesCommission = parseFloat(salesCommissionEl.textContent || salesCommissionEl.value) || 0.0;
+            } catch (e) {
+                console.error('Error parsing sales commission:', e);
+                salesCommission = 0.0;
+            }
+        }
+        
         // Get initial data from server if editing
         const variantsDataEl = document.getElementById('variants-data');
         if (variantsDataEl) {
             try {
                 const data = JSON.parse(variantsDataEl.textContent || variantsDataEl.value);
+                // Convert old price to actual_price if needed (backward compatibility)
+                const combinations = data.combinations || {};
+                for (const key in combinations) {
+                    if (combinations[key]) {
+                        // If price exists but actual_price doesn't, use price as actual_price
+                        if (!combinations[key].actual_price && combinations[key].price) {
+                            combinations[key].actual_price = combinations[key].price;
+                        }
+                        // Calculate price from actual_price if actual_price exists
+                        if (combinations[key].actual_price && !combinations[key].price) {
+                            combinations[key].price = calculatePrice(parseFloat(combinations[key].actual_price) || 0);
+                        }
+                    }
+                }
                 variantState = {
                     enabled: data.enabled || false,
                     variants: data.variants || [],
-                    combinations: data.combinations || {}
+                    combinations: combinations
                 };
             } catch (e) {
                 console.error('Error parsing variant data:', e);
@@ -359,6 +387,7 @@
                 newCombinations[key] = { ...variantState.combinations[key] };
             } else {
                 newCombinations[key] = {
+                    actual_price: '',
                     price: '',
                     stock: '',
                     image: '',
@@ -405,7 +434,7 @@
         const combinations = Object.keys(variantState.combinations).sort();
         
         if (combinations.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No combinations available. Add variant types above.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No combinations available. Add variant types above.</td></tr>';
             return;
         }
         
@@ -440,13 +469,20 @@
             
             const discountType = combo.discount_type || '';
             const discountValue = combo.discount || '';
+            const actualPrice = combo.actual_price || '';
+            const calculatedPrice = combo.price || '';
 
             row.innerHTML = `
                 <td><strong>${escapeHtml(comboKey)}</strong></td>
                 <td>
-                    <input type="number" class="form-control form-control-sm combination-price" 
-                           value="${escapeHtml(combo.price || '')}" 
+                    <input type="number" class="form-control form-control-sm combination-actual-price" 
+                           value="${escapeHtml(actualPrice)}" 
                            placeholder="0.00" step="0.01" min="0">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm combination-price" 
+                           value="${escapeHtml(calculatedPrice)}" 
+                           placeholder="Auto-calculated" readonly style="background-color: #f8f9fa;">
                 </td>
                 <td>
                     <input type="number" class="form-control form-control-sm combination-stock" 
@@ -488,6 +524,7 @@
             tbody.appendChild(row);
 
             // Setup event listeners
+            const actualPriceInput = row.querySelector('.combination-actual-price');
             const priceInput = row.querySelector('.combination-price');
             const stockInput = row.querySelector('.combination-stock');
             const discountTypeSelect = row.querySelector('.combination-discount-type');
@@ -496,8 +533,14 @@
             const imageInput = row.querySelector('.combination-image');
             const imageUrlInput = row.querySelector('.combination-image-url');
 
-            priceInput.addEventListener('input', function() {
-                variantState.combinations[comboKey].price = this.value;
+            // Calculate price when actual_price changes
+            actualPriceInput.addEventListener('input', function() {
+                const actualPrice = parseFloat(this.value) || 0;
+                variantState.combinations[comboKey].actual_price = this.value;
+                // Calculate price: actual_price + (actual_price * sales_commission / 100)
+                const calculatedPrice = calculatePrice(actualPrice);
+                variantState.combinations[comboKey].price = calculatedPrice.toFixed(2);
+                priceInput.value = calculatedPrice.toFixed(2);
             });
 
             stockInput.addEventListener('input', function() {
@@ -534,6 +577,13 @@
                 }
             });
         });
+    }
+
+    // Calculate price from actual_price using sales commission
+    function calculatePrice(actualPrice) {
+        if (!actualPrice || actualPrice <= 0) return 0;
+        const commission = salesCommission || 0;
+        return actualPrice + (actualPrice * commission / 100);
     }
 
     function handleImageUpload(input, comboKey, imageUrlInput, row, imageBtn) {
@@ -656,11 +706,11 @@
                 return false;
             }
         } else {
-            // When variants disabled, ensure price and stock are required
-            const priceField = document.getElementById('id_price');
+            // When variants disabled, ensure actual_price and stock are required
+            const actualPriceField = document.getElementById('id_actual_price');
             const stockField = document.getElementById('id_stock_quantity');
-            if (priceField && !priceField.disabled) {
-                priceField.setAttribute('required', 'required');
+            if (actualPriceField && !actualPriceField.disabled) {
+                actualPriceField.setAttribute('required', 'required');
             }
             if (stockField && !stockField.disabled) {
                 stockField.setAttribute('required', 'required');
@@ -701,6 +751,7 @@
         const rows = document.querySelectorAll('#combinations-table-body tr[data-combination]');
         rows.forEach(row => {
             const comboKey = row.dataset.combination;
+            const actualPriceInput = row.querySelector('.combination-actual-price');
             const priceInput = row.querySelector('.combination-price');
             const stockInput = row.querySelector('.combination-stock');
             const discountTypeSelect = row.querySelector('.combination-discount-type');
@@ -709,7 +760,16 @@
             const primaryRadio = row.querySelector('.combination-primary');
 
             if (variantState.combinations[comboKey]) {
-                variantState.combinations[comboKey].price = priceInput ? priceInput.value : '';
+                const actualPrice = actualPriceInput ? actualPriceInput.value : '';
+                variantState.combinations[comboKey].actual_price = actualPrice;
+                // Calculate price from actual_price
+                if (actualPrice) {
+                    const actualPriceNum = parseFloat(actualPrice) || 0;
+                    const calculatedPrice = calculatePrice(actualPriceNum);
+                    variantState.combinations[comboKey].price = calculatedPrice.toFixed(2);
+                } else {
+                    variantState.combinations[comboKey].price = '';
+                }
                 variantState.combinations[comboKey].stock = stockInput ? stockInput.value : '';
                 variantState.combinations[comboKey].discount_type = discountTypeSelect ? discountTypeSelect.value : '';
                 variantState.combinations[comboKey].discount = discountInput ? discountInput.value : '';

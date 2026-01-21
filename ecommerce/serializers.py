@@ -91,6 +91,7 @@ class ProductSerializer(serializers.ModelSerializer):
                  'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants', 'images', 
                  'average_rating', 'review_count', 'item_code', 'created_at', 'updated_at']
         read_only_fields = ['id', 'item_code', 'created_at', 'updated_at']
+        # Note: actual_price is excluded from customer-facing serializer
     
     def to_representation(self, instance):
         # Pass the request context to nested serializers
@@ -109,28 +110,34 @@ class ProductSerializer(serializers.ModelSerializer):
                 if image_data.get('image'):
                     image_data['image'] = request.build_absolute_uri(image_data['image'])
         
-        # Process variant combination images
+        # Process variant combination images and remove actual_price from combinations
         if data.get('variants') and request:
             variants_data = data['variants']
             if isinstance(variants_data, dict) and variants_data.get('combinations'):
                 combinations = variants_data['combinations']
                 if isinstance(combinations, dict):
                     for combo_key, combo_data in combinations.items():
-                        if isinstance(combo_data, dict) and combo_data.get('image'):
-                            image_path = combo_data['image']
-                            # Only convert if it's a relative path (starts with /media/ or /)
-                            # Skip local file paths (like /data/...) as they can't be accessed
-                            if image_path and not image_path.startswith('http://') and not image_path.startswith('https://'):
-                                if image_path.startswith('/media/') or (image_path.startswith('/') and not image_path.startswith('/data/')):
-                                    # Convert relative path to full URL
-                                    try:
-                                        combo_data['image'] = request.build_absolute_uri(image_path)
-                                    except Exception:
-                                        # If conversion fails, set to empty string
+                        if isinstance(combo_data, dict):
+                            # Remove actual_price from customer-facing response
+                            if 'actual_price' in combo_data:
+                                del combo_data['actual_price']
+                            
+                            # Process image URLs
+                            if combo_data.get('image'):
+                                image_path = combo_data['image']
+                                # Only convert if it's a relative path (starts with /media/ or /)
+                                # Skip local file paths (like /data/...) as they can't be accessed
+                                if image_path and not image_path.startswith('http://') and not image_path.startswith('https://'):
+                                    if image_path.startswith('/media/') or (image_path.startswith('/') and not image_path.startswith('/data/')):
+                                        # Convert relative path to full URL
+                                        try:
+                                            combo_data['image'] = request.build_absolute_uri(image_path)
+                                        except Exception:
+                                            # If conversion fails, set to empty string
+                                            combo_data['image'] = ''
+                                    elif image_path.startswith('/data/'):
+                                        # Local cache path - can't be accessed, set to empty
                                         combo_data['image'] = ''
-                                elif image_path.startswith('/data/'):
-                                    # Local cache path - can't be accessed, set to empty
-                                    combo_data['image'] = ''
         
         return data
     
@@ -145,39 +152,49 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
-    # Make price and stock_quantity optional at field level to allow conditional validation
-    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    # actual_price is what merchants input
+    actual_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    # price is calculated from actual_price, so make it read-only
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, read_only=True)
     stock_quantity = serializers.IntegerField(required=False, allow_null=True)
     # is_approved is read-only - only admins can set this
     is_approved = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Product
-        fields = ['name', 'description', 'store', 'category', 'price', 'discount_type', 'discount',
+        fields = ['name', 'description', 'store', 'category', 'actual_price', 'price', 'discount_type', 'discount',
                  'stock_quantity', 'is_active', 'is_featured', 'is_approved', 'variants', 'item_code']
-        read_only_fields = ['item_code']
+        read_only_fields = ['item_code', 'price']
     
     def validate(self, data):
         """
         Validate product data, handling variant-enabled products.
-        When variants are enabled, price and stock_quantity are optional
+        When variants are enabled, actual_price and stock_quantity are optional
         as they will be calculated from variant combinations in the model's save() method.
         """
         variants = data.get('variants', {})
         variants_enabled = isinstance(variants, dict) and variants.get('enabled', False)
         
-        # If variants are enabled and price/stock_quantity are missing, set defaults
-        # These will be recalculated in the model's save() method from variant combinations
+        # If variants are enabled, validate combinations have actual_price
         if variants_enabled:
-            if 'price' not in data or data.get('price') is None:
-                data['price'] = 0  # Default, will be set from primary variant combination
+            combinations = variants.get('combinations', {})
+            if isinstance(combinations, dict):
+                for combo_key, combo_data in combinations.items():
+                    if isinstance(combo_data, dict):
+                        # actual_price should be provided for each combination
+                        if 'actual_price' not in combo_data or not combo_data.get('actual_price'):
+                            raise serializers.ValidationError({
+                                'variants': f'Variant combination "{combo_key}" must have actual_price.'
+                            })
+            
+            # Set defaults for product-level fields when variants enabled
             if 'stock_quantity' not in data or data.get('stock_quantity') is None:
                 data['stock_quantity'] = 0  # Default, will be calculated from variant combinations
         else:
-            # When variants are not enabled, price and stock_quantity are required
-            if 'price' not in data or data.get('price') is None:
+            # When variants are not enabled, actual_price is required
+            if 'actual_price' not in data or data.get('actual_price') is None:
                 raise serializers.ValidationError({
-                    'price': 'Price is required when variants are not enabled.'
+                    'actual_price': 'Actual price is required when variants are not enabled.'
                 })
             if 'stock_quantity' not in data or data.get('stock_quantity') is None:
                 raise serializers.ValidationError({

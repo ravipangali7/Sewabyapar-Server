@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from django.db.models import DecimalField
+from decimal import Decimal, ROUND_HALF_UP
 from core.models import User, Address
 import json
 
@@ -58,7 +60,8 @@ class Product(models.Model):
     description = models.TextField()
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='products')
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
-    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    actual_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)], help_text='Merchant price before commission')
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], help_text='Selling price with commission applied')
     discount_type = models.CharField(max_length=10, choices=[('flat', 'Flat'), ('percentage', 'Percentage')], blank=True, null=True)
     discount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(0)])
     stock_quantity = models.PositiveIntegerField(default=0)
@@ -102,7 +105,9 @@ class Product(models.Model):
         return self.stock_quantity
     
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate stock, set price from primary combination when variants are enabled, and generate item_code"""
+        """Override save to auto-calculate stock, calculate price from actual_price with commission, set price from primary combination when variants are enabled, and generate item_code"""
+        from core.models import SuperSetting
+        
         # Generate item_code if not set
         if not self.item_code:
             # Find the highest existing code number
@@ -127,11 +132,38 @@ class Product(models.Model):
                 code = f"PSB{new_number:02d}"
             self.item_code = code
         
+        # Get sales commission from SuperSetting
+        try:
+            super_setting = SuperSetting.objects.first()
+            if super_setting:
+                sales_commission = Decimal(str(super_setting.sales_commission))
+            else:
+                sales_commission = Decimal('0')
+        except Exception:
+            sales_commission = Decimal('0')
+        
+        # Handle variant combinations
         if self.is_variants_enabled():
             variants_data = self.get_variants_data()
             combinations = variants_data.get("combinations", {})
             
-            # Find primary combination and set price from it
+            # Calculate price for each variant combination from actual_price
+            for combo_key, combo_data in combinations.items():
+                if isinstance(combo_data, dict):
+                    # If actual_price exists, calculate price
+                    if "actual_price" in combo_data and combo_data["actual_price"]:
+                        try:
+                            actual_price = Decimal(str(combo_data["actual_price"]))
+                            # Calculate price: actual_price + (actual_price * sales_commission / 100)
+                            calculated_price = actual_price + (actual_price * sales_commission / Decimal('100'))
+                            calculated_price = calculated_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                            combo_data["price"] = str(calculated_price)
+                        except (ValueError, TypeError) as e:
+                            # If calculation fails, keep existing price if available
+                            if "price" not in combo_data:
+                                combo_data["price"] = str(actual_price)
+            
+            # Find primary combination and set product price from it
             primary_combination = None
             for combo_key, combo_data in combinations.items():
                 if isinstance(combo_data, dict) and combo_data.get("is_primary", False):
@@ -140,13 +172,32 @@ class Product(models.Model):
             
             if primary_combination and "price" in primary_combination:
                 try:
-                    self.price = primary_combination["price"]
+                    self.price = Decimal(str(primary_combination["price"]))
                 except (ValueError, TypeError):
                     pass  # Keep existing price if conversion fails
+            
+            # Set actual_price from primary combination if not set
+            if primary_combination and "actual_price" in primary_combination and not self.actual_price:
+                try:
+                    self.actual_price = Decimal(str(primary_combination["actual_price"]))
+                except (ValueError, TypeError):
+                    pass
             
             # Auto-calculate stock from combinations
             total_stock = self.get_total_stock()
             self.stock_quantity = total_stock
+        else:
+            # For non-variant products: calculate price from actual_price if actual_price is set
+            if self.actual_price is not None:
+                try:
+                    actual_price = Decimal(str(self.actual_price))
+                    # Calculate price: actual_price + (actual_price * sales_commission / 100)
+                    calculated_price = actual_price + (actual_price * sales_commission / Decimal('100'))
+                    calculated_price = calculated_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    self.price = calculated_price
+                except (ValueError, TypeError):
+                    pass  # Keep existing price if calculation fails
+        
         super().save(*args, **kwargs)
     
     class Meta:
