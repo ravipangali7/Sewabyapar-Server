@@ -23,6 +23,10 @@ from ...services.sabpaisa_service import (
     decrypt_sabpaisa_response,
     parse_sabpaisa_status_code
 )
+from ...services.razorpay_service import (
+    verify_payment_status,
+    verify_webhook_signature
+)
 
 
 # @api_view(['POST'])
@@ -1451,5 +1455,249 @@ def sabpaisa_payment_callback(request):
         return Response(
             {'error': f'Unexpected error: {str(e)}', 'traceback': traceback.format_exc()},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def razorpay_payment_status(request):
+    """
+    Check Razorpay payment status by payment_id
+    
+    GET /api/payments/razorpay/status/?payment_id=xxx
+    """
+    try:
+        payment_id = request.query_params.get('payment_id')
+        
+        if not payment_id:
+            return Response(
+                {'error': 'payment_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        print(f"[RAZORPAY_STATUS] Checking payment status for payment_id: {payment_id}")
+        sys.stdout.flush()
+        
+        # Try to find Transaction by payment_id (stored in merchant_order_id field)
+        transaction = None
+        order = None
+        try:
+            # First try with user filter (more secure)
+            transaction = Transaction.objects.get(merchant_order_id=payment_id, user=request.user)
+            order = transaction.related_order
+            print(f"[RAZORPAY_STATUS] Found transaction: {transaction.id}, order: {order.id if order else 'None'}")
+            sys.stdout.flush()
+        except Transaction.DoesNotExist:
+            # Fallback: try without user filter (in case of callback or edge cases)
+            try:
+                transaction = Transaction.objects.get(merchant_order_id=payment_id)
+                order = transaction.related_order
+                print(f"[RAZORPAY_STATUS] Found transaction (without user filter): {transaction.id}, order: {order.id if order else 'None'}")
+                sys.stdout.flush()
+                # Verify the user matches (security check)
+                if transaction.user != request.user:
+                    print(f"[RAZORPAY_STATUS] WARNING: Transaction user {transaction.user.id} doesn't match request user {request.user.id}")
+                    sys.stdout.flush()
+                    return Response(
+                        {'error': 'Transaction not found or access denied'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            except Transaction.DoesNotExist:
+                print(f"[RAZORPAY_STATUS] Transaction not found for payment_id: {payment_id}")
+                sys.stdout.flush()
+                return Response(
+                    {'error': 'Transaction not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Verify payment status with Razorpay API
+        status_result = verify_payment_status(payment_id)
+        
+        if 'error' in status_result:
+            return Response(
+                {'error': status_result['error']},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        payment_data = status_result.get('data', {})
+        payment_status_value = payment_data.get('status', '').lower()
+        
+        # Update Transaction and Order status based on verification
+        if transaction and order:
+            if payment_status_value == 'captured' and payment_data.get('captured'):
+                print(f"[RAZORPAY_STATUS] Payment is captured - Updating transaction and order")
+                sys.stdout.flush()
+                transaction.status = 'completed'
+                transaction.utr = payment_data.get('acquirer_data', {}).get('bank_transaction_id', '') or transaction.utr
+                transaction.vpa = payment_data.get('vpa', '') or transaction.vpa
+                transaction.bank_id = payment_data.get('bank', '') or transaction.bank_id
+                transaction.save()
+                
+                order.payment_status = 'success'
+                order.status = 'confirmed'
+                order.save()
+            elif payment_status_value == 'failed':
+                print(f"[RAZORPAY_STATUS] Payment is failed - Updating transaction and order")
+                sys.stdout.flush()
+                transaction.status = 'failed'
+                transaction.save()
+                
+                order.payment_status = 'failed'
+                order.save()
+            elif payment_status_value in ['authorized', 'created']:
+                print(f"[RAZORPAY_STATUS] Payment is {payment_status_value} - Keeping as pending")
+                sys.stdout.flush()
+                transaction.status = 'pending'
+                transaction.save()
+                
+                order.payment_status = 'pending'
+                order.save()
+        
+        # Return payment status
+        return Response({
+            'success': True,
+            'payment_status': payment_status_value,
+            'payment_details': payment_data,
+            'transaction_id': transaction.id if transaction else None,
+            'order_id': order.id if order else None
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        print(f"[RAZORPAY_STATUS] Error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        sys.stdout.flush()
+        return Response(
+            {'error': f'Error checking payment status: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])  # AllowAny because Razorpay will POST here
+def razorpay_payment_callback(request):
+    """
+    Handle Razorpay webhook callback
+    
+    POST /api/payments/razorpay/callback/
+    Headers: X-Razorpay-Signature
+    Body: JSON webhook payload
+    """
+    try:
+        # Get webhook signature from headers
+        webhook_signature = request.headers.get('X-Razorpay-Signature', '')
+        
+        if not webhook_signature:
+            print(f"[RAZORPAY_CALLBACK] No signature header found")
+            sys.stdout.flush()
+            return Response(
+                {'error': 'X-Razorpay-Signature header is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get raw request body for signature verification
+        webhook_body = request.body.decode('utf-8')
+        
+        # Verify webhook signature
+        signature_result = verify_webhook_signature(webhook_body, webhook_signature)
+        if not signature_result.get('success'):
+            print(f"[RAZORPAY_CALLBACK] Webhook signature verification failed: {signature_result.get('error')}")
+            sys.stdout.flush()
+            return Response(
+                {'error': 'Invalid webhook signature'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        print(f"[RAZORPAY_CALLBACK] Webhook signature verified successfully")
+        sys.stdout.flush()
+        
+        # Parse webhook payload
+        import json
+        webhook_data = json.loads(webhook_body)
+        
+        # Extract payment details from webhook
+        event = webhook_data.get('event', '')
+        payload = webhook_data.get('payload', {})
+        payment_entity = payload.get('payment', {}).get('entity', {})
+        payment_id = payment_entity.get('id', '')
+        
+        print(f"[RAZORPAY_CALLBACK] Webhook event: {event}, payment_id: {payment_id}")
+        sys.stdout.flush()
+        
+        if not payment_id:
+            print(f"[RAZORPAY_CALLBACK] No payment_id found in webhook payload")
+            sys.stdout.flush()
+            return Response(
+                {'error': 'payment_id not found in webhook payload'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Find Transaction by payment_id
+        try:
+            transaction = Transaction.objects.get(merchant_order_id=payment_id)
+            order = transaction.related_order
+            print(f"[RAZORPAY_CALLBACK] Found transaction: {transaction.id}, order: {order.id if order else 'None'}")
+            sys.stdout.flush()
+        except Transaction.DoesNotExist:
+            print(f"[RAZORPAY_CALLBACK] Transaction not found for payment_id: {payment_id}")
+            sys.stdout.flush()
+            # Return 200 OK even if transaction not found (to prevent Razorpay from retrying)
+            return Response(
+                {'message': 'Transaction not found, but webhook received'},
+                status=status.HTTP_200_OK
+            )
+        
+        # Update Transaction and Order based on webhook event
+        payment_status = payment_entity.get('status', '').lower()
+        payment_captured = payment_entity.get('captured', False)
+        
+        print(f"[RAZORPAY_CALLBACK] Payment status: {payment_status}, captured: {payment_captured}")
+        sys.stdout.flush()
+        
+        if payment_status == 'captured' and payment_captured:
+            print(f"[RAZORPAY_CALLBACK] Payment captured - Updating transaction and order")
+            sys.stdout.flush()
+            transaction.status = 'completed'
+            transaction.utr = payment_entity.get('acquirer_data', {}).get('bank_transaction_id', '') or transaction.utr
+            transaction.vpa = payment_entity.get('vpa', '') or transaction.vpa
+            transaction.bank_id = payment_entity.get('bank', '') or transaction.bank_id
+            transaction.save()
+            
+            if order:
+                order.payment_status = 'success'
+                order.status = 'confirmed'
+                order.save()
+        elif payment_status == 'failed':
+            print(f"[RAZORPAY_CALLBACK] Payment failed - Updating transaction and order")
+            sys.stdout.flush()
+            transaction.status = 'failed'
+            transaction.save()
+            
+            if order:
+                order.payment_status = 'failed'
+                order.save()
+        
+        # Return 200 OK to Razorpay
+        return Response(
+            {'message': 'Webhook processed successfully'},
+            status=status.HTTP_200_OK
+        )
+    
+    except json.JSONDecodeError as e:
+        print(f"[RAZORPAY_CALLBACK] JSON decode error: {str(e)}")
+        sys.stdout.flush()
+        return Response(
+            {'error': 'Invalid JSON in webhook payload'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        print(f"[RAZORPAY_CALLBACK] Error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        sys.stdout.flush()
+        # Return 200 OK even on error to prevent Razorpay from retrying
+        return Response(
+            {'error': f'Error processing webhook: {str(e)}'},
+            status=status.HTTP_200_OK
         )
 

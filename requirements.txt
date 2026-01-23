@@ -16,6 +16,7 @@ mypy_extensions==1.1.0
 packaging==25.0
 phonepe-sdk==2.1.5
 pillow==11.3.0
+razorpay==1.4.2
 pycryptodome==3.20.0
 PyMySQL==1.1.2
 pytz==2025.2

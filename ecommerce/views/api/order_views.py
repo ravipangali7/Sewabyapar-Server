@@ -519,11 +519,33 @@ def create_order_after_razorpay_payment(request):
                 'error': 'payment_id and payment_signature are required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # TODO: Verify Razorpay payment signature here
-        # For now, we'll trust the payment_id and signature from Flutter
-        # In production, verify using Razorpay API
+        # Verify Razorpay payment signature
+        from ecommerce.services.razorpay_service import verify_payment_signature, verify_payment_status
         
-        # Validate serializer to get order data
+        # If razorpay_order_id is not provided, we'll get it from payment status verification
+        # But signature verification requires it, so we need it first
+        if not razorpay_order_id:
+            # Try to get order_id from payment status (but this requires API call)
+            # For now, require it - Flutter should always send it
+            return Response({
+                'success': False,
+                'error': 'razorpay_order_id is required for signature verification'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Step 1: Verify payment signature
+        signature_result = verify_payment_signature(payment_id, razorpay_order_id, payment_signature)
+        if not signature_result.get('success'):
+            print(f"[RAZORPAY_ORDER] Signature verification failed: {signature_result.get('error')}")
+            sys.stdout.flush()
+            return Response({
+                'success': False,
+                'error': signature_result.get('error', 'Payment signature verification failed')
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        print(f"[RAZORPAY_ORDER] Signature verification successful")
+        sys.stdout.flush()
+        
+        # Validate serializer to get order data (needed to calculate expected amount)
         serializer = OrderCreateSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
             return Response({
@@ -609,6 +631,24 @@ def create_order_after_razorpay_payment(request):
                     'error': f'Payment amount ({payment_amount}) does not match order total ({total_amount})'
                 }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Step 2: Verify payment status with Razorpay API
+        print(f"[RAZORPAY_ORDER] Verifying payment status with Razorpay API")
+        sys.stdout.flush()
+        status_result = verify_payment_status(payment_id, expected_amount=float(total_amount))
+        
+        if not status_result.get('success'):
+            print(f"[RAZORPAY_ORDER] Payment status verification failed: {status_result.get('error')}")
+            sys.stdout.flush()
+            return Response({
+                'success': False,
+                'error': status_result.get('error', 'Payment verification failed'),
+                'payment_details': status_result.get('data', {})
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        payment_data = status_result.get('data', {})
+        print(f"[RAZORPAY_ORDER] Payment verification successful. Status: {payment_data.get('status')}, Amount: {payment_data.get('amount')}")
+        sys.stdout.flush()
+        
         # Generate order number
         order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
         while Order.objects.filter(order_number=order_number).exists():
@@ -659,16 +699,23 @@ def create_order_after_razorpay_payment(request):
         elif request.user.name:
             payer_name = request.user.name
         
+        # Store payment details from Razorpay API response
         Transaction.objects.create(
             user=request.user,
             transaction_type='razorpay_payment',
             amount=total_amount,
-            status='completed',
+            status='completed',  # Payment verified and captured
             description=f'Razorpay payment for order {order_number}',
             related_order=order,
-            merchant_order_id=payment_id,  # Use payment_id as merchant order ID
+            merchant_order_id=payment_id,  # Store payment_id as merchant_order_id
             payer_name=payer_name,
+            utr=payment_data.get('acquirer_data', {}).get('bank_transaction_id', '') or payment_id,  # Store bank transaction ID if available
+            vpa=payment_data.get('vpa', ''),  # Store VPA for UPI payments
+            bank_id=payment_data.get('bank', ''),  # Store bank code
         )
+        
+        print(f"[RAZORPAY_ORDER] Order {order_number} and transaction created successfully")
+        sys.stdout.flush()
         
         # Return created order
         serializer = OrderSerializer(order)

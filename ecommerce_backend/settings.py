@@ -267,6 +267,11 @@ def get_sabpaisa_url():
 
 SABPAISA_URL = get_sabpaisa_url()
 
+# Razorpay Payment Gateway Configuration
+# Get from environment variables for security
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_live_S2FJTY5dSpHzEp')  # Public key (can be in code)
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')  # Secret key (MUST be in environment variable)
+
 # Shipdaak Logistics API Configuration
 SHIPDAAK_API_BASE_URL = 'https://api.shipdaak.com'  # Set this in environment or .env file
 SHIPDAAK_API_EMAIL = 'sewasajilo2@gmail.com'  # Set this in environment or .env file
