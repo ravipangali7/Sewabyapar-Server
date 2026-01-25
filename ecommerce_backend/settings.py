@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'ecommerce',
     'shared',
     'taxi',
+    'travel',
     'website',
     'myadmin',
     'django_ckeditor_5',

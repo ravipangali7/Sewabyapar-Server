@@ -1,0 +1,60 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Travel Committee Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_committee_update' committee.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:travel:travel_committee_delete' committee.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:travel:travel_committee_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Travel Committee Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Name:</strong></div>
+                        <div class="col-sm-8">{{ committee.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>User:</strong></div>
+                        <div class="col-sm-8">{{ committee.user.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Description:</strong></div>
+                        <div class="col-sm-8">{{ committee.description|default:"N/A" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Status:</strong></div>
+                        <div class="col-sm-8">{% if committee.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</div>
+                    </div>
+                    {% if committee.logo %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Logo:</strong></div>
+                        <div class="col-sm-8"><img src="{{ committee.logo.url }}" alt="{{ committee.name }}" style="max-width: 200px;"></div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Created:</strong></div>
+                        <div class="col-sm-8">{{ committee.created_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

@@ -4,8 +4,7 @@ from myadmin.views.ecommerce import (
     product_views, category_views, store_views, order_views,
     review_views, cart_views, wishlist_views, coupon_views,
     product_image_views, order_item_views, banner_views, popup_views,
-    shipping_charge_history_views, payment_setting_views, variant_image_views,
-    withdrawal_views
+    shipping_charge_history_views, variant_image_views
 )
 
 app_name = 'ecommerce'
@@ -104,23 +103,5 @@ urlpatterns = [
     path('popups/<int:pk>/update/', popup_views.PopupUpdateView.as_view(), name='popup_update'),
     path('popups/<int:pk>/delete/', popup_views.PopupDeleteView.as_view(), name='popup_delete'),
     
-    # Payment Setting URLs
-    path('payment-settings/', payment_setting_views.PaymentSettingListView.as_view(), name='payment_setting_list'),
-    path('payment-settings/create/', payment_setting_views.PaymentSettingCreateView.as_view(), name='payment_setting_create'),
-    path('payment-settings/<int:pk>/', payment_setting_views.PaymentSettingDetailView.as_view(), name='payment_setting_detail'),
-    path('payment-settings/<int:pk>/update/', payment_setting_views.PaymentSettingUpdateView.as_view(), name='payment_setting_update'),
-    path('payment-settings/<int:pk>/delete/', payment_setting_views.PaymentSettingDeleteView.as_view(), name='payment_setting_delete'),
-    path('payment-settings/<int:pk>/approve/', payment_setting_views.PaymentSettingApproveView.as_view(), name='payment_setting_approve'),
-    path('payment-settings/<int:pk>/reject/', payment_setting_views.PaymentSettingRejectView.as_view(), name='payment_setting_reject'),
-    path('payment-settings/bulk-approve/', payment_setting_views.PaymentSettingBulkApproveView.as_view(), name='payment_setting_bulk_approve'),
-    
-    # Withdrawal URLs
-    path('withdrawals/', withdrawal_views.WithdrawalListView.as_view(), name='withdrawal_list'),
-    path('withdrawals/<int:pk>/', withdrawal_views.WithdrawalDetailView.as_view(), name='withdrawal_detail'),
-    path('withdrawals/create/', withdrawal_views.WithdrawalCreateView.as_view(), name='withdrawal_create'),
-    path('withdrawals/<int:pk>/update/', withdrawal_views.WithdrawalUpdateView.as_view(), name='withdrawal_update'),
-    path('withdrawals/<int:pk>/delete/', withdrawal_views.WithdrawalDeleteView.as_view(), name='withdrawal_delete'),
-    path('withdrawals/<int:pk>/approve/', withdrawal_views.WithdrawalApproveView.as_view(), name='withdrawal_approve'),
-    path('withdrawals/<int:pk>/reject/', withdrawal_views.WithdrawalRejectView.as_view(), name='withdrawal_reject'),
 ]
 

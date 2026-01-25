@@ -24,6 +24,7 @@ def super_setting(request):
         return Response({
             'sales_commission': float(setting.sales_commission),
             'shipping_charge_commission': int(setting.shipping_charge_commission),
+            'travel_ticket_percentage': float(setting.travel_ticket_percentage),
             'balance': float(setting.balance),
             'merchant_agreement_file': merchant_agreement_file_url,
             'is_phone_pe': setting.is_phone_pe,

@@ -1,5 +1,5 @@
 from django.urls import path
-from ..views.api import auth_views, setting_views, kyc_views, cms_views
+from ..views.api import auth_views, setting_views, kyc_views, cms_views, payment_method_views, withdrawal_views
 from ..views import address_views, notification_views
 
 urlpatterns = [
@@ -44,4 +44,15 @@ urlpatterns = [
     
     # Website Settings URL
     path('website-settings/', cms_views.website_settings, name='website-settings'),
+    
+    # Payment Method URLs
+    path('merchant/payment-method/', payment_method_views.get_payment_method, name='get-payment-method'),
+    path('merchant/payment-method/create/', payment_method_views.create_payment_method, name='create-payment-method'),
+    path('merchant/payment-method/update/', payment_method_views.update_payment_method, name='update-payment-method'),
+    path('merchant/payment-method/delete/', payment_method_views.delete_payment_method, name='delete-payment-method'),
+    
+    # Withdrawal URLs
+    path('merchant/withdrawals/', withdrawal_views.withdrawal_list, name='withdrawal-list'),
+    path('merchant/withdrawals/create/', withdrawal_views.create_withdrawal, name='create-withdrawal'),
+    path('merchant/withdrawals/<int:pk>/', withdrawal_views.withdrawal_detail, name='withdrawal-detail'),
 ]

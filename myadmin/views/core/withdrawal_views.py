@@ -12,20 +12,19 @@ from django.db.models import Q, Sum
 from django.db import IntegrityError, transaction
 from decimal import Decimal
 from myadmin.mixins import StaffRequiredMixin
-from ecommerce.models import Withdrawal, MerchantPaymentSetting
-from core.models import Transaction, User
-from myadmin.forms.ecommerce_forms import WithdrawalForm
+from core.models import Withdrawal, UserPaymentMethod, Transaction, User
+from myadmin.forms.core_forms import WithdrawalForm
 
 
 class WithdrawalListView(StaffRequiredMixin, ListView):
     """List all withdrawals with filters"""
     model = Withdrawal
-    template_name = 'admin/ecommerce/withdrawal_list.html'
+    template_name = 'admin/core/withdrawal_list.html'
     context_object_name = 'withdrawals'
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = Withdrawal.objects.all().select_related('merchant', 'payment_setting').order_by('-created_at')
+        queryset = Withdrawal.objects.all().select_related('merchant', 'payment_method').order_by('-created_at')
         
         # Filter by status
         status = self.request.GET.get('status', 'all')
@@ -58,7 +57,7 @@ class WithdrawalListView(StaffRequiredMixin, ListView):
 class WithdrawalDetailView(StaffRequiredMixin, DetailView):
     """Detailed withdrawal view"""
     model = Withdrawal
-    template_name = 'admin/ecommerce/withdrawal_detail.html'
+    template_name = 'admin/core/withdrawal_detail.html'
     context_object_name = 'withdrawal'
     pk_url_kwarg = 'pk'
     
@@ -89,15 +88,15 @@ class WithdrawalCreateView(StaffRequiredMixin, CreateView):
     """Create new withdrawal"""
     model = Withdrawal
     form_class = WithdrawalForm
-    template_name = 'admin/ecommerce/withdrawal_form.html'
+    template_name = 'admin/core/withdrawal_form.html'
     
     def form_valid(self, form):
         try:
             withdrawal = form.save(commit=False)
             
-            # Validate merchant has approved payment setting
-            if not withdrawal.payment_setting or withdrawal.payment_setting.status != 'approved':
-                form.add_error('payment_setting', 'Merchant must have an approved payment setting.')
+            # Validate merchant has approved payment method
+            if not withdrawal.payment_method or withdrawal.payment_method.status != 'approved':
+                form.add_error('payment_method', 'Merchant must have an approved payment method.')
                 return self.form_invalid(form)
             
             # Validate sufficient balance
@@ -135,14 +134,14 @@ class WithdrawalCreateView(StaffRequiredMixin, CreateView):
             return self.form_invalid(form)
     
     def get_success_url(self):
-        return reverse_lazy('myadmin:ecommerce:withdrawal_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('myadmin:core:withdrawal_detail', kwargs={'pk': self.object.pk})
 
 
 class WithdrawalUpdateView(StaffRequiredMixin, UpdateView):
     """Update withdrawal"""
     model = Withdrawal
     form_class = WithdrawalForm
-    template_name = 'admin/ecommerce/withdrawal_form.html'
+    template_name = 'admin/core/withdrawal_form.html'
     
     def form_valid(self, form):
         try:
@@ -175,15 +174,15 @@ class WithdrawalUpdateView(StaffRequiredMixin, UpdateView):
             return self.form_invalid(form)
     
     def get_success_url(self):
-        return reverse_lazy('myadmin:ecommerce:withdrawal_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('myadmin:core:withdrawal_detail', kwargs={'pk': self.object.pk})
 
 
 class WithdrawalDeleteView(StaffRequiredMixin, DeleteView):
     """Delete withdrawal"""
     model = Withdrawal
-    template_name = 'admin/ecommerce/withdrawal_confirm_delete.html'
+    template_name = 'admin/core/withdrawal_confirm_delete.html'
     context_object_name = 'withdrawal'
-    success_url = reverse_lazy('myadmin:ecommerce:withdrawal_list')
+    success_url = reverse_lazy('myadmin:core:withdrawal_list')
     
     def delete(self, request, *args, **kwargs):
         withdrawal = self.get_object()
@@ -192,7 +191,7 @@ class WithdrawalDeleteView(StaffRequiredMixin, DeleteView):
         # Only allow deletion if status is pending
         if withdrawal.status != 'pending':
             messages.error(request, f'Cannot delete withdrawal with status "{withdrawal.get_status_display()}". Only pending withdrawals can be deleted.')
-            return redirect('myadmin:ecommerce:withdrawal_detail', pk=withdrawal.pk)
+            return redirect('myadmin:core:withdrawal_detail', pk=withdrawal.pk)
         
         try:
             # Delete related transaction
@@ -204,7 +203,7 @@ class WithdrawalDeleteView(StaffRequiredMixin, DeleteView):
             print(f'[ERROR] Error deleting withdrawal: {str(e)}')
             traceback.print_exc()
             messages.error(request, 'An error occurred while deleting withdrawal.')
-            return redirect('myadmin:ecommerce:withdrawal_detail', pk=withdrawal.pk)
+            return redirect('myadmin:core:withdrawal_detail', pk=withdrawal.pk)
 
 
 class WithdrawalApproveView(StaffRequiredMixin, View):
@@ -215,16 +214,16 @@ class WithdrawalApproveView(StaffRequiredMixin, View):
             
             if withdrawal.status == 'approved':
                 messages.info(request, f'Withdrawal #{withdrawal.id} for {withdrawal.merchant.name} is already approved.')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
             if withdrawal.status == 'rejected':
                 messages.error(request, f'Cannot approve a rejected withdrawal. Please create a new withdrawal request.')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
-            # Check if merchant has approved payment setting
-            if not withdrawal.payment_setting or withdrawal.payment_setting.status != 'approved':
-                messages.error(request, f'Merchant does not have an approved payment setting. Cannot approve withdrawal.')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+            # Check if merchant has approved payment method
+            if not withdrawal.payment_method or withdrawal.payment_method.status != 'approved':
+                messages.error(request, f'Merchant does not have an approved payment method. Cannot approve withdrawal.')
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
             # Check sufficient balance
             merchant = withdrawal.merchant
@@ -240,7 +239,7 @@ class WithdrawalApproveView(StaffRequiredMixin, View):
             
             if withdrawal.amount > available_balance:
                 messages.error(request, f'Insufficient balance. Available: ₹{available_balance}, Requested: ₹{withdrawal.amount}')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
             # Approve withdrawal and deduct balance (atomic transaction)
             with transaction.atomic():
@@ -283,13 +282,13 @@ class WithdrawalApproveView(StaffRequiredMixin, View):
             
             # Redirect based on referrer
             if 'withdrawal_list' in request.META.get('HTTP_REFERER', ''):
-                return redirect('myadmin:ecommerce:withdrawal_list')
-            return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_list')
+            return redirect('myadmin:core:withdrawal_detail', pk=pk)
         except Exception as e:
             print(f'[ERROR] Error approving withdrawal: {str(e)}')
             traceback.print_exc()
             messages.error(request, 'An error occurred while approving withdrawal.')
-            return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+            return redirect('myadmin:core:withdrawal_detail', pk=pk)
 
 
 class WithdrawalRejectView(StaffRequiredMixin, View):
@@ -301,15 +300,15 @@ class WithdrawalRejectView(StaffRequiredMixin, View):
             
             if not rejection_reason:
                 messages.error(request, 'Rejection reason is required.')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
             if withdrawal.status == 'rejected':
                 messages.info(request, f'Withdrawal #{withdrawal.id} is already rejected.')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
             if withdrawal.status == 'approved':
                 messages.error(request, f'Cannot reject an approved withdrawal. Please process a refund if needed.')
-                return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_detail', pk=pk)
             
             # Reject withdrawal
             withdrawal.status = 'rejected'
@@ -343,10 +342,10 @@ class WithdrawalRejectView(StaffRequiredMixin, View):
             
             # Redirect based on referrer
             if 'withdrawal_list' in request.META.get('HTTP_REFERER', ''):
-                return redirect('myadmin:ecommerce:withdrawal_list')
-            return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+                return redirect('myadmin:core:withdrawal_list')
+            return redirect('myadmin:core:withdrawal_detail', pk=pk)
         except Exception as e:
             print(f'[ERROR] Error rejecting withdrawal: {str(e)}')
             traceback.print_exc()
             messages.error(request, 'An error occurred while rejecting withdrawal.')
-            return redirect('myadmin:ecommerce:withdrawal_detail', pk=pk)
+            return redirect('myadmin:core:withdrawal_detail', pk=pk)

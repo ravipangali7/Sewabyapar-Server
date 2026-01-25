@@ -51,6 +51,23 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col">
+                            <h6 class="text-muted mb-2">Travel Ticket Percentage</h6>
+                            <h4 class="mb-0">{{ supersetting.travel_ticket_percentage|floatformat:2 }}%</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-success">
+                                <i class="align-middle" data-feather="percent"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
                             <h6 class="text-muted mb-2">Platform Balance</h6>
                             <h4 class="mb-0">₹{{ supersetting.balance|floatformat:2 }}</h4>
                         </div>
@@ -104,6 +121,13 @@
                         <div class="col-sm-8">
                             <h5 class="mb-0">{{ supersetting.shipping_charge_commission }}%</h5>
                             <small class="text-muted">Commission percentage added to courier rates</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="percent" style="width: 16px; height: 16px;"></i> Travel Ticket Percentage:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">{{ supersetting.travel_ticket_percentage|floatformat:2 }}%</h5>
+                            <small class="text-muted">Travel ticket commission percentage</small>
                         </div>
                     </div>
                     <div class="row mb-3">

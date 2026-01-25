@@ -256,6 +256,9 @@ class SuperSetting(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         help_text='Shipping charge commission percentage (added to courier rates)'
     )
+    travel_ticket_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0,
+                                                  validators=[MinValueValidator(0), MaxValueValidator(100)],
+                                                  help_text='Travel ticket commission percentage')
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0,
                                  validators=[MinValueValidator(0)],
                                  help_text='Platform balance')
@@ -280,6 +283,81 @@ class SuperSetting(models.Model):
     
     def __str__(self):
         return "Super Setting"
+
+
+class UserPaymentMethod(models.Model):
+    """User payment method model - renamed from MerchantPaymentSetting to support all users"""
+    PAYMENT_METHOD_TYPE_CHOICES = [
+        ('bank_account', 'Bank Account'),
+        ('upi', 'UPI'),
+        ('wallet', 'Wallet'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payment_method')
+    payment_method_type = models.CharField(max_length=20, choices=PAYMENT_METHOD_TYPE_CHOICES, help_text='Type of payment method')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', help_text='Verification status')
+    rejection_reason = models.TextField(blank=True, null=True, help_text='Reason for rejection if status is rejected')
+    
+    # Payment details stored as JSON for flexibility
+    # For bank_account: {account_number, ifsc, bank_name, account_holder_name}
+    # For upi: {vpa, upi_id}
+    # For wallet: {wallet_type, wallet_id, wallet_provider}
+    payment_details = models.JSONField(default=dict, help_text='Payment method details (varies by payment_method_type)')
+    
+    # Timestamps
+    approved_at = models.DateTimeField(blank=True, null=True, help_text='When payment method was approved')
+    rejected_at = models.DateTimeField(blank=True, null=True, help_text='When payment method was rejected')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.name} - {self.get_payment_method_type_display()} ({self.get_status_display()})"
+    
+    def can_edit(self):
+        """Check if payment method can be edited (only if pending or rejected)"""
+        return self.status in ['pending', 'rejected']
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'User Payment Method'
+        verbose_name_plural = 'User Payment Methods'
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+
+
+class Withdrawal(models.Model):
+    """Withdrawal model for merchant withdrawal requests"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    merchant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='withdrawals', limit_choices_to={'is_merchant': True})
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_method = models.ForeignKey('UserPaymentMethod', on_delete=models.SET_NULL, null=True, blank=True, related_name='withdrawals', help_text='Payment method used for this withdrawal')
+    rejection_reason = models.TextField(blank=True, null=True, help_text='Reason for rejection if status is rejected')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.merchant.name} - ₹{self.amount} ({self.get_status_display()})"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['merchant', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
 
 
 class Transaction(models.Model):
@@ -309,7 +387,7 @@ class Transaction(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     description = models.TextField(blank=True, help_text='Transaction description')
     related_order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe transactions')
-    related_withdrawal = models.ForeignKey('ecommerce.Withdrawal', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related withdrawal for withdrawal transactions')
+    related_withdrawal = models.ForeignKey('Withdrawal', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related withdrawal for withdrawal transactions')
     # PhonePe/SabPaisa transaction fields
     merchant_order_id = models.CharField(max_length=100, blank=True, null=True, help_text='Merchant Order ID for PhonePe/SabPaisa payment callbacks (clientTxnId for SabPaisa)', db_index=True)
     utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference (UTR) for PhonePe transactions')

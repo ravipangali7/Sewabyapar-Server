@@ -6,8 +6,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from decimal import Decimal, ROUND_HALF_UP
-from ...models import Withdrawal, MerchantPaymentSetting
-from core.models import Transaction
+from ...models import Withdrawal, UserPaymentMethod, Transaction
 from ...serializers import WithdrawalSerializer, WithdrawalCreateSerializer
 import sys
 import traceback
@@ -31,22 +30,22 @@ class WithdrawalPagination(PageNumberPagination):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def create_withdrawal(request):
-    """Create withdrawal request - uses approved payment setting if available"""
+    """Create withdrawal request - uses approved payment method if available"""
     if not check_merchant_permission(request.user):
         return Response({
             'error': 'Only merchants can create withdrawal requests'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        # Check if merchant has approved payment setting
-        payment_setting = MerchantPaymentSetting.objects.filter(
+        # Check if merchant has approved payment method
+        payment_method = UserPaymentMethod.objects.filter(
             user=request.user,
             status='approved'
         ).first()
         
-        if not payment_setting:
+        if not payment_method:
             return Response({
-                'error': 'No approved payment setting found. Please set up and get your payment method approved first.'
+                'error': 'No approved payment method found. Please set up and get your payment method approved first.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Validate amount
@@ -82,7 +81,7 @@ def create_withdrawal(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Get account holder name from payment details for transaction
-        payment_details = payment_setting.payment_details or {}
+        payment_details = payment_method.payment_details or {}
         account_holder_name = payment_details.get('account_holder_name', request.user.name)
         
         # Create withdrawal request
@@ -90,7 +89,7 @@ def create_withdrawal(request):
             withdrawal = Withdrawal.objects.create(
                 merchant=request.user,
                 amount=amount,
-                payment_setting=payment_setting,
+                payment_method=payment_method,
                 status='pending'
             )
             
@@ -171,4 +170,3 @@ def withdrawal_detail(request, pk):
         return Response({
             'error': 'Failed to retrieve withdrawal'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-

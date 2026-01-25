@@ -63,6 +63,16 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:payment_method_list' %}">
+                    <i class="align-middle" data-feather="credit-card"></i> <span class="align-middle">User Payment Method</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:withdrawal_list' %}">
+                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Withdrawals</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:shipdaak:courier_config_list' %}">
                     <i class="align-middle" data-feather="truck"></i> <span class="align-middle">Courier Management</span>
                 </a>
@@ -102,6 +112,23 @@
                 </a>
             </li>
 
+            <li class="sidebar-header">User Payment Method</li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:payment_method_list' %}?status=pending">
+                    <i class="align-middle" data-feather="clock"></i> <span class="align-middle">Pending</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:payment_method_list' %}?status=approved">
+                    <i class="align-middle" data-feather="check-circle"></i> <span class="align-middle">Verified</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:core:payment_method_list' %}?status=rejected">
+                    <i class="align-middle" data-feather="x-circle"></i> <span class="align-middle">Rejected</span>
+                </a>
+            </li>
+
             <li class="sidebar-header">Ecommerce</li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:product_list' %}">
@@ -129,11 +156,6 @@
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:withdrawal_list' %}">
-                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">Withdrawals</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:review_list' %}">
                     <i class="align-middle" data-feather="star"></i> <span class="align-middle">Reviews</span>
                 </a>
@@ -154,7 +176,7 @@
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{% url 'myadmin:ecommerce:payment_setting_list' %}">
+                <a class="sidebar-link" href="{% url 'myadmin:core:payment_method_list' %}">
                     <i class="align-middle" data-feather="credit-card"></i> <span class="align-middle">Merchant Payout Method Verification</span>
                 </a>
             </li>
@@ -176,7 +198,6 @@
                 </a>
             </li>
 
-            <li class="sidebar-header">General</li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:ecommerce:banner_list' %}">
                     <i class="align-middle" data-feather="image"></i> <span class="align-middle">Banners</span>
@@ -220,12 +241,54 @@
                 </a>
             </li>
 
-            <li class="sidebar-header">Shared</li>
+            <li class="sidebar-header">Travels</li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:shared:place_list' %}">
                     <i class="align-middle" data-feather="map-pin"></i> <span class="align-middle">Places</span>
                 </a>
             </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_committee_list' %}">
+                    <i class="align-middle" data-feather="users"></i> <span class="align-middle">TravelCommittee</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_vehicle_list' %}">
+                    <i class="align-middle" data-feather="truck"></i> <span class="align-middle">TravelVehicle</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_vehicle_image_list' %}">
+                    <i class="align-middle" data-feather="image"></i> <span class="align-middle">TravelVehicleImage</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_vehicle_seat_list' %}">
+                    <i class="align-middle" data-feather="grid"></i> <span class="align-middle">TravelVehicleSeat</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_committee_staff_list' %}">
+                    <i class="align-middle" data-feather="user-check"></i> <span class="align-middle">TravelComitteStaff</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_dealer_list' %}">
+                    <i class="align-middle" data-feather="briefcase"></i> <span class="align-middle">TravelDealer</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_agent_list' %}">
+                    <i class="align-middle" data-feather="user"></i> <span class="align-middle">TravelAgent</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{% url 'myadmin:travel:travel_booking_list' %}">
+                    <i class="align-middle" data-feather="calendar"></i> <span class="align-middle">TravelBooking</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">General</li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{% url 'myadmin:shared:feedback_list' %}">
                     <i class="align-middle" data-feather="message-square"></i> <span class="align-middle">Feedback/Complaints</span>

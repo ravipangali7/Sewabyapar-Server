@@ -1,8 +1,7 @@
 from django.contrib import admin
 from .models import (
     Store, Category, Product, ProductImage, Cart, Order, OrderItem, 
-    Review, Wishlist, Coupon, GlobalCourier, ShippingChargeHistory,
-    MerchantPaymentSetting, Withdrawal
+    Review, Wishlist, Coupon, GlobalCourier, ShippingChargeHistory
 )
 
 
@@ -134,47 +133,3 @@ class ShippingChargeHistoryAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
 
 
-@admin.register(MerchantPaymentSetting)
-class MerchantPaymentSettingAdmin(admin.ModelAdmin):
-    list_display = ['user', 'payment_method_type', 'status', 'rejection_reason', 'created_at', 'approved_at', 'rejected_at']
-    list_filter = ['status', 'payment_method_type', 'created_at', 'approved_at', 'rejected_at']
-    search_fields = ['user__username', 'user__name', 'user__email', 'rejection_reason']
-    readonly_fields = ['created_at', 'updated_at', 'approved_at', 'rejected_at']
-    fieldsets = (
-        ('Merchant Information', {
-            'fields': ('user',)
-        }),
-        ('Payment Method', {
-            'fields': ('payment_method_type', 'payment_details')
-        }),
-        ('Verification Status', {
-            'fields': ('status', 'rejection_reason')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at', 'approved_at', 'rejected_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    ordering = ['-created_at']
-
-
-@admin.register(Withdrawal)
-class WithdrawalAdmin(admin.ModelAdmin):
-    list_display = ['id', 'merchant', 'amount', 'status', 'payment_setting', 'created_at', 'updated_at']
-    list_filter = ['status', 'created_at', 'updated_at']
-    search_fields = ['merchant__name', 'merchant__phone', 'merchant__email', 'id', 'rejection_reason']
-    readonly_fields = ['created_at', 'updated_at']
-    fieldsets = (
-        ('Withdrawal Information', {
-            'fields': ('merchant', 'amount', 'status', 'payment_setting')
-        }),
-        ('Rejection Information', {
-            'fields': ('rejection_reason',),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    ordering = ['-created_at']

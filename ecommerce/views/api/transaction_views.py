@@ -140,7 +140,7 @@ def merchant_wallet(request):
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
         
         # Get pending withdrawals (only 'pending' status - 'approved' withdrawals have already been deducted from balance)
-        from ...models import Withdrawal
+        from core.models import Withdrawal
         pending_withdrawals = Withdrawal.objects.filter(
             merchant=request.user,
             status='pending'

@@ -1,6 +1,6 @@
 """Core app URLs"""
 from django.urls import path
-from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views, transaction_views
+from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views, transaction_views, payment_method_views, withdrawal_views
 
 app_name = 'core'
 
@@ -60,5 +60,24 @@ urlpatterns = [
     path('transactions/create/', transaction_views.TransactionCreateView.as_view(), name='transaction_create'),
     path('transactions/<int:pk>/update/', transaction_views.TransactionUpdateView.as_view(), name='transaction_update'),
     path('transactions/<int:pk>/delete/', transaction_views.TransactionDeleteView.as_view(), name='transaction_delete'),
+    
+    # User Payment Method URLs
+    path('payment-methods/', payment_method_views.PaymentMethodListView.as_view(), name='payment_method_list'),
+    path('payment-methods/create/', payment_method_views.PaymentMethodCreateView.as_view(), name='payment_method_create'),
+    path('payment-methods/<int:pk>/', payment_method_views.PaymentMethodDetailView.as_view(), name='payment_method_detail'),
+    path('payment-methods/<int:pk>/update/', payment_method_views.PaymentMethodUpdateView.as_view(), name='payment_method_update'),
+    path('payment-methods/<int:pk>/delete/', payment_method_views.PaymentMethodDeleteView.as_view(), name='payment_method_delete'),
+    path('payment-methods/<int:pk>/approve/', payment_method_views.PaymentMethodApproveView.as_view(), name='payment_method_approve'),
+    path('payment-methods/<int:pk>/reject/', payment_method_views.PaymentMethodRejectView.as_view(), name='payment_method_reject'),
+    path('payment-methods/bulk-approve/', payment_method_views.PaymentMethodBulkApproveView.as_view(), name='payment_method_bulk_approve'),
+    
+    # Withdrawal URLs
+    path('withdrawals/', withdrawal_views.WithdrawalListView.as_view(), name='withdrawal_list'),
+    path('withdrawals/<int:pk>/', withdrawal_views.WithdrawalDetailView.as_view(), name='withdrawal_detail'),
+    path('withdrawals/create/', withdrawal_views.WithdrawalCreateView.as_view(), name='withdrawal_create'),
+    path('withdrawals/<int:pk>/update/', withdrawal_views.WithdrawalUpdateView.as_view(), name='withdrawal_update'),
+    path('withdrawals/<int:pk>/delete/', withdrawal_views.WithdrawalDeleteView.as_view(), name='withdrawal_delete'),
+    path('withdrawals/<int:pk>/approve/', withdrawal_views.WithdrawalApproveView.as_view(), name='withdrawal_approve'),
+    path('withdrawals/<int:pk>/reject/', withdrawal_views.WithdrawalRejectView.as_view(), name='withdrawal_reject'),
 ]
 

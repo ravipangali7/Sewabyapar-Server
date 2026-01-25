@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Address, Notification, SuperSetting
+from .models import User, Address, Notification, SuperSetting, UserPaymentMethod, Withdrawal
 
 
 @admin.register(User)
@@ -73,8 +73,8 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(SuperSetting)
 class SuperSettingAdmin(admin.ModelAdmin):
     """SuperSetting admin"""
-    list_display = ['sales_commission', 'shipping_charge_commission', 'balance', 'created_at', 'updated_at']
-    fields = ['sales_commission', 'shipping_charge_commission', 'balance', 'created_at', 'updated_at']
+    list_display = ['sales_commission', 'shipping_charge_commission', 'travel_ticket_percentage', 'balance', 'created_at', 'updated_at']
+    fields = ['sales_commission', 'shipping_charge_commission', 'travel_ticket_percentage', 'balance', 'created_at', 'updated_at']
     readonly_fields = ['created_at', 'updated_at']
     
     def has_add_permission(self, request):
@@ -86,3 +86,51 @@ class SuperSettingAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Prevent deletion of SuperSetting
         return False
+
+
+@admin.register(UserPaymentMethod)
+class UserPaymentMethodAdmin(admin.ModelAdmin):
+    """UserPaymentMethod admin"""
+    list_display = ['user', 'payment_method_type', 'status', 'rejection_reason', 'created_at', 'approved_at', 'rejected_at']
+    list_filter = ['status', 'payment_method_type', 'created_at', 'approved_at', 'rejected_at']
+    search_fields = ['user__username', 'user__name', 'user__email', 'rejection_reason']
+    readonly_fields = ['created_at', 'updated_at', 'approved_at', 'rejected_at']
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user',)
+        }),
+        ('Payment Method', {
+            'fields': ('payment_method_type', 'payment_details')
+        }),
+        ('Verification Status', {
+            'fields': ('status', 'rejection_reason')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'approved_at', 'rejected_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    ordering = ['-created_at']
+
+
+@admin.register(Withdrawal)
+class WithdrawalAdmin(admin.ModelAdmin):
+    """Withdrawal admin"""
+    list_display = ['id', 'merchant', 'amount', 'status', 'payment_method', 'created_at', 'updated_at']
+    list_filter = ['status', 'created_at', 'updated_at']
+    search_fields = ['merchant__name', 'merchant__phone', 'merchant__email', 'id', 'rejection_reason']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('Withdrawal Information', {
+            'fields': ('merchant', 'amount', 'status', 'payment_method')
+        }),
+        ('Rejection Information', {
+            'fields': ('rejection_reason',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    ordering = ['-created_at']

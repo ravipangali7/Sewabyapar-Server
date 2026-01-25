@@ -1,0 +1,174 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">{% if object %}Edit{% else %}Create{% endif %} Withdrawal</h1>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:withdrawal_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="dollar-sign"></i> Withdrawal Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="withdrawalForm">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Fields -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.merchant.id_for_label }}">
+                                    {{ form.merchant.label }}
+                                    {% if form.merchant.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.merchant }}
+                                {% if form.merchant.help_text %}
+                                    <small class="form-text text-muted">{{ form.merchant.help_text }}</small>
+                                {% endif %}
+                                {% if form.merchant.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.merchant.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.amount.id_for_label }}">
+                                    {{ form.amount.label }}
+                                    {% if form.amount.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₹</span>
+                                    {{ form.amount }}
+                                </div>
+                                {% if form.amount.help_text %}
+                                    <small class="form-text text-muted">{{ form.amount.help_text }}</small>
+                                {% endif %}
+                                {% if form.amount.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.amount.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.status.id_for_label }}">
+                                    {{ form.status.label }}
+                                    {% if form.status.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.status }}
+                                {% if form.status.help_text %}
+                                    <small class="form-text text-muted">{{ form.status.help_text }}</small>
+                                {% endif %}
+                                {% if form.status.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.status.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.payment_method.id_for_label }}">
+                                    {{ form.payment_method.label }}
+                                    {% if form.payment_method.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.payment_method }}
+                                {% if form.payment_method.help_text %}
+                                    <small class="form-text text-muted">{{ form.payment_method.help_text }}</small>
+                                {% endif %}
+                                {% if form.payment_method.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.payment_method.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label" for="{{ form.rejection_reason.id_for_label }}">
+                                    {{ form.rejection_reason.label }}
+                                    {% if form.rejection_reason.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.rejection_reason }}
+                                {% if form.rejection_reason.help_text %}
+                                    <small class="form-text text-muted">{{ form.rejection_reason.help_text }}</small>
+                                {% endif %}
+                                {% if form.rejection_reason.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.rejection_reason.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'myadmin:core:withdrawal_list' %}" class="btn btn-secondary">
+                                <i class="align-middle" data-feather="x"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="align-middle" data-feather="save"></i> {% if object %}Update{% else %}Create{% endif %} Withdrawal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+    
+    // Filter payment_method based on selected merchant
+    const merchantSelect = document.getElementById('{{ form.merchant.id_for_label }}');
+    const paymentMethodSelect = document.getElementById('{{ form.payment_method.id_for_label }}');
+    
+    if (merchantSelect && paymentMethodSelect) {
+        merchantSelect.addEventListener('change', function() {
+            const merchantId = this.value;
+            if (merchantId) {
+                // Reload page with merchant filter to update payment_method options
+                const url = new URL(window.location.href);
+                url.searchParams.set('merchant', merchantId);
+                window.location.href = url.toString();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
