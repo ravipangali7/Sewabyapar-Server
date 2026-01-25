@@ -6,6 +6,27 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def clear_orphaned_withdrawal_references(apps, schema_editor):
+    """
+    Clear orphaned related_withdrawal_id values before changing the foreign key
+    to point to the new core.Withdrawal model. Old references point to ecommerce.Withdrawal
+    which will be deleted, so we need to set them to NULL.
+    """
+    # Set all related_withdrawal_id to NULL since we're moving from ecommerce.Withdrawal to core.Withdrawal
+    # Use raw SQL to avoid issues with the foreign key relationship during migration
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE core_transaction SET related_withdrawal_id = NULL WHERE related_withdrawal_id IS NOT NULL"
+        )
+
+
+def reverse_clear_orphaned_withdrawal_references(apps, schema_editor):
+    """
+    Reverse migration - nothing to do as we can't restore the old references
+    """
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -53,6 +74,11 @@ class Migration(migrations.Migration):
             options={
                 'ordering': ['-created_at'],
             },
+        ),
+        # Clear orphaned withdrawal references before changing the foreign key
+        migrations.RunPython(
+            clear_orphaned_withdrawal_references,
+            reverse_clear_orphaned_withdrawal_references,
         ),
         migrations.AlterField(
             model_name='transaction',
