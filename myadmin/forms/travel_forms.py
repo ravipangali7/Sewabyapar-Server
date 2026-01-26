@@ -60,13 +60,12 @@ class TravelVehicleImageForm(forms.ModelForm):
 class TravelVehicleSeatForm(forms.ModelForm):
     class Meta:
         model = TravelVehicleSeat
-        fields = ['side', 'number', 'status', 'floor', 'price']
+        fields = ['side', 'number', 'status', 'floor']
         widgets = {
             'side': forms.Select(attrs={'class': 'form-select'}),
             'number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'floor': forms.Select(attrs={'class': 'form-select'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
 
 
@@ -86,7 +85,7 @@ TravelVehicleSeatFormSet = inlineformset_factory(
     TravelVehicle,
     TravelVehicleSeat,
     form=TravelVehicleSeatForm,
-    fields=['side', 'number', 'status', 'floor', 'price'],
+    fields=['side', 'number', 'status', 'floor'],
     extra=1,
     can_delete=True,
 )

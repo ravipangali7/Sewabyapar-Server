@@ -258,13 +258,6 @@
                                                 <div class="text-danger small">{{ form.status.errors }}</div>
                                             {% endif %}
                                         </div>
-                                        <div class="col-md-12 mb-2">
-                                            <label class="form-label">Price</label>
-                                            {{ form.price }}
-                                            {% if form.price.errors %}
-                                                <div class="text-danger small">{{ form.price.errors }}</div>
-                                            {% endif %}
-                                        </div>
                                     </div>
                                     {% for hidden in form.hidden_fields %}
                                         {{ hidden }}

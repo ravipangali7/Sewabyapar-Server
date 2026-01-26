@@ -31,7 +31,7 @@ class TravelVehicleImageAdmin(admin.ModelAdmin):
 
 @admin.register(TravelVehicleSeat)
 class TravelVehicleSeatAdmin(admin.ModelAdmin):
-    list_display = ['vehicle', 'side', 'number', 'floor', 'status', 'price', 'created_at']
+    list_display = ['vehicle', 'side', 'number', 'floor', 'status', 'created_at']
     list_filter = ['status', 'floor', 'side', 'created_at']
     search_fields = ['vehicle__name', 'vehicle__vehicle_no']
     readonly_fields = ['created_at', 'updated_at']

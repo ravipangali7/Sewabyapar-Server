@@ -42,23 +42,6 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col">
-                            <h6 class="text-muted mb-2">Price</h6>
-                            <h4 class="mb-0">₹{{ seat.price|floatformat:2 }}</h4>
-                        </div>
-                        <div class="col-auto">
-                            <div class="stat text-primary">
-                                <i class="align-middle" data-feather="dollar-sign"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col">
                             <h6 class="text-muted mb-2">Seat</h6>
                             <div class="fs-6">{{ seat.side }}{{ seat.number }}</div>
                         </div>
@@ -123,12 +106,6 @@
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="layers" style="width: 16px; height: 16px;"></i> Floor:</strong></div>
                         <div class="col-sm-8">
                             <span class="badge bg-secondary">{{ seat.get_floor_display }}</span>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Price:</strong></div>
-                        <div class="col-sm-8">
-                            <h5 class="mb-0">₹{{ seat.price|floatformat:2 }}</h5>
                         </div>
                     </div>
                 </div>

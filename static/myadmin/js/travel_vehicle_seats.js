@@ -117,7 +117,7 @@
         return `
             <div class="seat-box badge bg-${statusColor}" 
                  style="width: 50px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 2px;"
-                 title="Seat ${seat.side}${seat.number} - ${seat.status} - ₹${seat.price.toFixed(2)}">
+                 title="Seat ${seat.side}${seat.number} - ${seat.status}">
                 ${seat.side}${seat.number}
             </div>
         `;
