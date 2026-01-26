@@ -436,10 +436,11 @@
         const container = document.getElementById('seat-layout-container');
         if (!container) return;
         
-        // Check if we're on a detail page (has data-seats-json attribute)
-        const seatsJson = container.getAttribute('data-seats-json');
-        if (seatsJson) {
+        // Check if we're on a detail page (has seats-json-data script tag)
+        const seatsJsonScript = document.getElementById('seats-json-data');
+        if (seatsJsonScript) {
             // This is a detail page, render from JSON data
+            const seatsJson = seatsJsonScript.textContent.trim();
             renderSeatLayoutFromData(seatsJson);
             return;
         }

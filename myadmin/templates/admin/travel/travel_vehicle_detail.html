@@ -283,12 +283,13 @@
                                     </div>
                                     
                                     <!-- Seat Layout Container -->
-                                    <div id="seat-layout-container" data-seats-json="{{ seats_json|escapejs }}">
+                                    <div id="seat-layout-container">
                                         <div class="text-center text-muted py-5">
                                             <i class="align-middle" data-feather="grid" style="width: 48px; height: 48px;"></i>
                                             <p class="mt-2 mb-0">Loading seat layout...</p>
                                         </div>
                                     </div>
+                                    <script type="application/json" id="seats-json-data">{{ seats_json|safe }}</script>
                                 </div>
                             </div>
                         </div>
