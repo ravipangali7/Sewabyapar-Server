@@ -1,0 +1,25 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Travel Agents</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_agent_create' %}"><i class="align-middle" data-feather="plus"></i> Add Agent</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Travel Agents</h5></div><div class="card-body">
+        <form method="get" class="mb-3">
+            <div class="row">
+                <div class="col-md-4"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"></div>
+                <div class="col-md-2">
+                    <select class="form-select" name="is_active">
+                        <option value="all" {% if is_active == 'all' %}selected{% endif %}>All Status</option>
+                        <option value="active" {% if is_active == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if is_active == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-1"><button class="btn btn-primary w-100" type="submit">Search</button></div>
+            </div>
+        </form>
+        <table class="table table-hover"><thead><tr><th>User</th><th>Dealer</th><th>Committees</th><th>Commission Type</th><th>Commission Value</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+            {% for agent in agents %}<tr><td><a href="{% url 'myadmin:core:user_detail' agent.user.pk %}">{{ agent.user.name }}</a></td><td><a href="{% url 'myadmin:travel:travel_dealer_detail' agent.dealer.pk %}">{{ agent.dealer.user.name }}</a></td><td>{% for committee in agent.committees.all %}<span class="badge bg-secondary">{{ committee.name }}</span>{% if not forloop.last %} {% endif %}{% empty %}None{% endfor %}</td><td><span class="badge bg-info">{{ agent.get_commission_type_display }}</span></td><td>₹{{ agent.commission_value }}</td><td>{% if agent.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td><td>{{ agent.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:travel:travel_agent_detail' agent.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:travel:travel_agent_update' agent.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="8" class="text-center">No agents found</td></tr>{% endfor %}
+        </tbody></table>
+        {% include 'admin/includes/pagination.html' %}
+    </div></div></div></div>
+</div>
+{% endblock %}

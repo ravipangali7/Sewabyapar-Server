@@ -1,0 +1,26 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Travel Vehicle Seats</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_vehicle_seat_create' %}"><i class="align-middle" data-feather="plus"></i> Add Seat</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Travel Vehicle Seats</h5></div><div class="card-body">
+        <form method="get" class="mb-3">
+            <div class="row">
+                <div class="col-md-4"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"></div>
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+                        <option value="available" {% if status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="booked" {% if status == 'booked' %}selected{% endif %}>Booked</option>
+                        <option value="boarded" {% if status == 'boarded' %}selected{% endif %}>Boarded</option>
+                    </select>
+                </div>
+                <div class="col-md-1"><button class="btn btn-primary w-100" type="submit">Search</button></div>
+            </div>
+        </form>
+        <table class="table table-hover"><thead><tr><th>Vehicle</th><th>Seat</th><th>Side</th><th>Number</th><th>Floor</th><th>Status</th><th>Price</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+            {% for seat in seats %}<tr><td><a href="{% url 'myadmin:travel:travel_vehicle_detail' seat.vehicle.pk %}">{{ seat.vehicle.name }}</a></td><td><span class="badge bg-info">{{ seat.side }}{{ seat.number }}</span></td><td>{{ seat.side }}</td><td>{{ seat.number }}</td><td><span class="badge bg-secondary">{{ seat.get_floor_display }}</span></td><td><span class="badge bg-{% if seat.status == 'available' %}success{% elif seat.status == 'booked' %}warning{% else %}danger{% endif %}">{{ seat.get_status_display }}</span></td><td>₹{{ seat.price }}</td><td>{{ seat.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:travel:travel_vehicle_seat_detail' seat.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:travel:travel_vehicle_seat_update' seat.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="9" class="text-center">No seats found</td></tr>{% endfor %}
+        </tbody></table>
+        {% include 'admin/includes/pagination.html' %}
+    </div></div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Travel Vehicle Seat Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_vehicle_seat_update' seat.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:travel:travel_vehicle_seat_delete' seat.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:travel:travel_vehicle_seat_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            <span class="badge bg-{% if seat.status == 'available' %}success{% elif seat.status == 'booked' %}warning{% else %}danger{% endif %} fs-6">
+                                {{ seat.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if seat.status == 'available' %}check-circle{% elif seat.status == 'booked' %}clock{% else %}x-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Price</h6>
+                            <h4 class="mb-0">₹{{ seat.price|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Seat</h6>
+                            <div class="fs-6">{{ seat.side }}{{ seat.number }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="grid"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Created</h6>
+                            <div class="fs-6">{{ seat.created_at|date:"M Y" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="grid"></i> Seat Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Vehicle:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:travel:travel_vehicle_detail' seat.vehicle.pk %}" class="text-decoration-none">{{ seat.vehicle.name }} ({{ seat.vehicle.vehicle_no }})</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Seat Number:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info fs-6">{{ seat.side }}{{ seat.number }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Side:</strong></div>
+                        <div class="col-sm-8">{{ seat.side }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Number:</strong></div>
+                        <div class="col-sm-8">{{ seat.number }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="layers" style="width: 16px; height: 16px;"></i> Floor:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-secondary">{{ seat.get_floor_display }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Price:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ seat.price|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Status & Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            <span class="badge bg-{% if seat.status == 'available' %}success{% elif seat.status == 'booked' %}warning{% else %}danger{% endif %}">
+                                {{ seat.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ seat.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ seat.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ seat.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ seat.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

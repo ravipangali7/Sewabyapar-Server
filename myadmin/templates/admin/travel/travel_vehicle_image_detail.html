@@ -1,0 +1,83 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Travel Vehicle Image Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_vehicle_image_update' image.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:travel:travel_vehicle_image_delete' image.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:travel:travel_vehicle_image_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="image"></i> Image Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Vehicle:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:travel:travel_vehicle_detail' image.vehicle.pk %}" class="text-decoration-none">{{ image.vehicle.name }} ({{ image.vehicle.vehicle_no }})</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="type" style="width: 16px; height: 16px;"></i> Title:</strong></div>
+                        <div class="col-sm-8">{{ image.title|default:"N/A" }}</div>
+                    </div>
+                    {% if image.image %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="image" style="width: 16px; height: 16px;"></i> Image:</strong></div>
+                        <div class="col-sm-8"><img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width: 100%; max-height: 500px;"></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ image.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ image.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ image.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ image.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

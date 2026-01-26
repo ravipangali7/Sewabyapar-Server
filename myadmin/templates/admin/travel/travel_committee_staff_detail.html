@@ -1,0 +1,109 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Travel Committee Staff Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_committee_staff_update' staff.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:travel:travel_committee_staff_delete' staff.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:travel:travel_committee_staff_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="user"></i> Staff Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> User:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' staff.user.pk %}" class="text-decoration-none">{{ staff.user.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="users" style="width: 16px; height: 16px;"></i> Travel Committee:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:travel:travel_committee_detail' staff.travel_committee.pk %}" class="text-decoration-none">{{ staff.travel_committee.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Booking Permission:</strong></div>
+                        <div class="col-sm-8">
+                            {% if staff.booking_permission %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-danger">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Boarding Permission:</strong></div>
+                        <div class="col-sm-8">
+                            {% if staff.boarding_permission %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-danger">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="check-circle" style="width: 16px; height: 16px;"></i> Finance Permission:</strong></div>
+                        <div class="col-sm-8">
+                            {% if staff.finance_permission %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-danger">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ staff.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ staff.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ staff.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ staff.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}

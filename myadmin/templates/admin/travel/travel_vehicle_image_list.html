@@ -1,0 +1,26 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3"><h1 class="h3 d-inline align-middle">Travel Vehicle Images</h1><a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_vehicle_image_create' %}"><i class="align-middle" data-feather="plus"></i> Add Image</a></div>
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">All Travel Vehicle Images</h5></div><div class="card-body">
+        <form method="get" class="mb-3">
+            <div class="row">
+                <div class="col-md-4"><input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}"></div>
+                <div class="col-md-3">
+                    <select class="form-select" name="vehicle">
+                        <option value="">All Vehicles</option>
+                        {% for veh in vehicles %}
+                        <option value="{{ veh.pk }}" {% if vehicle == veh.pk|stringformat:"s" %}selected{% endif %}>{{ veh.name }} ({{ veh.vehicle_no }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1"><button class="btn btn-primary w-100" type="submit">Search</button></div>
+            </div>
+        </form>
+        <table class="table table-hover"><thead><tr><th>Image</th><th>Vehicle</th><th>Title</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+            {% for image in images %}<tr><td>{% if image.image %}<img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width: 100px; max-height: 100px;">{% else %}No Image{% endif %}</td><td><a href="{% url 'myadmin:travel:travel_vehicle_detail' image.vehicle.pk %}">{{ image.vehicle.name }}</a></td><td>{{ image.title|default:"N/A" }}</td><td>{{ image.created_at|date:"M d, Y" }}</td><td><a href="{% url 'myadmin:travel:travel_vehicle_image_detail' image.pk %}" class="btn btn-sm btn-info">View</a> <a href="{% url 'myadmin:travel:travel_vehicle_image_update' image.pk %}" class="btn btn-sm btn-primary">Edit</a></td></tr>{% empty %}<tr><td colspan="5" class="text-center">No images found</td></tr>{% endfor %}
+        </tbody></table>
+        {% include 'admin/includes/pagination.html' %}
+    </div></div></div></div>
+</div>
+{% endblock %}

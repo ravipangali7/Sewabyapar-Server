@@ -1,0 +1,257 @@
+{% extends 'admin/layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="mb-3">
+        <h1 class="h3 d-inline align-middle">Travel Booking Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_booking_update' booking.pk %}">
+            <i class="align-middle" data-feather="edit"></i> Edit
+        </a>
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:travel:travel_booking_delete' booking.pk %}">
+            <i class="align-middle" data-feather="trash-2"></i> Delete
+        </a>
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:travel:travel_booking_list' %}">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Status</h6>
+                            <span class="badge bg-{% if booking.status == 'pending' %}warning{% elif booking.status == 'booked' %}info{% else %}success{% endif %} fs-6">
+                                {{ booking.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="{% if booking.status == 'pending' %}clock{% elif booking.status == 'booked' %}check-circle{% else %}check{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Price</h6>
+                            <h4 class="mb-0">₹{{ booking.actual_price|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Ticket Number</h6>
+                            <div class="fs-6">{{ booking.ticket_number|default:"N/A" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="hash"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h6 class="text-muted mb-2">Booking Date</h6>
+                            <div class="fs-6">{{ booking.booking_date|date:"M d, Y" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat text-primary">
+                                <i class="align-middle" data-feather="calendar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="calendar"></i> Booking Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="hash" style="width: 16px; height: 16px;"></i> Ticket Number:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info fs-6">{{ booking.ticket_number|default:"N/A" }}</span>
+                        </div>
+                    </div>
+                    {% if booking.customer %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Customer:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:core:user_detail' booking.customer.pk %}" class="text-decoration-none">{{ booking.customer.name }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Name:</strong></div>
+                        <div class="col-sm-8">{{ booking.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="phone" style="width: 16px; height: 16px;"></i> Phone:</strong></div>
+                        <div class="col-sm-8">{{ booking.phone }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Gender:</strong></div>
+                        <div class="col-sm-8">{{ booking.get_gender_display }}</div>
+                    </div>
+                    {% if booking.nationality %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="globe" style="width: 16px; height: 16px;"></i> Nationality:</strong></div>
+                        <div class="col-sm-8">{{ booking.nationality }}</div>
+                    </div>
+                    {% endif %}
+                    {% if booking.agent %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Agent:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:travel:travel_agent_detail' booking.agent.pk %}" class="text-decoration-none">{{ booking.agent.user.name }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="truck" style="width: 16px; height: 16px;"></i> Vehicle:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'myadmin:travel:travel_vehicle_detail' booking.vehicle.pk %}" class="text-decoration-none">{{ booking.vehicle.name }} ({{ booking.vehicle.vehicle_no }})</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="grid" style="width: 16px; height: 16px;"></i> Seat:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-secondary">{{ booking.vehicle_seat.side }}{{ booking.vehicle_seat.number }} ({{ booking.vehicle_seat.get_floor_display }})</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="dollar-sign" style="width: 16px; height: 16px;"></i> Actual Price:</strong></div>
+                        <div class="col-sm-8">
+                            <h5 class="mb-0">₹{{ booking.actual_price|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Booking Date:</strong></div>
+                        <div class="col-sm-8">{{ booking.booking_date|date:"F d, Y H:i" }}</div>
+                    </div>
+                    {% if booking.boarding_date %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Boarding Date:</strong></div>
+                        <div class="col-sm-8">{{ booking.boarding_date|date:"F d, Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if booking.boarding_place %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="map-pin" style="width: 16px; height: 16px;"></i> Boarding Place:</strong></div>
+                        <div class="col-sm-8">{{ booking.boarding_place.name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if booking.remarks %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong><i class="align-middle" data-feather="file-text" style="width: 16px; height: 16px;"></i> Remarks:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="p-3 bg-light rounded">
+                                {{ booking.remarks|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Commission Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="dollar-sign"></i> Commission Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Dealer Commission:</strong></div>
+                        <div class="col-sm-8">₹{{ booking.dealer_commission|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Agent Commission:</strong></div>
+                        <div class="col-sm-8">₹{{ booking.agent_commission|floatformat:2 }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>System Commission:</strong></div>
+                        <div class="col-sm-8">₹{{ booking.system_commission|floatformat:2 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="info"></i> Status Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="toggle-right" style="width: 16px; height: 16px;"></i> Status:</strong></div>
+                        <div class="col-12 mt-1">
+                            <span class="badge bg-{% if booking.status == 'pending' %}warning{% elif booking.status == 'booked' %}info{% else %}success{% endif %}">
+                                {{ booking.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Created:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ booking.created_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ booking.created_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12"><strong><i class="align-middle" data-feather="calendar" style="width: 16px; height: 16px;"></i> Updated:</strong></div>
+                        <div class="col-12 mt-1">
+                            <i class="align-middle" data-feather="clock" style="width: 14px; height: 14px;"></i>
+                            {{ booking.updated_at|date:"F d, Y" }}<br>
+                            <small class="text-muted">{{ booking.updated_at|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+</script>
+{% endblock %}
