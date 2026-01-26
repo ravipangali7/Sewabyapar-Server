@@ -1,5 +1,6 @@
 """Forms for travel models"""
 from django import forms
+from django.forms import inlineformset_factory
 from travel.models import (
     TravelCommittee, TravelVehicle, TravelVehicleImage, TravelVehicleSeat,
     TravelCommitteeStaff, TravelDealer, TravelAgent, TravelBooking
@@ -34,18 +35,24 @@ class TravelVehicleForm(forms.ModelForm):
             'from_place': forms.Select(attrs={'class': 'form-select'}),
             'to_place': forms.Select(attrs={'class': 'form-select'}),
             'departure_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'actual_seat_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
-            'seat_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'actual_seat_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'id': 'id_actual_seat_price'}),
+            'seat_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'readonly': True, 'id': 'id_seat_price'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make seat_price readonly (but not disabled so it submits)
+        if 'seat_price' in self.fields:
+            self.fields['seat_price'].widget.attrs['readonly'] = True
+            self.fields['seat_price'].widget.attrs['style'] = 'background-color: #e9ecef; cursor: not-allowed;'
 
 
 class TravelVehicleImageForm(forms.ModelForm):
     class Meta:
         model = TravelVehicleImage
-        fields = ['image', 'vehicle', 'title']
+        fields = ['image', 'title']
         widgets = {
             'image': forms.FileInput(attrs={'class': 'form-control'}),
-            'vehicle': forms.Select(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
@@ -53,15 +60,36 @@ class TravelVehicleImageForm(forms.ModelForm):
 class TravelVehicleSeatForm(forms.ModelForm):
     class Meta:
         model = TravelVehicleSeat
-        fields = ['vehicle', 'side', 'number', 'status', 'floor', 'price']
+        fields = ['side', 'number', 'status', 'floor', 'price']
         widgets = {
-            'vehicle': forms.Select(attrs={'class': 'form-select'}),
             'side': forms.Select(attrs={'class': 'form-select'}),
             'number': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'floor': forms.Select(attrs={'class': 'form-select'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
+
+
+# Inline Formset for TravelVehicleImage
+TravelVehicleImageFormSet = inlineformset_factory(
+    TravelVehicle,
+    TravelVehicleImage,
+    form=TravelVehicleImageForm,
+    fields=['image', 'title'],
+    extra=1,
+    can_delete=True,
+)
+
+
+# Inline Formset for TravelVehicleSeat
+TravelVehicleSeatFormSet = inlineformset_factory(
+    TravelVehicle,
+    TravelVehicleSeat,
+    form=TravelVehicleSeatForm,
+    fields=['side', 'number', 'status', 'floor', 'price'],
+    extra=1,
+    can_delete=True,
+)
 
 
 class TravelCommitteeStaffForm(forms.ModelForm):
