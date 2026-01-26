@@ -6,6 +6,52 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def add_travel_ticket_percentage_if_not_exists(apps, schema_editor):
+    """
+    Add travel_ticket_percentage column only if it doesn't already exist.
+    This handles the case where the migration was partially applied.
+    """
+    with schema_editor.connection.cursor() as cursor:
+        # Check if column exists
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'core_supersetting' 
+            AND COLUMN_NAME = 'travel_ticket_percentage'
+        """)
+        exists = cursor.fetchone()[0] > 0
+        
+        if not exists:
+            # Add the column if it doesn't exist
+            # Using the same definition as Django would create: DECIMAL(5,2) with default 0
+            cursor.execute("""
+                ALTER TABLE core_supersetting 
+                ADD COLUMN travel_ticket_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0
+            """)
+
+
+def reverse_add_travel_ticket_percentage(apps, schema_editor):
+    """
+    Reverse migration - remove the column if it exists
+    """
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'core_supersetting' 
+            AND COLUMN_NAME = 'travel_ticket_percentage'
+        """)
+        exists = cursor.fetchone()[0] > 0
+        
+        if exists:
+            cursor.execute("""
+                ALTER TABLE core_supersetting 
+                DROP COLUMN travel_ticket_percentage
+            """)
+
+
 def clear_orphaned_withdrawal_references(apps, schema_editor):
     """
     Clear orphaned related_withdrawal_id values before changing the foreign key
@@ -34,10 +80,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='supersetting',
-            name='travel_ticket_percentage',
-            field=models.DecimalField(decimal_places=2, default=0, help_text='Travel ticket commission percentage', max_digits=5, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(100)]),
+        # Add travel_ticket_percentage field only if it doesn't exist
+        migrations.RunPython(
+            add_travel_ticket_percentage_if_not_exists,
+            reverse_add_travel_ticket_percentage,
         ),
         migrations.CreateModel(
             name='UserPaymentMethod',
