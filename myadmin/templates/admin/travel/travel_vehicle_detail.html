@@ -188,8 +188,119 @@
             </div>
         </div>
     </div>
+
+    <!-- Vehicle Images Section -->
+    {% if vehicle_images %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="image"></i> Vehicle Images
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for image in vehicle_images %}
+                        <div class="col-md-3 col-sm-4 mb-3">
+                            <div class="card">
+                                <a href="{{ image.image.url }}" target="_blank">
+                                    <img src="{{ image.image.url }}" alt="{{ image.title|default:vehicle.name }}" class="card-img-top" style="height: 200px; width: 100%; object-fit: cover; cursor: pointer; aspect-ratio: 4/3;">
+                                </a>
+                                <div class="card-body p-2">
+                                    <small class="text-muted">
+                                        {{ image.title|default:"No title" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Vehicle Seats Section -->
+    {% if vehicle_seats %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="align-middle" data-feather="grid"></i> Vehicle Seats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Left Column: Seat Information -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Seat Information</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Seat</th>
+                                            <th>Side</th>
+                                            <th>Floor</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for seat in vehicle_seats %}
+                                        <tr>
+                                            <td><span class="badge bg-info">{{ seat.side }}{{ seat.number }}</span></td>
+                                            <td>{{ seat.side }}</td>
+                                            <td><span class="badge bg-secondary">{{ seat.get_floor_display }}</span></td>
+                                            <td>
+                                                <span class="badge bg-{% if seat.status == 'available' %}success{% elif seat.status == 'booked' %}warning{% else %}danger{% endif %}">
+                                                    {{ seat.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Column: Seat Layout Visualization -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Bus Seat Layout</h5>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Legend -->
+                                    <div class="mb-3">
+                                        <small class="text-muted">Legend:</small>
+                                        <div class="d-flex gap-3 mt-1">
+                                            <div><span class="badge bg-success" style="width: 20px; height: 20px; display: inline-block;"></span> Available</div>
+                                            <div><span class="badge bg-warning" style="width: 20px; height: 20px; display: inline-block;"></span> Booked</div>
+                                            <div><span class="badge bg-danger" style="width: 20px; height: 20px; display: inline-block;"></span> Boarded</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Seat Layout Container -->
+                                    <div id="seat-layout-container" data-seats-json="{{ seats_json|escapejs }}">
+                                        <div class="text-center text-muted py-5">
+                                            <i class="align-middle" data-feather="grid" style="width: 48px; height: 48px;"></i>
+                                            <p class="mt-2 mb-0">Loading seat layout...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
+<script src="{% static 'myadmin/js/travel_vehicle_seats.js' %}"></script>
 <script>
     if (typeof feather !== 'undefined') {
         feather.replace();

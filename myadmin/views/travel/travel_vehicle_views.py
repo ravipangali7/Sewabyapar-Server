@@ -1,4 +1,5 @@
 """Travel Vehicle management views"""
+import json
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
@@ -68,6 +69,30 @@ class TravelVehicleDetailView(StaffRequiredMixin, DetailView):
     model = TravelVehicle
     template_name = 'admin/travel/travel_vehicle_detail.html'
     context_object_name = 'vehicle'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vehicle = self.get_object()
+        
+        # Get vehicle images
+        context['vehicle_images'] = vehicle.images.all()
+        
+        # Get vehicle seats
+        context['vehicle_seats'] = vehicle.seats.all()
+        
+        # Serialize seats to JSON for JavaScript
+        seats_data = []
+        for seat in vehicle.seats.all():
+            seats_data.append({
+                'side': seat.side,
+                'number': seat.number,
+                'status': seat.status,
+                'floor': seat.floor,
+                'id': f"{seat.side}{seat.number}{seat.floor}"
+            })
+        context['seats_json'] = json.dumps(seats_data)
+        
+        return context
 
 
 class TravelVehicleCreateView(StaffRequiredMixin, CreateView):

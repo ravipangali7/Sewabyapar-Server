@@ -124,6 +124,164 @@
     }
 
     /**
+     * Render seat layout from JSON data (for detail page)
+     */
+    function renderSeatLayoutFromData(seatData) {
+        const container = document.getElementById('seat-layout-container');
+        if (!container) return;
+        
+        let seats = [];
+        if (Array.isArray(seatData)) {
+            seats = seatData;
+        } else if (typeof seatData === 'string') {
+            try {
+                seats = JSON.parse(seatData);
+            } catch (e) {
+                console.error('Error parsing seat data:', e);
+                seats = [];
+            }
+        }
+        
+        if (seats.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="align-middle" data-feather="grid" style="width: 48px; height: 48px;"></i>
+                    <p class="mt-2 mb-0">No seats available</p>
+                </div>
+            `;
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+            return;
+        }
+        
+        const grouped = groupSeatsBySideAndFloor(seats);
+        const floors = ['upper', 'lower'];
+        
+        let html = '';
+        
+        floors.forEach(function(floor) {
+            const aSeats = grouped[floor + '_A'] || [];
+            const bSeats = grouped[floor + '_B'] || [];
+            const cSeats = grouped[floor + '_C'] || [];
+            
+            // Check if this floor has any seats
+            const hasSeats = aSeats.length > 0 || bSeats.length > 0 || cSeats.length > 0;
+            
+            if (hasSeats) {
+                html += `<div class="mb-4 seat-layout-floor"><h6 class="mb-3 text-capitalize">${floor} Floor</h6>`;
+                
+                // Create seat maps for quick lookup
+                const aSeatMap = {};
+                aSeats.forEach(function(seat) {
+                    aSeatMap[seat.number] = seat;
+                });
+                
+                const bSeatMap = {};
+                bSeats.forEach(function(seat) {
+                    bSeatMap[seat.number] = seat;
+                });
+                
+                const cSeatMap = {};
+                cSeats.forEach(function(seat) {
+                    cSeatMap[seat.number] = seat;
+                });
+                
+                // Top row: Side A (single column) + Gap + Side B (2 columns)
+                html += '<div class="d-flex align-items-start gap-4 mb-3" style="justify-content: center;">';
+                
+                // Side A - Single column
+                if (aSeats.length > 0) {
+                    const maxANumber = Math.max.apply(Math, aSeats.map(function(s) { return s.number; }));
+                    html += '<div class="side-a-column">';
+                    html += '<div class="text-center mb-2"><strong>A</strong></div>';
+                    html += '<div class="d-flex flex-column gap-2">';
+                    for (let i = 1; i <= maxANumber; i++) {
+                        if (aSeatMap[i]) {
+                            html += renderSeatBox(aSeatMap[i]);
+                        } else {
+                            html += '<div style="width: 50px; height: 40px; margin: 2px;"></div>';
+                        }
+                    }
+                    html += '</div></div>';
+                }
+                
+                // Gap spacer
+                html += '<div style="width: 40px;"></div>';
+                
+                // Side B - Two columns (odd numbers left, even numbers right)
+                if (bSeats.length > 0) {
+                    const maxBNumber = Math.max.apply(Math, bSeats.map(function(s) { return s.number; }));
+                    html += '<div class="side-b-grid">';
+                    html += '<div class="text-center mb-2"><strong>B</strong></div>';
+                    html += '<div class="d-flex gap-2">';
+                    
+                    // Left column (odd numbers: B1, B3, B5, B7...)
+                    html += '<div class="d-flex flex-column gap-2">';
+                    for (let i = 1; i <= maxBNumber; i += 2) {
+                        if (bSeatMap[i]) {
+                            html += renderSeatBox(bSeatMap[i]);
+                        } else {
+                            html += '<div style="width: 50px; height: 40px; margin: 2px;"></div>';
+                        }
+                    }
+                    html += '</div>';
+                    
+                    // Right column (even numbers: B2, B4, B6, B8...)
+                    html += '<div class="d-flex flex-column gap-2">';
+                    for (let i = 2; i <= maxBNumber; i += 2) {
+                        if (bSeatMap[i]) {
+                            html += renderSeatBox(bSeatMap[i]);
+                        } else {
+                            html += '<div style="width: 50px; height: 40px; margin: 2px;"></div>';
+                        }
+                    }
+                    html += '</div>';
+                    
+                    html += '</div></div>';
+                }
+                
+                html += '</div>'; // End top row
+                
+                // Side C - Horizontal row centered below
+                if (cSeats.length > 0) {
+                    const maxCNumber = Math.max.apply(Math, cSeats.map(function(s) { return s.number; }));
+                    html += '<div class="d-flex justify-content-center mb-2">';
+                    html += '<div class="text-center"><strong>C</strong></div>';
+                    html += '</div>';
+                    html += '<div class="d-flex justify-content-center gap-2">';
+                    for (let i = 1; i <= maxCNumber; i++) {
+                        if (cSeatMap[i]) {
+                            html += renderSeatBox(cSeatMap[i]);
+                        } else {
+                            html += '<div style="width: 50px; height: 40px; margin: 2px;"></div>';
+                        }
+                    }
+                    html += '</div>';
+                }
+                
+                html += '</div>'; // End floor container
+            }
+        });
+        
+        if (html === '') {
+            html = `
+                <div class="text-center text-muted py-5">
+                    <i class="align-middle" data-feather="grid" style="width: 48px; height: 48px;"></i>
+                    <p class="mt-2 mb-0">No seats available</p>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+        
+        // Reinitialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    /**
      * Render seat layout
      */
     function renderSeatLayout() {
@@ -275,6 +433,18 @@
      * Initialize seat layout visualization
      */
     function initSeatLayout() {
+        const container = document.getElementById('seat-layout-container');
+        if (!container) return;
+        
+        // Check if we're on a detail page (has data-seats-json attribute)
+        const seatsJson = container.getAttribute('data-seats-json');
+        if (seatsJson) {
+            // This is a detail page, render from JSON data
+            renderSeatLayoutFromData(seatsJson);
+            return;
+        }
+        
+        // Otherwise, this is a form page, use formset
         const formsetPrefix = getFormsetPrefix();
         const formsContainer = document.getElementById(formsetPrefix + '-forms');
         const addButton = document.getElementById('add-' + formsetPrefix + '-row');
