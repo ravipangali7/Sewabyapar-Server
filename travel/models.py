@@ -158,6 +158,7 @@ class TravelBooking(models.Model):
     ]
     
     ticket_number = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    qr_code = models.TextField(blank=True, null=True, help_text='QR code data for ticket scanning')
     customer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='travel_bookings')
     name = models.CharField(max_length=200)
     phone = models.CharField(max_length=20)
@@ -177,6 +178,51 @@ class TravelBooking(models.Model):
     system_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def generate_ticket_number(self):
+        """Generate unique ticket number"""
+        import uuid
+        from datetime import datetime
+        if not self.ticket_number:
+            timestamp = datetime.now().strftime('%Y%m%d')
+            unique_id = str(uuid.uuid4())[:8].upper()
+            self.ticket_number = f"TRV-{timestamp}-{unique_id}"
+        return self.ticket_number
+    
+    def generate_qr_code(self):
+        """Generate QR code data for ticket"""
+        if not self.ticket_number:
+            self.generate_ticket_number()
+        self.qr_code = self.ticket_number
+        return self.qr_code
+    
+    def calculate_commissions(self):
+        """Calculate all commission amounts"""
+        from decimal import Decimal
+        if not self.vehicle:
+            return
+        
+        # System commission
+        self.system_commission = Decimal(str(self.vehicle.seat_price)) - Decimal(str(self.vehicle.actual_seat_price))
+        
+        # Dealer commission
+        if self.agent and self.agent.dealer:
+            dealer = self.agent.dealer
+            if dealer.commission_type == 'flat':
+                self.dealer_commission = Decimal(str(dealer.commission_value))
+            else:  # percentage
+                self.dealer_commission = self.system_commission * (Decimal(str(dealer.commission_value)) / Decimal('100'))
+        else:
+            self.dealer_commission = Decimal('0')
+        
+        # Agent commission
+        if self.agent:
+            if self.agent.commission_type == 'flat':
+                self.agent_commission = Decimal(str(self.agent.commission_value))
+            else:  # percentage
+                self.agent_commission = self.system_commission * (Decimal(str(self.agent.commission_value)) / Decimal('100'))
+        else:
+            self.agent_commission = Decimal('0')
     
     def __str__(self):
         return f"{self.ticket_number or 'N/A'} - {self.name}"

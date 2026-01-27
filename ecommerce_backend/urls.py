@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/', include('ecommerce.urls.api_urls')),
     path('api/shared/', include('shared.urls.api_urls')),
     path('api/taxi/', include('taxi.urls.api_urls')),
+    path('api/travel/', include('travel.urls.api_urls')),
     path('', include('website.urls')),
     path('ckeditor5/', include('django_ckeditor_5.urls')),
 ]

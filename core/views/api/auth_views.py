@@ -150,17 +150,24 @@ def user_logout(request):
 @permission_classes([permissions.IsAuthenticated])
 def user_profile(request):
     """Get current user profile"""
+    from core.utils.role_helpers import get_user_travel_roles, get_user_primary_role
+    
     user_data = UserSerializer(request.user).data
     
-    # Determine user type for response
-    if request.user.is_merchant:
-        user_type = 'merchant'
-    elif request.user.is_driver:
-        user_type = 'driver'
-    else:
-        user_type = 'customer'
+    # Get travel roles
+    travel_roles = get_user_travel_roles(request.user)
     
-    user_data['user_type'] = user_type
+    # Determine user type for response
+    primary_role = get_user_primary_role(request.user)
+    
+    user_data['user_type'] = primary_role
+    user_data['travel_roles'] = {
+        'is_travel_committee': travel_roles['is_travel_committee'],
+        'is_travel_staff': travel_roles['is_travel_staff'],
+        'is_travel_dealer': travel_roles['is_travel_dealer'],
+        'is_agent': travel_roles['is_agent'],
+    }
+    
     return Response(user_data)
 
 
@@ -565,6 +572,41 @@ def delete_account(request):
             return Response({
                 'error': f'Account deletion failed: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def switch_mode(request):
+    """Switch between merchant/customer mode"""
+    from core.utils.role_helpers import get_user_travel_roles, can_switch_to_customer, can_switch_to_merchant
+    
+    mode = request.data.get('mode')  # 'merchant' or 'customer'
+    
+    if mode == 'customer':
+        if not can_switch_to_customer(request.user):
+            return Response({
+                'error': 'You do not have any merchant/travel roles to switch from'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # Just return success - mode switching is handled client-side
+        return Response({
+            'message': 'Switched to customer mode',
+            'mode': 'customer'
+        })
+    
+    elif mode == 'merchant':
+        if not can_switch_to_merchant(request.user):
+            return Response({
+                'error': 'You do not have any travel roles to switch to merchant mode'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # Just return success - mode switching is handled client-side
+        return Response({
+            'message': 'Switched to merchant mode',
+            'mode': 'merchant'
+        })
+    
+    return Response({
+        'error': 'Invalid mode. Use "merchant" or "customer"'
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

@@ -341,7 +341,7 @@ class Withdrawal(models.Model):
         ('rejected', 'Rejected'),
     ]
     
-    merchant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='withdrawals', limit_choices_to={'is_merchant': True})
+    merchant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='withdrawals')
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.ForeignKey('UserPaymentMethod', on_delete=models.SET_NULL, null=True, blank=True, related_name='withdrawals', help_text='Payment method used for this withdrawal')
@@ -372,6 +372,8 @@ class Transaction(models.Model):
         ('sabpaisa_payment', 'SabPaisa Payment'),
         ('razorpay_payment', 'Razorpay Payment'),
         ('payout', 'Merchant Payout'),
+        ('travel_booking_revenue', 'Travel Booking Revenue'),
+        ('travel_booking_commission', 'Travel Booking Commission'),
     ]
     
     STATUS_CHOICES = [
@@ -388,6 +390,7 @@ class Transaction(models.Model):
     description = models.TextField(blank=True, help_text='Transaction description')
     related_order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related order for commission/payout/phonepe transactions')
     related_withdrawal = models.ForeignKey('Withdrawal', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related withdrawal for withdrawal transactions')
+    related_travel_booking = models.ForeignKey('travel.TravelBooking', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', help_text='Related travel booking for travel transactions')
     # PhonePe/SabPaisa transaction fields
     merchant_order_id = models.CharField(max_length=100, blank=True, null=True, help_text='Merchant Order ID for PhonePe/SabPaisa payment callbacks (clientTxnId for SabPaisa)', db_index=True)
     utr = models.CharField(max_length=100, blank=True, null=True, help_text='Unique Transaction Reference (UTR) for PhonePe transactions')
