@@ -3,7 +3,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from travel.models import (
     TravelCommittee, TravelVehicle, TravelVehicleImage, TravelVehicleSeat,
-    TravelCommitteeStaff, TravelDealer, TravelAgent, TravelBooking
+    TravelCommitteeStaff, TravelDealer, TravelBooking
 )
 from core.models import User
 from shared.models import Place
@@ -110,20 +110,6 @@ class TravelDealerForm(forms.ModelForm):
         fields = ['user', 'commission_type', 'commission_value', 'is_active']
         widgets = {
             'user': forms.Select(attrs={'class': 'form-select'}),
-            'commission_type': forms.Select(attrs={'class': 'form-select'}),
-            'commission_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
-class TravelAgentForm(forms.ModelForm):
-    class Meta:
-        model = TravelAgent
-        fields = ['user', 'dealer', 'committees', 'commission_type', 'commission_value', 'is_active']
-        widgets = {
-            'user': forms.Select(attrs={'class': 'form-select'}),
-            'dealer': forms.Select(attrs={'class': 'form-select'}),
-            'committees': forms.SelectMultiple(attrs={'class': 'form-select'}),
             'commission_type': forms.Select(attrs={'class': 'form-select'}),
             'commission_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

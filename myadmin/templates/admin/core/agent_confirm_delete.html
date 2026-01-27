@@ -1,0 +1,4 @@
+{% extends 'admin/layouts/base.html' %}
+{% block content %}
+<div class="container-fluid p-0"><div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="card-title mb-0">Confirm Delete</h5></div><div class="card-body"><p>Are you sure you want to delete agent <strong>{{ agent.user.name }}</strong>?</p><form method="post">{% csrf_token %}<button type="submit" class="btn btn-danger">Yes, Delete</button><a href="{% url 'myadmin:core:agent_list' %}" class="btn btn-secondary">Cancel</a></form></div></div></div></div></div>
+{% endblock %}

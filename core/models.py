@@ -409,3 +409,30 @@ class Transaction(models.Model):
             models.Index(fields=['transaction_type', '-created_at']),
             models.Index(fields=['merchant_order_id']),
         ]
+
+
+class Agent(models.Model):
+    """Agent model - moved from travel app"""
+    COMMISSION_TYPE_CHOICES = [
+        ('flat', 'Flat'),
+        ('percentage', 'Percentage'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
+    dealer = models.ForeignKey('travel.TravelDealer', on_delete=models.SET_NULL, null=True, blank=True, related_name='agents')
+    committees = models.ManyToManyField('travel.TravelCommittee', related_name='agents', blank=True)
+    commission_type = models.CharField(max_length=20, choices=COMMISSION_TYPE_CHOICES, default='percentage')
+    commission_value = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        if self.dealer:
+            return f"{self.user.name} - {self.dealer.user.name}"
+        return f"{self.user.name}"
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Agent'
+        verbose_name_plural = 'Agents'

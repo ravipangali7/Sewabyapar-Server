@@ -135,7 +135,7 @@
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="user" style="width: 16px; height: 16px;"></i> Agent:</strong></div>
                         <div class="col-sm-8">
-                            <a href="{% url 'myadmin:travel:travel_agent_detail' booking.agent.pk %}" class="text-decoration-none">{{ booking.agent.user.name }}</a>
+                            <a href="{% url 'myadmin:core:agent_detail' booking.agent.pk %}" class="text-decoration-none">{{ booking.agent.user.name }}</a>
                         </div>
                     </div>
                     {% endif %}

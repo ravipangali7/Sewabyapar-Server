@@ -3,7 +3,7 @@ from django.urls import path
 from myadmin.views.travel import (
     travel_committee_views, travel_vehicle_views, travel_vehicle_image_views,
     travel_vehicle_seat_views, travel_committee_staff_views, travel_dealer_views,
-    travel_agent_views, travel_booking_views
+    travel_booking_views
 )
 
 app_name = 'travel'
@@ -50,13 +50,6 @@ urlpatterns = [
     path('dealers/create/', travel_dealer_views.TravelDealerCreateView.as_view(), name='travel_dealer_create'),
     path('dealers/<int:pk>/update/', travel_dealer_views.TravelDealerUpdateView.as_view(), name='travel_dealer_update'),
     path('dealers/<int:pk>/delete/', travel_dealer_views.TravelDealerDeleteView.as_view(), name='travel_dealer_delete'),
-    
-    # Travel Agent URLs
-    path('agents/', travel_agent_views.TravelAgentListView.as_view(), name='travel_agent_list'),
-    path('agents/<int:pk>/', travel_agent_views.TravelAgentDetailView.as_view(), name='travel_agent_detail'),
-    path('agents/create/', travel_agent_views.TravelAgentCreateView.as_view(), name='travel_agent_create'),
-    path('agents/<int:pk>/update/', travel_agent_views.TravelAgentUpdateView.as_view(), name='travel_agent_update'),
-    path('agents/<int:pk>/delete/', travel_agent_views.TravelAgentDeleteView.as_view(), name='travel_agent_delete'),
     
     # Travel Booking URLs
     path('bookings/', travel_booking_views.TravelBookingListView.as_view(), name='travel_booking_list'),

@@ -144,31 +144,6 @@ class TravelDealer(models.Model):
         verbose_name_plural = 'Travel Dealers'
 
 
-class TravelAgent(models.Model):
-    """Travel Agent model"""
-    COMMISSION_TYPE_CHOICES = [
-        ('flat', 'Flat'),
-        ('percentage', 'Percentage'),
-    ]
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='travel_agents')
-    dealer = models.ForeignKey(TravelDealer, on_delete=models.CASCADE, related_name='agents')
-    committees = models.ManyToManyField(TravelCommittee, related_name='agents', blank=True)
-    commission_type = models.CharField(max_length=20, choices=COMMISSION_TYPE_CHOICES, default='percentage')
-    commission_value = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.user.name} - {self.dealer.user.name}"
-    
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Travel Agent'
-        verbose_name_plural = 'Travel Agents'
-
-
 class TravelBooking(models.Model):
     """Travel Booking model"""
     GENDER_CHOICES = [
@@ -189,7 +164,7 @@ class TravelBooking(models.Model):
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     nationality = models.CharField(max_length=100, blank=True, null=True)
     remarks = models.TextField(blank=True, null=True)
-    agent = models.ForeignKey(TravelAgent, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
+    agent = models.ForeignKey('core.Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
     vehicle = models.ForeignKey(TravelVehicle, on_delete=models.CASCADE, related_name='bookings')
     vehicle_seat = models.ForeignKey(TravelVehicleSeat, on_delete=models.CASCADE, related_name='bookings')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

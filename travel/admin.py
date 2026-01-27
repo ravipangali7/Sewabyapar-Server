@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     TravelCommittee, TravelVehicle, TravelVehicleImage, TravelVehicleSeat,
-    TravelCommitteeStaff, TravelDealer, TravelAgent, TravelBooking
+    TravelCommitteeStaff, TravelDealer, TravelBooking
 )
 
 
@@ -51,15 +51,6 @@ class TravelDealerAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'commission_type', 'created_at']
     search_fields = ['user__name', 'user__phone']
     readonly_fields = ['created_at', 'updated_at']
-
-
-@admin.register(TravelAgent)
-class TravelAgentAdmin(admin.ModelAdmin):
-    list_display = ['user', 'dealer', 'commission_type', 'commission_value', 'is_active', 'created_at']
-    list_filter = ['is_active', 'commission_type', 'created_at']
-    search_fields = ['user__name', 'user__phone', 'dealer__user__name']
-    readonly_fields = ['created_at', 'updated_at']
-    filter_horizontal = ['committees']
 
 
 @admin.register(TravelBooking)

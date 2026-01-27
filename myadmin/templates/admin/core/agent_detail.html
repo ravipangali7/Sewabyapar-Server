@@ -4,14 +4,14 @@
 {% block content %}
 <div class="container-fluid p-0">
     <div class="mb-3">
-        <h1 class="h3 d-inline align-middle">Travel Agent Details</h1>
-        <a class="btn btn-primary ms-2" href="{% url 'myadmin:travel:travel_agent_update' agent.pk %}">
+        <h1 class="h3 d-inline align-middle">Agent Details</h1>
+        <a class="btn btn-primary ms-2" href="{% url 'myadmin:core:agent_update' agent.pk %}">
             <i class="align-middle" data-feather="edit"></i> Edit
         </a>
-        <a class="btn btn-danger ms-2" href="{% url 'myadmin:travel:travel_agent_delete' agent.pk %}">
+        <a class="btn btn-danger ms-2" href="{% url 'myadmin:core:agent_delete' agent.pk %}">
             <i class="align-middle" data-feather="trash-2"></i> Delete
         </a>
-        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:travel:travel_agent_list' %}">
+        <a class="btn btn-secondary ms-2" href="{% url 'myadmin:core:agent_list' %}">
             <i class="align-middle" data-feather="arrow-left"></i> Back to List
         </a>
     </div>
@@ -110,7 +110,11 @@
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong><i class="align-middle" data-feather="users" style="width: 16px; height: 16px;"></i> Dealer:</strong></div>
                         <div class="col-sm-8">
-                            <a href="{% url 'myadmin:travel:travel_dealer_detail' agent.dealer.pk %}" class="text-decoration-none">{{ agent.dealer.user.name }}</a>
+                            {% if agent.dealer %}
+                                <a href="{% url 'myadmin:travel:travel_dealer_detail' agent.dealer.pk %}" class="text-decoration-none">{{ agent.dealer.user.name }}</a>
+                            {% else %}
+                                None
+                            {% endif %}
                         </div>
                     </div>
                     <div class="row mb-3">

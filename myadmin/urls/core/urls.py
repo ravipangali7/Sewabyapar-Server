@@ -1,6 +1,6 @@
 """Core app URLs"""
 from django.urls import path
-from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views, transaction_views, payment_method_views, withdrawal_views
+from myadmin.views.core import user_views, address_views, otp_views, notification_views, kyc_views, supersetting_views, transaction_views, payment_method_views, withdrawal_views, agent_views
 
 app_name = 'core'
 
@@ -79,5 +79,12 @@ urlpatterns = [
     path('withdrawals/<int:pk>/delete/', withdrawal_views.WithdrawalDeleteView.as_view(), name='withdrawal_delete'),
     path('withdrawals/<int:pk>/approve/', withdrawal_views.WithdrawalApproveView.as_view(), name='withdrawal_approve'),
     path('withdrawals/<int:pk>/reject/', withdrawal_views.WithdrawalRejectView.as_view(), name='withdrawal_reject'),
+    
+    # Agent URLs
+    path('agents/', agent_views.AgentListView.as_view(), name='agent_list'),
+    path('agents/<int:pk>/', agent_views.AgentDetailView.as_view(), name='agent_detail'),
+    path('agents/create/', agent_views.AgentCreateView.as_view(), name='agent_create'),
+    path('agents/<int:pk>/update/', agent_views.AgentUpdateView.as_view(), name='agent_update'),
+    path('agents/<int:pk>/delete/', agent_views.AgentDeleteView.as_view(), name='agent_delete'),
 ]
 

@@ -2,7 +2,7 @@
 Forms for core models
 """
 from django import forms
-from core.models import User, Address, Notification, SuperSetting, Transaction, UserPaymentMethod, Withdrawal
+from core.models import User, Address, Notification, SuperSetting, Transaction, UserPaymentMethod, Withdrawal, Agent
 
 
 class UserForm(forms.ModelForm):
@@ -539,4 +539,19 @@ class WithdrawalForm(forms.ModelForm):
                 })
         
         return cleaned_data
+
+
+class AgentForm(forms.ModelForm):
+    """Form for Agent"""
+    class Meta:
+        model = Agent
+        fields = ['user', 'dealer', 'committees', 'commission_type', 'commission_value', 'is_active']
+        widgets = {
+            'user': forms.Select(attrs={'class': 'form-select'}),
+            'dealer': forms.Select(attrs={'class': 'form-select'}),
+            'committees': forms.SelectMultiple(attrs={'class': 'form-select'}),
+            'commission_type': forms.Select(attrs={'class': 'form-select'}),
+            'commission_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
