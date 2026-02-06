@@ -22,7 +22,7 @@ def vehicle_list(request):
     if request.method == 'POST':
         return vehicle_create(request)
     roles = check_user_travel_role(request.user)
-    
+    # Committee filter must match travel_committee_dashboard stats (same committee).
     if roles['is_travel_committee']:
         vehicles = TravelVehicle.objects.filter(committee=roles['committee'])
     elif roles['is_travel_staff']:
