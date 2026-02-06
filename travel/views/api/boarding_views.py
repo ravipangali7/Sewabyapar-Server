@@ -11,18 +11,25 @@ from travel.serializers import TravelBookingSerializer
 from travel.utils import check_user_travel_role
 
 
+def _get_boarding_committee(roles):
+    """Committee that can access boarding: committee user or staff with permission."""
+    if roles['is_travel_committee']:
+        return roles['committee']
+    if roles['is_travel_staff'] and roles['staff'].boarding_permission:
+        return roles['staff'].travel_committee
+    return None
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def boarding_screen(request):
-    """Get boarding queue for staff with boarding permission"""
+    """Get boarding queue - committee or staff with boarding permission"""
     roles = check_user_travel_role(request.user)
-    
-    if not roles['is_travel_staff'] or not roles['staff'].boarding_permission:
+    committee = _get_boarding_committee(roles)
+    if not committee:
         return Response({
             'error': 'You do not have boarding permission'
         }, status=status.HTTP_403_FORBIDDEN)
-    
-    committee = roles['staff'].travel_committee
     
     # Get bookings ready for boarding (status='booked')
     bookings = TravelBooking.objects.filter(
@@ -37,10 +44,10 @@ def boarding_screen(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def scan_ticket(request):
-    """Validate ticket by number or QR code scan"""
+    """Validate ticket by number or QR code scan - committee or staff with permission"""
     roles = check_user_travel_role(request.user)
-    
-    if not roles['is_travel_staff'] or not roles['staff'].boarding_permission:
+    committee = _get_boarding_committee(roles)
+    if not committee:
         return Response({
             'error': 'You do not have boarding permission'
         }, status=status.HTTP_403_FORBIDDEN)
@@ -59,7 +66,7 @@ def scan_ticket(request):
     try:
         booking = TravelBooking.objects.get(
             ticket_number=search_value,
-            vehicle__committee=roles['staff'].travel_committee
+            vehicle__committee=committee
         )
     except TravelBooking.DoesNotExist:
         return Response({
@@ -94,18 +101,18 @@ def scan_ticket(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def confirm_boarding(request, booking_id):
-    """Confirm boarding - update status and distribute commissions"""
+    """Confirm boarding - committee or staff with permission"""
     roles = check_user_travel_role(request.user)
-    
-    if not roles['is_travel_staff'] or not roles['staff'].boarding_permission:
+    committee = _get_boarding_committee(roles)
+    if not committee:
         return Response({
             'error': 'You do not have boarding permission'
         }, status=status.HTTP_403_FORBIDDEN)
     
     booking = get_object_or_404(TravelBooking, pk=booking_id)
     
-    # Verify booking belongs to staff's committee
-    if booking.vehicle.committee != roles['staff'].travel_committee:
+    # Verify booking belongs to committee
+    if booking.vehicle.committee != committee:
         return Response({
             'error': 'Booking does not belong to your committee'
         }, status=status.HTTP_403_FORBIDDEN)

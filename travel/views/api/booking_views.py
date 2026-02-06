@@ -8,7 +8,11 @@ from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime
 from travel.models import TravelBooking, TravelVehicle, TravelVehicleSeat
-from travel.serializers import TravelBookingSerializer, TravelBookingCreateSerializer
+from travel.serializers import (
+    TravelBookingSerializer,
+    TravelBookingCreateSerializer,
+    TravelBookingUpdateSerializer,
+)
 from travel.utils import check_user_travel_role, validate_booking_date, generate_ticket_pdf
 from travel.services.commission_service import calculate_commissions
 from django.http import HttpResponse
@@ -119,34 +123,58 @@ def my_bookings(request):
     return Response(serializer.data)
 
 
-@api_view(['GET'])
+def _booking_access(booking, roles, request_user):
+    """Return True if user can view this booking."""
+    if roles['is_travel_committee']:
+        return booking.vehicle.committee == roles['committee']
+    if roles['is_travel_staff']:
+        return booking.vehicle.committee == roles['staff'].travel_committee
+    if roles['is_travel_dealer']:
+        return booking.agent and booking.agent.dealer == roles['dealer']
+    if roles['is_agent']:
+        return booking.agent == roles['agent']
+    return booking.customer == request_user
+
+
+def _booking_can_edit(booking, roles):
+    """Return True if user can edit this booking (committee or staff)."""
+    if roles['is_travel_committee']:
+        return booking.vehicle.committee == roles['committee']
+    if roles['is_travel_staff']:
+        return booking.vehicle.committee == roles['staff'].travel_committee
+    return False
+
+
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def booking_detail(request, pk):
-    """Get booking details with QR"""
+    """Get booking details with QR, or update booking (PATCH) - committee/staff"""
     booking = get_object_or_404(TravelBooking, pk=pk)
-    
-    # Check permissions
     roles = check_user_travel_role(request.user)
-    has_access = False
-    
-    if roles['is_travel_committee']:
-        has_access = booking.vehicle.committee == roles['committee']
-    elif roles['is_travel_staff']:
-        has_access = booking.vehicle.committee == roles['staff'].travel_committee
-    elif roles['is_travel_dealer']:
-        has_access = booking.agent and booking.agent.dealer == roles['dealer']
-    elif roles['is_agent']:
-        has_access = booking.agent == roles['agent']
-    else:
-        has_access = booking.customer == request.user
-    
-    if not has_access:
+    if not _booking_access(booking, roles, request.user):
         return Response({
             'error': 'You do not have permission to view this booking'
         }, status=status.HTTP_403_FORBIDDEN)
-    
-    serializer = TravelBookingSerializer(booking, context={'request': request})
-    return Response(serializer.data)
+
+    if request.method == 'GET':
+        serializer = TravelBookingSerializer(booking, context={'request': request})
+        return Response(serializer.data)
+
+    if request.method == 'PATCH':
+        if not _booking_can_edit(booking, roles):
+            return Response({
+                'error': 'You do not have permission to update this booking'
+            }, status=status.HTTP_403_FORBIDDEN)
+        serializer = TravelBookingUpdateSerializer(
+            booking, data=request.data, partial=True
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        out = TravelBookingSerializer(booking, context={'request': request})
+        return Response(out.data)
+
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @api_view(['GET'])

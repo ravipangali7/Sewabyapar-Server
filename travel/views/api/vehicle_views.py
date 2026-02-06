@@ -6,15 +6,21 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import datetime
-from travel.models import TravelVehicle, TravelVehicleSeat
-from travel.serializers import TravelVehicleSerializer, TravelVehicleSeatSerializer
+from travel.models import TravelVehicle, TravelVehicleSeat, TravelBooking
+from travel.serializers import (
+    TravelVehicleSerializer,
+    TravelVehicleCreateUpdateSerializer,
+    TravelVehicleSeatSerializer,
+)
 from travel.utils import check_user_travel_role, validate_booking_date
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def vehicle_list(request):
-    """List vehicles filtered by role"""
+    """List vehicles (GET) or create vehicle (POST, committee only)"""
+    if request.method == 'POST':
+        return vehicle_create(request)
     roles = check_user_travel_role(request.user)
     
     if roles['is_travel_committee']:
@@ -42,16 +48,13 @@ def vehicle_list(request):
     return Response(serializer.data)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def vehicle_detail(request, pk):
-    """Get vehicle details with seat layout"""
+    """Get, update, or delete vehicle"""
     vehicle = get_object_or_404(TravelVehicle, pk=pk)
-    
-    # Check permissions
     roles = check_user_travel_role(request.user)
     has_access = False
-    
     if roles['is_travel_committee']:
         has_access = vehicle.committee == roles['committee']
     elif roles['is_travel_staff']:
@@ -60,14 +63,20 @@ def vehicle_detail(request, pk):
         has_access = vehicle.committee in roles['agent'].committees.all()
     else:
         has_access = vehicle.is_active
-    
+
     if not has_access:
         return Response({
-            'error': 'You do not have permission to view this vehicle'
+            'error': 'You do not have permission to access this vehicle'
         }, status=status.HTTP_403_FORBIDDEN)
-    
-    serializer = TravelVehicleSerializer(vehicle, context={'request': request})
-    return Response(serializer.data)
+
+    if request.method == 'GET':
+        serializer = TravelVehicleSerializer(vehicle, context={'request': request})
+        return Response(serializer.data)
+    if request.method in ('PATCH', 'PUT'):
+        return vehicle_update(request, pk)
+    if request.method == 'DELETE':
+        return vehicle_delete(request, pk)
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @api_view(['GET'])
@@ -144,3 +153,73 @@ def available_seats(request, vehicle_id):
         })
     
     return Response(seats_data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def vehicle_create(request):
+    """Create vehicle - committee only"""
+    roles = check_user_travel_role(request.user)
+    if not roles['is_travel_committee']:
+        return Response({
+            'error': 'Only Travel Committee can create vehicles'
+        }, status=status.HTTP_403_FORBIDDEN)
+    committee = roles['committee']
+    data = request.data.copy()
+    data['committee'] = committee.id
+    serializer = TravelVehicleCreateUpdateSerializer(data=data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    vehicle = serializer.save()
+    out = TravelVehicleSerializer(vehicle, context={'request': request})
+    return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH', 'PUT'])
+@permission_classes([IsAuthenticated])
+def vehicle_update(request, pk):
+    """Update vehicle - committee only"""
+    roles = check_user_travel_role(request.user)
+    if not roles['is_travel_committee']:
+        return Response({
+            'error': 'Only Travel Committee can update vehicles'
+        }, status=status.HTTP_403_FORBIDDEN)
+    vehicle = get_object_or_404(TravelVehicle, pk=pk)
+    if vehicle.committee != roles['committee']:
+        return Response({
+            'error': 'You do not have permission to update this vehicle'
+        }, status=status.HTTP_403_FORBIDDEN)
+    partial = request.method == 'PATCH'
+    data = request.data.copy()
+    data.pop('committee', None)
+    serializer = TravelVehicleCreateUpdateSerializer(
+        vehicle, data=data, partial=partial
+    )
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    vehicle = serializer.save()
+    out = TravelVehicleSerializer(vehicle, context={'request': request})
+    return Response(out.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def vehicle_delete(request, pk):
+    """Delete vehicle (soft: set is_active=False) - committee only"""
+    roles = check_user_travel_role(request.user)
+    if not roles['is_travel_committee']:
+        return Response({
+            'error': 'Only Travel Committee can delete vehicles'
+        }, status=status.HTTP_403_FORBIDDEN)
+    vehicle = get_object_or_404(TravelVehicle, pk=pk)
+    if vehicle.committee != roles['committee']:
+        return Response({
+            'error': 'You do not have permission to delete this vehicle'
+        }, status=status.HTTP_403_FORBIDDEN)
+    has_bookings = TravelBooking.objects.filter(vehicle=vehicle).exists()
+    if has_bookings:
+        vehicle.is_active = False
+        vehicle.save()
+        return Response({'message': 'Vehicle deactivated (has existing bookings)'})
+    vehicle.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)

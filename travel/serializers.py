@@ -52,6 +52,25 @@ class TravelVehicleSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class TravelVehicleCreateUpdateSerializer(serializers.ModelSerializer):
+    """Travel Vehicle create/update serializer (write-only fields)"""
+    class Meta:
+        model = TravelVehicle
+        fields = [
+            'name', 'vehicle_no', 'committee', 'image', 'is_active',
+            'from_place', 'to_place', 'departure_time', 'actual_seat_price',
+            'seat_price'
+        ]
+    
+    def validate_vehicle_no(self, value):
+        qs = TravelVehicle.objects.filter(vehicle_no=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A vehicle with this number already exists.')
+        return value
+
+
 class SeatLayoutSerializer(serializers.Serializer):
     """Seat layout structure serializer"""
     vehicle_id = serializers.IntegerField()
@@ -141,6 +160,21 @@ class TravelBookingCreateSerializer(serializers.ModelSerializer):
         return data
 
 
+class TravelBookingUpdateSerializer(serializers.ModelSerializer):
+    """Travel Booking update serializer - status and optional fields for committee"""
+    class Meta:
+        model = TravelBooking
+        fields = ['status', 'name', 'phone', 'remarks']
+    
+    def validate_status(self, value):
+        allowed = {'pending', 'booked', 'boarded'}
+        if value not in allowed:
+            raise serializers.ValidationError(
+                f'Status must be one of: {", ".join(allowed)}'
+            )
+        return value
+
+
 class TravelCommitteeStaffSerializer(serializers.ModelSerializer):
     """Travel Committee Staff serializer"""
     user = UserSerializer(read_only=True)
@@ -153,6 +187,16 @@ class TravelCommitteeStaffSerializer(serializers.ModelSerializer):
             'boarding_permission', 'finance_permission', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TravelCommitteeStaffWriteSerializer(serializers.ModelSerializer):
+    """Travel Committee Staff create/update serializer"""
+    class Meta:
+        model = TravelCommitteeStaff
+        fields = [
+            'user', 'travel_committee', 'booking_permission',
+            'boarding_permission', 'finance_permission'
+        ]
 
 
 class TravelDealerSerializer(serializers.ModelSerializer):
