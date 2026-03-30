@@ -79,7 +79,7 @@ class SeatLayoutSerializer(serializers.Serializer):
 
 
 class TravelBookingSerializer(serializers.ModelSerializer):
-    """Travel Booking serializer"""
+    """Travel Booking serializer — committee/staff (operational / payout detail)."""
     customer = UserSerializer(read_only=True)
     vehicle = TravelVehicleSerializer(read_only=True)
     vehicle_seat = TravelVehicleSeatSerializer(read_only=True)
@@ -93,9 +93,10 @@ class TravelBookingSerializer(serializers.ModelSerializer):
             'nationality', 'remarks', 'agent', 'vehicle', 'vehicle_seat', 'status',
             'booking_date', 'boarding_date', 'boarding_place', 'actual_price',
             'dealer_commission', 'agent_commission', 'system_commission',
+            'commission_distributed',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'ticket_number', 'qr_code', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'ticket_number', 'qr_code', 'created_at', 'updated_at', 'commission_distributed']
     
     def get_agent(self, obj):
         """Get agent information"""
@@ -110,6 +111,83 @@ class TravelBookingSerializer(serializers.ModelSerializer):
                 'is_active': obj.agent.is_active,
             }
         return None
+
+
+class TravelBookingPublicSerializer(serializers.ModelSerializer):
+    """Agent, dealer, customer — no internal split fields; optional booking_revenue for this user."""
+    customer = UserSerializer(read_only=True)
+    vehicle = TravelVehicleSerializer(read_only=True)
+    vehicle_seat = TravelVehicleSeatSerializer(read_only=True)
+    agent = serializers.SerializerMethodField()
+    boarding_place = PlaceSerializer(read_only=True)
+    booking_revenue = serializers.SerializerMethodField()
+    fare = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TravelBooking
+        fields = [
+            'id', 'ticket_number', 'qr_code', 'customer', 'name', 'phone', 'gender',
+            'nationality', 'remarks', 'agent', 'vehicle', 'vehicle_seat', 'status',
+            'booking_date', 'boarding_date', 'boarding_place',
+            'booking_revenue', 'fare',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'ticket_number', 'qr_code', 'customer', 'name', 'phone', 'gender',
+            'nationality', 'remarks', 'agent', 'vehicle', 'vehicle_seat', 'status',
+            'booking_date', 'boarding_date', 'boarding_place',
+            'booking_revenue', 'fare',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_agent(self, obj):
+        if obj.agent:
+            return {
+                'id': obj.agent.id,
+                'user': {
+                    'id': obj.agent.user.id,
+                    'name': obj.agent.user.name,
+                    'phone': obj.agent.user.phone,
+                },
+                'is_active': obj.agent.is_active,
+            }
+        return None
+    
+    def get_booking_revenue(self, obj):
+        """Your revenue from this booking (not commission %)."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        from travel.utils import check_user_travel_role
+        roles = check_user_travel_role(request.user)
+        if roles['is_agent'] and obj.agent and obj.agent.user_id == request.user.id:
+            return float(obj.agent_commission)
+        if roles['is_travel_dealer'] and obj.agent and obj.agent.dealer and obj.agent.dealer.user_id == request.user.id:
+            return float(obj.dealer_commission)
+        return None
+    
+    def get_fare(self, obj):
+        if obj.vehicle:
+            return float(obj.vehicle.seat_price)
+        return None
+
+
+def _use_internal_booking_serializer(request):
+    from travel.utils import check_user_travel_role
+    roles = check_user_travel_role(request.user)
+    return roles['is_travel_committee'] or roles['is_travel_staff']
+
+
+def serialize_booking(booking, request):
+    if _use_internal_booking_serializer(request):
+        return TravelBookingSerializer(booking, context={'request': request}).data
+    return TravelBookingPublicSerializer(booking, context={'request': request}).data
+
+
+def serialize_bookings(bookings, request):
+    if _use_internal_booking_serializer(request):
+        return TravelBookingSerializer(bookings, many=True, context={'request': request}).data
+    return TravelBookingPublicSerializer(bookings, many=True, context={'request': request}).data
 
 
 class TravelBookingCreateSerializer(serializers.ModelSerializer):
@@ -167,12 +245,23 @@ class TravelBookingUpdateSerializer(serializers.ModelSerializer):
         fields = ['status', 'name', 'phone', 'remarks']
     
     def validate_status(self, value):
-        allowed = {'pending', 'booked', 'boarded'}
+        allowed = {'pending', 'booked', 'boarded', 'cancelled'}
         if value not in allowed:
             raise serializers.ValidationError(
                 f'Status must be one of: {", ".join(allowed)}'
             )
         return value
+    
+    def update(self, instance, validated_data):
+        new_status = validated_data.get('status', instance.status)
+        if new_status == 'cancelled' and instance.status != 'cancelled':
+            if instance.status == 'boarded':
+                raise serializers.ValidationError('Cannot cancel a boarded ticket.')
+            seat = instance.vehicle_seat
+            if seat.status == 'booked':
+                seat.status = 'available'
+                seat.save()
+        return super().update(instance, validated_data)
 
 
 class TravelCommitteeStaffSerializer(serializers.ModelSerializer):
@@ -210,14 +299,3 @@ class TravelDealerSerializer(serializers.ModelSerializer):
             'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class RevenueHistorySerializer(serializers.Serializer):
-    """Revenue history serializer based on transactions"""
-    id = serializers.IntegerField()
-    transaction_type = serializers.CharField()
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
-    status = serializers.CharField()
-    description = serializers.CharField()
-    booking = TravelBookingSerializer(read_only=True, source='related_travel_booking')
-    created_at = serializers.DateTimeField()

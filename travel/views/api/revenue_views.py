@@ -9,7 +9,7 @@ from datetime import timedelta
 from decimal import Decimal
 from core.models import Transaction
 from travel.utils import check_user_travel_role
-from travel.serializers import RevenueHistorySerializer
+from travel.serializers import TravelBookingPublicSerializer
 
 
 @api_view(['GET'])
@@ -50,16 +50,21 @@ def revenue_history(request):
     # Order by created_at desc
     transactions = transactions.order_by('-created_at')
     
-    # Serialize
     data = []
     for transaction in transactions:
+        booking_data = None
+        if transaction.related_travel_booking:
+            booking_data = TravelBookingPublicSerializer(
+                transaction.related_travel_booking,
+                context={'request': request},
+            ).data
         data.append({
             'id': transaction.id,
             'transaction_type': transaction.transaction_type,
             'amount': float(transaction.amount),
             'status': transaction.status,
             'description': transaction.description,
-            'booking': RevenueHistorySerializer(transaction.related_travel_booking).data if transaction.related_travel_booking else None,
+            'booking': booking_data,
             'created_at': transaction.created_at,
         })
     

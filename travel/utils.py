@@ -79,6 +79,14 @@ def calculate_travel_commissions(booking):
         agent_commission = agent_commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     booking.agent_commission = agent_commission
     
+    # Dealer + agent share cannot exceed system commission pool (tolerance for rounding)
+    pool = dealer_commission + agent_commission
+    if pool > system_commission + Decimal('0.02'):
+        raise ValueError(
+            'Dealer and agent revenue amounts exceed the available pool for this booking. '
+            'Adjust dealer/agent commission settings.'
+        )
+    
     return {
         'system_commission': system_commission,
         'dealer_commission': dealer_commission,

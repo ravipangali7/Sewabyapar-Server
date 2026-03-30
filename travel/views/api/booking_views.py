@@ -4,19 +4,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db import transaction as db_transaction
 from django.utils import timezone
 from datetime import datetime
 from travel.models import TravelBooking, TravelVehicle, TravelVehicleSeat
 from travel.serializers import (
-    TravelBookingSerializer,
     TravelBookingCreateSerializer,
     TravelBookingUpdateSerializer,
+    serialize_bookings,
+    serialize_booking,
 )
 from travel.utils import check_user_travel_role, validate_booking_date, generate_ticket_pdf
 from travel.services.commission_service import calculate_commissions
 from django.http import HttpResponse
-import uuid
+from rest_framework.exceptions import ValidationError
 
 
 @api_view(['POST'])
@@ -46,43 +47,42 @@ def create_booking(request):
         return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
     
     # Get seats
-    seats = TravelVehicleSeat.objects.filter(id__in=seat_ids, vehicle=vehicle, status='available')
+    seats = list(
+        TravelVehicleSeat.objects.filter(id__in=seat_ids, vehicle=vehicle, status='available')
+    )
     
-    if seats.count() != len(seat_ids):
+    if len(seats) != len(seat_ids):
         return Response({
             'error': 'Some selected seats are not available'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Create bookings for each seat
     created_bookings = []
-    for seat in seats:
-        booking_data = data.copy()
-        booking_data['vehicle_seat'] = seat
-        booking_data['actual_price'] = vehicle.actual_seat_price
-        
-        # Set agent if user is agent
-        if roles['is_agent']:
-            booking_data['agent'] = roles['agent']
-        
-        booking = TravelBooking.objects.create(**booking_data)
-        
-        # Generate ticket number and QR code
-        booking.generate_ticket_number()
-        booking.generate_qr_code()
-        
-        # Calculate commissions
-        calculate_commissions(booking)
-        booking.save()
-        
-        # Update seat status
-        seat.status = 'booked'
-        seat.save()
-        
-        created_bookings.append(booking)
+    with db_transaction.atomic():
+        for seat in seats:
+            booking_data = data.copy()
+            booking_data['vehicle_seat'] = seat
+            booking_data['actual_price'] = vehicle.actual_seat_price
+            booking_data['status'] = 'booked'
+            
+            if roles['is_agent']:
+                booking_data['agent'] = roles['agent']
+            
+            booking = TravelBooking.objects.create(**booking_data)
+            booking.generate_ticket_number()
+            booking.generate_qr_code()
+            try:
+                calculate_commissions(booking)
+            except ValueError as e:
+                raise ValidationError(str(e))
+            booking.save()
+            seat.status = 'booked'
+            seat.save()
+            created_bookings.append(booking)
     
-    # Serialize and return
-    serializer = TravelBookingSerializer(created_bookings, many=True, context={'request': request})
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(
+        serialize_bookings(created_bookings, request),
+        status=status.HTTP_201_CREATED
+    )
 
 
 @api_view(['GET'])
@@ -119,8 +119,7 @@ def my_bookings(request):
     # Order by created_at desc
     bookings = bookings.order_by('-created_at')
     
-    serializer = TravelBookingSerializer(bookings, many=True, context={'request': request})
-    return Response(serializer.data)
+    return Response(serialize_bookings(bookings, request))
 
 
 def _booking_access(booking, roles, request_user):
@@ -157,8 +156,7 @@ def booking_detail(request, pk):
         }, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
-        serializer = TravelBookingSerializer(booking, context={'request': request})
-        return Response(serializer.data)
+        return Response(serialize_booking(booking, request))
 
     if request.method == 'PATCH':
         if not _booking_can_edit(booking, roles):
@@ -171,8 +169,8 @@ def booking_detail(request, pk):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
-        out = TravelBookingSerializer(booking, context={'request': request})
-        return Response(out.data)
+        booking.refresh_from_db()
+        return Response(serialize_booking(booking, request))
 
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -244,15 +242,27 @@ def reset_seats(request, vehicle_id):
                 'error': 'Cannot reset seats for past dates'
             }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Reset seats (only booked seats, not boarded)
-    seats = TravelVehicleSeat.objects.filter(
-        vehicle=vehicle,
-        status='booked'
-    )
-    
-    count = seats.update(status='available')
+    with db_transaction.atomic():
+        # Seats currently marked booked (not yet boarded on vehicle)
+        seat_qs = TravelVehicleSeat.objects.filter(
+            vehicle=vehicle,
+            status='booked'
+        )
+        seat_ids = list(seat_qs.values_list('id', flat=True))
+        
+        booking_filter = TravelBooking.objects.filter(
+            vehicle=vehicle,
+            vehicle_seat_id__in=seat_ids,
+            status__in=['pending', 'booked'],
+        )
+        if booking_date:
+            booking_filter = booking_filter.filter(booking_date__date=booking_date)
+        
+        cancelled = booking_filter.update(status='cancelled')
+        count = seat_qs.update(status='available')
     
     return Response({
-        'message': f'{count} seats reset to available',
-        'count': count
+        'message': f'{count} seats reset to available; {cancelled} booking(s) cancelled',
+        'count': count,
+        'bookings_cancelled': cancelled,
     })

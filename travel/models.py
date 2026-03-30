@@ -155,6 +155,7 @@ class TravelBooking(models.Model):
         ('pending', 'Pending'),
         ('booked', 'Booked'),
         ('boarded', 'Boarded'),
+        ('cancelled', 'Cancelled'),
     ]
     
     ticket_number = models.CharField(max_length=50, unique=True, blank=True, null=True)
@@ -176,6 +177,10 @@ class TravelBooking(models.Model):
     dealer_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     agent_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     system_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    commission_distributed = models.BooleanField(
+        default=False,
+        help_text='Set when boarding payout and ledger entries are completed',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

@@ -137,7 +137,7 @@ def available_seats(request, vehicle_id):
     booked_seats = TravelBooking.objects.filter(
         vehicle=vehicle,
         booking_date__date=booking_date.date(),
-        status__in=['pending', 'booked']
+        status__in=['pending', 'booked'],
     ).values_list('vehicle_seat_id', flat=True)
     
     # Mark seats as available or booked

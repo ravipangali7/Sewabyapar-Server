@@ -383,7 +383,14 @@ class Transaction(models.Model):
         ('cancelled', 'Cancelled'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='transactions',
+        null=True,
+        blank=True,
+        help_text='Null for platform/system ledger rows (e.g. travel system commission)',
+    )
     transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPE_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Transaction amount (can be negative for deductions)')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -403,7 +410,8 @@ class Transaction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.user.name} - {self.get_transaction_type_display()} - ₹{self.amount} ({self.get_status_display()})"
+        who = self.user.name if self.user else 'Platform'
+        return f"{who} - {self.get_transaction_type_display()} - ₹{self.amount} ({self.get_status_display()})"
     
     class Meta:
         ordering = ['-created_at']

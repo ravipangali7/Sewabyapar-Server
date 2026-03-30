@@ -8,6 +8,7 @@ from travel.views.api import (
 app_name = 'travel'
 
 urlpatterns = [
+    path('session/', dashboard_views.travel_session, name='travel-session'),
     # Dashboard endpoints
     path('dashboard/committee/', dashboard_views.travel_committee_dashboard, name='committee-dashboard'),
     path('dashboard/staff/', dashboard_views.travel_staff_dashboard, name='staff-dashboard'),

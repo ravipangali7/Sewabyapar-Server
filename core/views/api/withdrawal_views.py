@@ -8,14 +8,15 @@ from django.shortcuts import get_object_or_404
 from decimal import Decimal, ROUND_HALF_UP
 from ...models import Withdrawal, UserPaymentMethod, Transaction
 from ...serializers import WithdrawalSerializer, WithdrawalCreateSerializer
+from ...utils.role_helpers import can_use_merchant_wallet_services
 import sys
 import traceback
 
 
 def check_merchant_permission(user):
-    """Check if user is a merchant"""
-    if not user.is_merchant:
-        print(f'[WARNING] Non-merchant user {user.id} ({user.phone}) attempted to access merchant endpoint')
+    """Merchants and travel partners may use withdrawal APIs."""
+    if not can_use_merchant_wallet_services(user):
+        print(f'[WARNING] User {user.id} ({user.phone}) attempted to access withdrawal endpoint')
         sys.stdout.flush()
         return False
     return True
@@ -33,11 +34,11 @@ def create_withdrawal(request):
     """Create withdrawal request - uses approved payment method if available"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can create withdrawal requests'
+            'error': 'Only merchants and travel partners can create withdrawal requests'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        # Check if merchant has approved payment method
+        # Check if user has approved payment method
         payment_method = UserPaymentMethod.objects.filter(
             user=request.user,
             status='approved'
@@ -64,7 +65,7 @@ def create_withdrawal(request):
                 'error': 'Withdrawal amount must be greater than 0'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check if merchant has sufficient balance
+        # Check balance
         merchant_balance = Decimal(str(request.user.balance))
         
         # Get pending withdrawals
@@ -126,7 +127,7 @@ def withdrawal_list(request):
     """List merchant withdrawals"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants and travel partners can access this endpoint'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
@@ -157,7 +158,7 @@ def withdrawal_detail(request, pk):
     """Get withdrawal details"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants and travel partners can access this endpoint'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:

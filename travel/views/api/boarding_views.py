@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import datetime, date
 from travel.models import TravelBooking
-from travel.serializers import TravelBookingSerializer
+from travel.serializers import serialize_bookings, serialize_booking
 from travel.utils import check_user_travel_role
 
 
@@ -37,8 +37,7 @@ def boarding_screen(request):
         status='booked'
     ).order_by('booking_date')
     
-    serializer = TravelBookingSerializer(bookings, many=True, context={'request': request})
-    return Response(serializer.data)
+    return Response(serialize_bookings(bookings, request))
 
 
 @api_view(['POST'])
@@ -94,8 +93,7 @@ def scan_ticket(request):
             'error': 'Seat is not in booked status'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    serializer = TravelBookingSerializer(booking, context={'request': request})
-    return Response(serializer.data)
+    return Response(serialize_booking(booking, request))
 
 
 @api_view(['POST'])
@@ -134,8 +132,7 @@ def confirm_boarding(request, booking_id):
     
     # Commission distribution happens automatically via signals
     
-    serializer = TravelBookingSerializer(booking, context={'request': request})
     return Response({
         'message': 'Boarding confirmed successfully',
-        'booking': serializer.data
+        'booking': serialize_booking(booking, request),
     })

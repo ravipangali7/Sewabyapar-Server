@@ -18,8 +18,6 @@ def _agent_to_dict(agent, request):
             'phone': getattr(agent.user, 'phone', '') or '',
         },
         'is_active': agent.is_active,
-        'commission_type': agent.commission_type,
-        'commission_value': str(agent.commission_value),
         'committees': TravelCommitteeSerializer(
             agent.committees.filter(is_active=True), many=True,
             context={'request': request}

@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from ...models import UserPaymentMethod
+from ...utils.role_helpers import can_use_merchant_wallet_services
 from ...serializers import (
     UserPaymentMethodSerializer,
     UserPaymentMethodCreateSerializer,
@@ -13,9 +14,9 @@ import traceback
 
 
 def check_merchant_permission(user):
-    """Check if user is a merchant"""
-    if not user.is_merchant:
-        print(f'[WARNING] Non-merchant user {user.id} ({user.phone}) attempted to access merchant endpoint')
+    """Check if user may use payment-method APIs (merchants and travel partners)."""
+    if not can_use_merchant_wallet_services(user):
+        print(f'[WARNING] User {user.id} ({user.phone}) attempted to access payment method endpoint')
         sys.stdout.flush()
         return False
     return True
@@ -24,10 +25,10 @@ def check_merchant_permission(user):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def get_payment_method(request):
-    """Get merchant's payment method"""
+    """Get user's payment method (merchant or travel partner)"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can access this endpoint'
+            'error': 'Only merchants and travel partners can access this endpoint'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
@@ -57,10 +58,10 @@ def get_payment_method(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def create_payment_method(request):
-    """Create payment method for merchant"""
+    """Create payment method for merchant or travel partner"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can create payment methods'
+            'error': 'Only merchants and travel partners can create payment methods'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
@@ -101,10 +102,10 @@ def create_payment_method(request):
 @api_view(['PUT', 'PATCH'])
 @permission_classes([permissions.IsAuthenticated])
 def update_payment_method(request):
-    """Update merchant's payment method (only if pending or rejected)"""
+    """Update payment method (only if pending or rejected)"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can update payment methods'
+            'error': 'Only merchants and travel partners can update payment methods'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
@@ -149,10 +150,10 @@ def update_payment_method(request):
 @api_view(['DELETE'])
 @permission_classes([permissions.IsAuthenticated])
 def delete_payment_method(request):
-    """Delete merchant's payment method"""
+    """Delete user's payment method"""
     if not check_merchant_permission(request.user):
         return Response({
-            'error': 'Only merchants can delete payment methods'
+            'error': 'Only merchants and travel partners can delete payment methods'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:

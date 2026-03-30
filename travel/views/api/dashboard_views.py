@@ -17,6 +17,27 @@ from travel.utils import check_user_travel_role
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def travel_session(request):
+    """Permissions for travel UI (tabs, boarding, etc.)."""
+    roles = check_user_travel_role(request.user)
+    data = {
+        'is_travel_committee': roles['is_travel_committee'],
+        'is_travel_staff': roles['is_travel_staff'],
+        'is_travel_dealer': roles['is_travel_dealer'],
+        'is_agent': roles['is_agent'],
+    }
+    if roles['is_travel_staff'] and roles['staff']:
+        st = roles['staff']
+        data['staff'] = {
+            'booking_permission': st.booking_permission,
+            'boarding_permission': st.boarding_permission,
+            'finance_permission': st.finance_permission,
+        }
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def travel_committee_dashboard(request):
     """Travel Committee dashboard with stats"""
     roles = check_user_travel_role(request.user)
@@ -152,10 +173,11 @@ def travel_staff_dashboard(request):
             'queue_count': boarding_queue,
         }
     
-    # Finance permission
+    # Finance permission — committee owner's revenue for this committee (read-only view)
     if staff.finance_permission:
+        committee_user = committee.user
         today_revenue = Transaction.objects.filter(
-            user=request.user,
+            user=committee_user,
             transaction_type='travel_booking_revenue',
             status='completed',
             created_at__date=today
@@ -233,7 +255,6 @@ def travel_dealer_dashboard(request):
     return Response({
         'dealer': {
             'id': dealer.id,
-            'commission_type': dealer.commission_type,
         },
         'stats': {
             'agents': {

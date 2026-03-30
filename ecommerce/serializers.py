@@ -512,7 +512,7 @@ class CouponSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    user = serializers.SerializerMethodField()
     transaction_type_display = serializers.CharField(source='get_transaction_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     related_order_number = serializers.CharField(source='related_order.order_number', read_only=True, allow_null=True)
@@ -524,6 +524,11 @@ class TransactionSerializer(serializers.ModelSerializer):
                  'related_withdrawal', 'merchant_order_id', 'utr', 'bank_id', 'vpa', 'payer_name', 
                  'wallet_before', 'wallet_after', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_user(self, obj):
+        if obj.user_id is None:
+            return None
+        return UserSerializer(obj.user, context=self.context).data
 
 
 class RevenueHistorySerializer(serializers.Serializer):
