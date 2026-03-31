@@ -33,7 +33,13 @@
                     <a href="{% url 'website:logout' %}" class="inline-flex items-center px-3 py-2 text-xs md:text-sm rounded-lg bg-red-700 text-white font-semibold border border-red-500">Logout</a>
                 </div>
             </div>
-            <nav id="appBarMenu" class="mt-3 flex flex-wrap gap-2"></nav>
+            <div class="mt-3 flex items-center justify-between gap-2">
+                <button id="appBarBackBtn" class="hidden inline-flex items-center px-3 py-2 text-xs md:text-sm rounded-lg bg-white/90 text-red-700 border border-red-300">
+                    Back
+                </button>
+                <div id="appBarTitle" class="text-sm md:text-base font-semibold tracking-wide">Dashboard</div>
+                <div class="w-[64px]"></div>
+            </div>
         </div>
     </header>
 
@@ -88,7 +94,8 @@
 
     const el = {
         alert: document.getElementById("appAlert"),
-        appBarMenu: document.getElementById("appBarMenu"),
+        appBarBackBtn: document.getElementById("appBarBackBtn"),
+        appBarTitle: document.getElementById("appBarTitle"),
         desktopMenu: document.getElementById("desktopMenu"),
         bottomBarMenu: document.getElementById("bottomBarMenu"),
         kpiGrid: document.getElementById("kpiGrid"),
@@ -109,17 +116,11 @@
         travel_dealer: ["dashboard", "bookings", "agents", "revenue", "wallet"],
         agent: ["dashboard", "bookings", "create-booking", "vehicles", "revenue", "wallet"],
     };
-    const appBarItemsByRole = {
-        travel_committee: ["dashboard", "vehicles", "bookings"],
-        travel_staff: ["dashboard", "bookings", "boarding"],
-        travel_dealer: ["dashboard", "bookings", "agents"],
-        agent: ["dashboard", "create-booking", "bookings"],
-    };
     const bottomBarItemsByRole = {
-        travel_committee: ["dashboard", "boarding", "staff", "revenue", "wallet"],
+        travel_committee: ["dashboard", "vehicles", "bookings", "staff", "wallet"],
         travel_staff: ["dashboard", "bookings", "boarding", "revenue"],
-        travel_dealer: ["dashboard", "bookings", "revenue", "wallet"],
-        agent: ["dashboard", "create-booking", "bookings", "wallet"],
+        travel_dealer: ["dashboard", "bookings", "agents", "wallet"],
+        agent: ["dashboard", "bookings", "create-booking", "wallet"],
     };
     const tabLabel = {
         dashboard: "Dashboard",
@@ -355,21 +356,23 @@
 
     function renderNav() {
         const tabs = roleTabs();
-        const appBarTabs = (appBarItemsByRole[role] || []).filter((tab) => tabs.includes(tab));
         const bottomTabs = (bottomBarItemsByRole[role] || []).filter((tab) => tabs.includes(tab));
         const renderBtn = (tab, mode) =>
             `<button data-tab="${tab}" class="${
-                mode === "appbar"
-                    ? "travel-appbar-item px-3 py-2 text-xs md:text-sm rounded-lg border border-red-300 bg-white/90 text-red-700"
-                    : mode === "bottom"
+                mode === "bottom"
                         ? "travel-bottom-item px-1 py-3 text-xs text-gray-700"
                         : "travel-drawer-item w-full text-left px-3 py-2 rounded-lg text-sm"
             } ${state.tab === tab ? "active text-red-600 font-semibold" : "text-gray-700"}">
                 ${tabLabel[tab] || tab}
             </button>`;
-        el.appBarMenu.innerHTML = appBarTabs.map((t) => renderBtn(t, "appbar")).join("");
         el.desktopMenu.innerHTML = tabs.map((t) => renderBtn(t, "desktop")).join("");
         el.bottomBarMenu.innerHTML = bottomTabs.slice(0, 4).map((t) => renderBtn(t, "bottom")).join("");
+        el.appBarTitle.textContent = tabLabel[state.tab] || "Dashboard";
+        if (state.tab !== "dashboard") {
+            el.appBarBackBtn.classList.remove("hidden");
+        } else {
+            el.appBarBackBtn.classList.add("hidden");
+        }
         root.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", async () => {
             state.tab = b.dataset.tab;
             await render();
@@ -616,6 +619,10 @@
     }
 
     el.refreshBtn.addEventListener("click", async () => { await render(); });
+    el.appBarBackBtn.addEventListener("click", async () => {
+        state.tab = "dashboard";
+        await render();
+    });
     el.searchInput.addEventListener("input", async (e) => {
         state.query = e.target.value || "";
         await render();
