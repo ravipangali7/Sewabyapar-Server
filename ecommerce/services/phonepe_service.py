@@ -7,9 +7,28 @@ import uuid
 import requests
 import json
 from django.conf import settings
-from phonepe.sdk.pg.payments.v2.models.request.standard_checkout_pay_request import StandardCheckoutPayRequest
-from phonepe.sdk.pg.common.exceptions import PhonePeException
 from .phonepe_client import get_phonepe_client
+
+try:
+    from phonepe.sdk.pg.payments.v2.models.request.standard_checkout_pay_request import StandardCheckoutPayRequest
+    from phonepe.sdk.pg.common.exceptions import PhonePeException
+    PHONEPE_SDK_AVAILABLE = True
+except Exception:
+    PHONEPE_SDK_AVAILABLE = False
+
+    class PhonePeException(Exception):
+        pass
+
+
+def _ensure_phonepe_sdk():
+    """Return a consistent error payload when SDK is unavailable."""
+    if PHONEPE_SDK_AVAILABLE:
+        return None
+    return {
+        'error': 'PhonePe SDK is not installed in this environment',
+        'error_code': 'PHONEPE_SDK_MISSING',
+        'error_message': 'Install and configure PhonePe SDK to enable payments',
+    }
 
 
 def generate_merchant_order_id():
@@ -38,6 +57,9 @@ def initiate_payment(amount, merchant_order_id, redirect_url, auth_token=None):
         dict: Response containing redirectUrl or error
     """
     try:
+        missing = _ensure_phonepe_sdk()
+        if missing:
+            return missing
         # Get SDK client
         client = get_phonepe_client()
         
@@ -95,6 +117,9 @@ def check_payment_status_by_order_id(merchant_order_id, auth_token=None):
         dict: Payment status details or error
     """
     try:
+        missing = _ensure_phonepe_sdk()
+        if missing:
+            return missing
         import sys
         print(f"[PHONEPE_STATUS] Checking payment status for merchant_order_id: {merchant_order_id}")
         sys.stdout.flush()
@@ -282,6 +307,9 @@ def check_payment_status_by_transaction_id(transaction_id, auth_token=None):
         dict: Payment status details or error
     """
     try:
+        missing = _ensure_phonepe_sdk()
+        if missing:
+            return missing
         # Get SDK client
         client = get_phonepe_client()
         
@@ -318,6 +346,9 @@ def initiate_refund(merchant_order_id, merchant_refund_id, amount):
         dict: Refund response or error
     """
     try:
+        missing = _ensure_phonepe_sdk()
+        if missing:
+            return missing
         # Get SDK client
         client = get_phonepe_client()
         
@@ -363,6 +394,9 @@ def get_refund_status(merchant_refund_id):
         dict: Refund status details or error
     """
     try:
+        missing = _ensure_phonepe_sdk()
+        if missing:
+            return missing
         # Get SDK client
         client = get_phonepe_client()
         
@@ -404,6 +438,9 @@ def validate_webhook_callback(username, password, authorization_header, response
         dict: Validated callback data or error
     """
     try:
+        missing = _ensure_phonepe_sdk()
+        if missing:
+            return missing
         # Get SDK client
         client = get_phonepe_client()
         

@@ -35,6 +35,7 @@ urlpatterns = [
     
     # Staff endpoints (committee only)
     path('staff/', staff_views.staff_list, name='staff-list'),
+    path('staff/create/', staff_views.staff_create, name='staff-create'),
     path('staff/available-users/', staff_views.available_users_for_staff, name='staff-available-users'),
     path('staff/<int:pk>/', staff_views.staff_detail, name='staff-detail'),
     

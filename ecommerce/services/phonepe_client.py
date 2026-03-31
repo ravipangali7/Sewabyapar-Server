@@ -2,10 +2,18 @@
 PhonePe SDK Client Initialization
 Initializes the StandardCheckoutClient singleton instance
 """
-from phonepe.sdk.pg.payments.v2.standard_checkout_client import StandardCheckoutClient
-from phonepe.sdk.pg.env import Env
 from django.conf import settings
-from phonepe.sdk.pg.common.exceptions import PhonePeException
+
+try:
+    from phonepe.sdk.pg.payments.v2.standard_checkout_client import StandardCheckoutClient
+    from phonepe.sdk.pg.env import Env
+    from phonepe.sdk.pg.common.exceptions import PhonePeException
+    PHONEPE_SDK_AVAILABLE = True
+except Exception:
+    PHONEPE_SDK_AVAILABLE = False
+
+    class PhonePeException(Exception):
+        pass
 
 
 def get_phonepe_client():
@@ -23,6 +31,8 @@ def get_phonepe_client():
         Exception: For any other unexpected errors
     """
     try:
+        if not PHONEPE_SDK_AVAILABLE:
+            raise ValueError("PhonePe SDK is not available in this environment")
         # Safely get PhonePe settings with validation
         client_id = getattr(settings, 'PHONEPE_CLIENT_ID', None)
         client_secret = getattr(settings, 'PHONEPE_CLIENT_SECRET', None)

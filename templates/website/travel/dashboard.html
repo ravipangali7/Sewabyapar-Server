@@ -1,0 +1,83 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}{{ travel_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .travel-gradient { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .travel-shell { min-height: calc(100vh - 64px); }
+    .travel-card { border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; }
+    .travel-stat { border-radius: 12px; border: 1px solid #e5e7eb; background: #fff; }
+    .travel-tab.active { color: #dc2626; border-bottom: 2px solid #dc2626; }
+    .drawer-item.active { background: #fef2f2; color: #b91c1c; }
+    .mobile-nav { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #e5e7eb; z-index: 50; }
+    @media (max-width: 767px) { .travel-main { padding-bottom: 72px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="travelApp"
+     class="travel-shell bg-gray-50"
+     data-role="{{ travel_role }}"
+     data-api-base="{{ api_base }}">
+    <div class="travel-gradient text-white">
+        <div class="max-w-7xl mx-auto px-4 py-5 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold">{{ travel_title }}</h1>
+                <p class="text-sm text-red-100">Role-gated travel operations dashboard</p>
+            </div>
+            <a href="{% url 'website:dashboard' %}" class="bg-white text-red-600 px-3 py-2 rounded-lg text-sm font-semibold">Main Dashboard</a>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-3 md:px-4 py-4 travel-main">
+        <div class="md:flex md:gap-4">
+            <aside class="hidden md:block w-64 travel-card p-3 h-fit sticky top-20">
+                <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Travel Menu</div>
+                <nav id="desktopMenu" class="space-y-1"></nav>
+            </aside>
+
+            <section class="flex-1">
+                <div id="appAlert" class="hidden mb-3 rounded-lg px-3 py-2 text-sm"></div>
+
+                <div id="topTabs" class="travel-card mb-3 overflow-x-auto">
+                    <div id="tabList" class="flex min-w-max"></div>
+                </div>
+
+                <div id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3"></div>
+
+                <div class="travel-card p-3 mb-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 id="panelTitle" class="text-base font-semibold text-gray-900">Operations</h2>
+                        <div class="flex items-center gap-2">
+                            <input id="searchInput" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Search..." />
+                            <button id="refreshBtn" class="bg-red-600 text-white px-3 py-2 rounded-lg text-sm">Refresh</button>
+                        </div>
+                    </div>
+                    <div id="panelActions" class="mb-3 flex flex-wrap gap-2"></div>
+                    <div id="panelBody" class="overflow-x-auto"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <nav class="mobile-nav md:hidden">
+        <div id="mobileMenu" class="grid grid-cols-4 text-xs"></div>
+    </nav>
+</div>
+
+<div id="modalRoot" class="hidden fixed inset-0 z-[60] bg-black/40 items-center justify-center p-3">
+    <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+        <div class="flex items-center justify-between border-b px-4 py-3">
+            <h3 id="modalTitle" class="font-semibold">Form</h3>
+            <button id="modalClose" class="text-gray-500 text-xl">&times;</button>
+        </div>
+        <form id="modalForm" class="p-4 space-y-3"></form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'website/js/travel/app.js' %}"></script>
+{% endblock %}

@@ -7,6 +7,7 @@ from django.db.models import Sum, Count, Q
 from ..models import MySetting, Services, CMSPages
 from ecommerce.models import Product, Category, Store, Order, OrderItem
 from taxi.models import TaxiBooking
+from website.decorators import travel_role_required
 
 
 def home_view(request):
@@ -151,4 +152,65 @@ def dashboard_view(request):
     }
     
     return render(request, 'website/dashboard.html', context)
+
+
+def _base_website_context():
+    settings = MySetting.objects.first()
+    return {
+        "settings": settings,
+        "menu_pages": CMSPages.objects.filter(on_menu=True),
+        "footer_pages": CMSPages.objects.filter(on_footer=True),
+    }
+
+
+@travel_role_required("travel_committee")
+def travel_committee_view(request):
+    context = _base_website_context()
+    context.update(
+        {
+            "travel_role": "travel_committee",
+            "travel_title": "Travel Committee Dashboard",
+            "api_base": "/api/travel",
+        }
+    )
+    return render(request, "website/travel/dashboard.html", context)
+
+
+@travel_role_required("travel_staff")
+def travel_committee_staff_view(request):
+    context = _base_website_context()
+    context.update(
+        {
+            "travel_role": "travel_staff",
+            "travel_title": "Travel Committee Staff Dashboard",
+            "api_base": "/api/travel",
+        }
+    )
+    return render(request, "website/travel/dashboard.html", context)
+
+
+@travel_role_required("travel_dealer")
+def travel_dealer_view(request):
+    context = _base_website_context()
+    context.update(
+        {
+            "travel_role": "travel_dealer",
+            "travel_title": "Travel Dealer Dashboard",
+            "api_base": "/api/travel",
+        }
+    )
+    return render(request, "website/travel/dashboard.html", context)
+
+
+@travel_role_required("agent")
+def travel_agent_view(request):
+    context = _base_website_context()
+    context.update(
+        {
+            "travel_role": "agent",
+            "travel_title": "Agent Dashboard",
+            "api_base": "/api/travel",
+        }
+    )
+    return render(request, "website/travel/dashboard.html", context)
 

@@ -127,7 +127,11 @@ from ...services.razorpay_service import (
 #         )
 
 # Add this import at the top
-from phonepe.sdk.pg.common.exceptions import PhonePeException
+try:
+    from phonepe.sdk.pg.common.exceptions import PhonePeException
+except Exception:
+    class PhonePeException(Exception):
+        pass
 
 # Update the initiate_payment_view function
 @api_view(['POST'])

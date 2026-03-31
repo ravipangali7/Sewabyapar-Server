@@ -54,4 +54,10 @@ urlpatterns = [
     path('profile/help-support/', profile.help_support_view, name='help_support'),
     path('profile/kyc/', profile.kyc_submit_view, name='kyc_submit'),
     path('profile/kyc/status/', profile.kyc_status_view, name='kyc_status'),
+
+    # Travel role web app routes
+    path('app/travel-committee/', views.travel_committee_view, name='travel_committee'),
+    path('app/travel-committee-staff/', views.travel_committee_staff_view, name='travel_committee_staff'),
+    path('app/travel-dealer/', views.travel_dealer_view, name='travel_dealer'),
+    path('app/agent/', views.travel_agent_view, name='travel_agent'),
 ]
