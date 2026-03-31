@@ -180,19 +180,41 @@
         return "-";
     }
 
+    function flattenMetrics(stats) {
+        const result = [];
+        const grouped = [];
+        const scalar = [];
+        Object.entries(stats || {}).forEach(([groupKey, value]) => {
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                Object.entries(value).forEach(([metricKey, metricValue]) => {
+                    grouped.push({
+                        label: `${toLabel(groupKey)} ${toLabel(metricKey)}`,
+                        value: metricValue,
+                    });
+                });
+            } else {
+                scalar.push({
+                    label: toLabel(groupKey),
+                    value: value,
+                });
+            }
+        });
+        result.push(...grouped, ...scalar);
+        return result;
+    }
+
     function renderKpis(stats) {
-        const entries = Object.entries(stats || {});
-        if (!entries.length) {
+        const metrics = flattenMetrics(stats).slice(0, 16);
+        if (!metrics.length) {
             el.kpiGrid.innerHTML = `<div class="travel-card p-3 text-sm text-gray-500 col-span-full">No stats available.</div>`;
             return;
         }
-        el.kpiGrid.innerHTML = entries.slice(0, 8).map(([k, v]) => {
-            const val = typeof v === "object" ? Object.entries(v).map(([a, b]) => `${toLabel(a)}: ${b}`).join(" | ") : v;
-            return `<div class="travel-stat p-3">
-                <div class="text-xs text-gray-500">${toLabel(k)}</div>
-                <div class="text-lg font-bold text-gray-900 break-words">${val}</div>
-            </div>`;
-        }).join("");
+        el.kpiGrid.innerHTML = metrics.map((metric) => `
+            <div class="travel-stat p-3">
+                <div class="text-xs text-gray-500">${metric.label}</div>
+                <div class="text-lg font-bold text-gray-900 break-words">${getValue({ v: metric.value }, "v")}</div>
+            </div>
+        `).join("");
     }
 
     function renderDetailsCard(title, data, fields) {
