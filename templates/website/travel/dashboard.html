@@ -79,5 +79,510 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'website/js/travel/app.js' %}"></script>
+<script>
+(function () {
+    const root = document.getElementById("travelApp");
+    if (!root) return;
+
+    const role = root.dataset.role;
+    const apiBase = root.dataset.apiBase || "/api/travel";
+    const coreApiBase = "/api";
+    const state = { session: null, tab: "dashboard", query: "", pageData: [] };
+
+    const el = {
+        alert: document.getElementById("appAlert"),
+        tabList: document.getElementById("tabList"),
+        desktopMenu: document.getElementById("desktopMenu"),
+        mobileMenu: document.getElementById("mobileMenu"),
+        kpiGrid: document.getElementById("kpiGrid"),
+        panelTitle: document.getElementById("panelTitle"),
+        panelActions: document.getElementById("panelActions"),
+        panelBody: document.getElementById("panelBody"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        searchInput: document.getElementById("searchInput"),
+        modalRoot: document.getElementById("modalRoot"),
+        modalTitle: document.getElementById("modalTitle"),
+        modalForm: document.getElementById("modalForm"),
+        modalClose: document.getElementById("modalClose"),
+    };
+
+    const tabsByRole = {
+        travel_committee: ["dashboard", "vehicles", "bookings", "boarding", "staff", "revenue", "wallet"],
+        travel_staff: ["dashboard", "bookings", "boarding", "revenue"],
+        travel_dealer: ["dashboard", "bookings", "agents", "revenue", "wallet"],
+        agent: ["dashboard", "bookings", "create-booking", "vehicles", "revenue", "wallet"],
+    };
+
+    const dashboardProfileFields = {
+        travel_committee: ["id", "name", "logo"],
+        travel_staff: ["id"],
+        travel_dealer: ["id"],
+        agent: ["id"],
+    };
+
+    const tableSchemas = {
+        bookings: ["id", "ticket_number", "name", "phone", "status", "booking_date", "fare"],
+        vehicles: ["id", "name", "vehicle_no", "from_place.name", "to_place.name", "departure_time", "is_active", "seat_price"],
+        boarding: ["id", "ticket_number", "name", "phone", "status", "booking_date"],
+        staff: ["id", "user.name", "user.phone", "booking_permission", "boarding_permission", "finance_permission"],
+        agents: ["id", "user.name", "user.phone", "is_active", "created_at"],
+        revenue: ["id", "transaction_type", "amount", "status", "description", "created_at"],
+        wallet: ["section", "id", "amount", "status", "created_at", "value"],
+    };
+
+    function getCsrfToken() {
+        const m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : "";
+    }
+
+    async function api(path, options = {}) {
+        const res = await fetch(path, {
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCsrfToken(),
+                ...(options.headers || {}),
+            },
+            ...options,
+        });
+        const isJson = (res.headers.get("content-type") || "").includes("application/json");
+        const data = isJson ? await res.json() : null;
+        if (!res.ok) throw new Error((data && (data.error || data.detail)) || `Request failed (${res.status})`);
+        return data;
+    }
+
+    function showAlert(message, type) {
+        el.alert.className = "mb-3 rounded-lg px-3 py-2 text-sm";
+        const styles = {
+            success: "bg-green-100 text-green-700 border border-green-300",
+            error: "bg-red-100 text-red-700 border border-red-300",
+            warning: "bg-yellow-100 text-yellow-700 border border-yellow-300",
+        };
+        el.alert.classList.add(...(styles[type] || styles.warning).split(" "));
+        el.alert.textContent = message;
+        el.alert.classList.remove("hidden");
+    }
+
+    function clearAlert() { el.alert.classList.add("hidden"); }
+
+    function toLabel(key) {
+        return key.replace(/\./g, " ").replace(/_/g, " ").replace(/\b\w/g, (x) => x.toUpperCase());
+    }
+
+    function getValue(obj, path) {
+        const value = path.split(".").reduce((acc, p) => (acc && acc[p] !== undefined ? acc[p] : undefined), obj);
+        if (value === null || value === undefined || value === "") return "-";
+        if (typeof value === "boolean") return value ? "Yes" : "No";
+        if (typeof value === "number") return String(value);
+        if (typeof value === "string") return value;
+        if (Array.isArray(value)) return value.length ? value.map((v) => (typeof v === "object" ? v.name || v.id || "-" : v)).join(", ") : "-";
+        if (typeof value === "object") return value.name || value.id || "-";
+        return "-";
+    }
+
+    function renderKpis(stats) {
+        const entries = Object.entries(stats || {});
+        if (!entries.length) {
+            el.kpiGrid.innerHTML = `<div class="travel-card p-3 text-sm text-gray-500 col-span-full">No stats available.</div>`;
+            return;
+        }
+        el.kpiGrid.innerHTML = entries.slice(0, 8).map(([k, v]) => {
+            const val = typeof v === "object" ? Object.entries(v).map(([a, b]) => `${toLabel(a)}: ${b}`).join(" | ") : v;
+            return `<div class="travel-stat p-3">
+                <div class="text-xs text-gray-500">${toLabel(k)}</div>
+                <div class="text-lg font-bold text-gray-900 break-words">${val}</div>
+            </div>`;
+        }).join("");
+    }
+
+    function renderDetailsCard(title, data, fields) {
+        const rows = fields.map((field) =>
+            `<div class="flex items-start justify-between gap-3 border-b last:border-b-0 py-2">
+                <div class="text-sm text-gray-500">${toLabel(field)}</div>
+                <div class="text-sm text-gray-900 text-right break-all">${getValue(data, field)}</div>
+            </div>`
+        ).join("");
+        return `<div class="travel-card p-3">
+            <h3 class="font-semibold text-gray-900 mb-2">${title}</h3>
+            ${rows || `<div class="text-sm text-gray-500">No details available.</div>`}
+        </div>`;
+    }
+
+    function renderTable(items, columns, actions) {
+        if (!items || !items.length) {
+            el.panelBody.innerHTML = `<div class="text-sm text-gray-500 p-2">No data found.</div>`;
+            return;
+        }
+        const head = columns.map((c) => `<th class="text-left p-2 border-b text-xs uppercase text-gray-500">${toLabel(c)}</th>`).join("");
+        const actionHead = actions ? `<th class="text-left p-2 border-b text-xs uppercase text-gray-500">Actions</th>` : "";
+        const rows = items.map((row, i) => {
+            const cells = columns.map((c) => `<td class="p-2 border-b text-sm">${getValue(row, c)}</td>`).join("");
+            const actionCell = actions
+                ? `<td class="p-2 border-b text-sm">${actions.map((a) =>
+                    `<button data-row="${i}" data-act="${a.id}" class="mr-1 mb-1 text-xs px-2 py-1 rounded ${a.className || "bg-gray-100"}">${a.label}</button>`
+                ).join("")}</td>`
+                : "";
+            return `<tr>${cells}${actionCell}</tr>`;
+        }).join("");
+        el.panelBody.innerHTML = `<table class="w-full min-w-[780px]"><thead><tr>${head}${actionHead}</tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function fieldInputHtml(field) {
+        const required = field.required ? "required" : "";
+        const value = field.value || "";
+        if (field.type === "textarea") {
+            return `<textarea name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required}>${value}</textarea>`;
+        }
+        if (field.type === "select") {
+            const options = (field.options || []).map((o) =>
+                `<option value="${o.value}" ${String(o.value) === String(value) ? "selected" : ""}>${o.label}</option>`).join("");
+            return `<select name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required}>${options}</select>`;
+        }
+        return `<input name="${field.name}" type="${field.type || "text"}" value="${value}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} />`;
+    }
+
+    function openModal(title, fields, onSubmit, submitLabel) {
+        el.modalTitle.textContent = title;
+        el.modalForm.innerHTML = "";
+        fields.forEach((field) => {
+            const wrap = document.createElement("div");
+            wrap.innerHTML = `<label class="block text-sm text-gray-700 mb-1">${field.label}</label>${fieldInputHtml(field)}`;
+            el.modalForm.appendChild(wrap);
+        });
+        const btn = document.createElement("button");
+        btn.type = "submit";
+        btn.className = "bg-red-600 text-white px-4 py-2 rounded-lg";
+        btn.textContent = submitLabel || "Save";
+        el.modalForm.appendChild(btn);
+        el.modalForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(el.modalForm);
+            const payload = {};
+            for (const [k, v] of formData.entries()) payload[k] = v;
+            try {
+                await onSubmit(payload);
+                closeModal();
+                showAlert("Saved successfully", "success");
+                await render();
+            } catch (err) {
+                showAlert(err.message, "error");
+            }
+        };
+        el.modalRoot.classList.remove("hidden");
+        el.modalRoot.classList.add("flex");
+    }
+
+    function closeModal() {
+        el.modalRoot.classList.add("hidden");
+        el.modalRoot.classList.remove("flex");
+    }
+
+    function actionButton(label, cb, cls) {
+        const btn = document.createElement("button");
+        btn.className = cls || "bg-red-600 text-white px-3 py-2 rounded-lg text-sm";
+        btn.textContent = label;
+        btn.onclick = cb;
+        el.panelActions.appendChild(btn);
+    }
+
+    function bindRowActions(actionsMap) {
+        const btns = el.panelBody.querySelectorAll("button[data-row][data-act]");
+        btns.forEach((btn) => btn.addEventListener("click", async () => {
+            const row = state.pageData[parseInt(btn.dataset.row, 10)];
+            const fn = actionsMap[btn.dataset.act];
+            if (!row || !fn) return;
+            try { await fn(row); } catch (err) { showAlert(err.message, "error"); }
+        }));
+    }
+
+    function matchesSearch(item) {
+        if (!state.query) return true;
+        return Object.values(item || {}).some((v) => String(v).toLowerCase().includes(state.query.toLowerCase()));
+    }
+
+    function roleTabs() {
+        const tabs = tabsByRole[role] || ["dashboard"];
+        if (role !== "travel_staff" || !state.session?.staff) return tabs;
+        return tabs.filter((t) => {
+            if (t === "bookings") return !!state.session.staff.booking_permission;
+            if (t === "boarding") return !!state.session.staff.boarding_permission;
+            if (t === "revenue") return !!state.session.staff.finance_permission;
+            return true;
+        });
+    }
+
+    function renderNav() {
+        const tabs = roleTabs();
+        const renderBtn = (tab, mobile) =>
+            `<button data-tab="${tab}" class="travel-tab ${mobile ? "px-2 py-3 text-xs" : "drawer-item w-full text-left px-3 py-2 rounded-lg"} ${state.tab === tab ? "active text-red-600 font-semibold" : "text-gray-700"}">
+                ${mobile ? tab.split("-")[0] : tab.replace("-", " ").toUpperCase()}
+            </button>`;
+        el.tabList.innerHTML = tabs.map((t) => renderBtn(t, false)).join("");
+        el.desktopMenu.innerHTML = tabs.map((t) => renderBtn(t, false)).join("");
+        el.mobileMenu.innerHTML = tabs.slice(0, 4).map((t) => renderBtn(t, true)).join("");
+        root.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", async () => {
+            state.tab = b.dataset.tab;
+            await render();
+        }));
+    }
+
+    async function loadDashboard() {
+        const endpoint = {
+            travel_committee: `${apiBase}/dashboard/committee/`,
+            travel_staff: `${apiBase}/dashboard/staff/`,
+            travel_dealer: `${apiBase}/dashboard/dealer/`,
+            agent: `${apiBase}/dashboard/agent/`,
+        }[role];
+        const data = await api(endpoint);
+        renderKpis(data.stats || data.widgets || {});
+        const profileKey = data.committee ? "committee" : data.staff ? "staff" : data.dealer ? "dealer" : "agent";
+        const profile = data[profileKey] || {};
+        const fields = dashboardProfileFields[role] || ["id"];
+        const summary = renderDetailsCard("Role Summary", profile, fields);
+        const balance = renderDetailsCard("Quick Snapshot", { balance: data.balance || data.stats?.balance || "-" }, ["balance"]);
+        el.panelBody.innerHTML = `<div class="grid md:grid-cols-2 gap-3">${summary}${balance}</div>`;
+    }
+
+    async function loadBookings() {
+        const data = await api(`${apiBase}/bookings/`);
+        state.pageData = (data || []).filter(matchesSearch);
+        renderKpis({});
+        const actions = [{ id: "view", label: "View", className: "bg-blue-50" }, { id: "ticket", label: "Ticket", className: "bg-green-50" }];
+        if (role === "travel_committee" || role === "travel_staff") actions.unshift({ id: "edit", label: "Edit", className: "bg-yellow-50" });
+        renderTable(state.pageData, tableSchemas.bookings, actions);
+        actionButton("Refresh Bookings", render);
+        if (role === "agent" || (role === "travel_staff" && state.session?.staff?.booking_permission)) {
+            actionButton("Create Booking", openCreateBookingModal);
+        }
+        bindRowActions({
+            view: async (row) => showAlert(`Ticket: ${row.ticket_number || row.id}`, "success"),
+            ticket: async (row) => window.open(`${apiBase}/bookings/${row.id}/ticket/`, "_blank"),
+            edit: async (row) => openModal("Update Booking", [
+                { name: "name", label: "Name", value: row.name, required: true },
+                { name: "phone", label: "Phone", value: row.phone, required: true },
+                { name: "status", label: "Status", type: "select", value: row.status, options: ["pending", "booked", "boarded", "cancelled"].map((s) => ({ value: s, label: s })) },
+                { name: "remarks", label: "Remarks", type: "textarea", value: row.remarks || "" },
+            ], (payload) => api(`${apiBase}/bookings/${row.id}/`, { method: "PATCH", body: JSON.stringify(payload) }), "Update"),
+        });
+    }
+
+    async function openCreateBookingModal() {
+        openModal("Create Booking", [
+            { name: "vehicle", label: "Vehicle ID", required: true },
+            { name: "seat_ids", label: "Seat IDs (comma separated)", required: true },
+            { name: "booking_date", label: "Booking DateTime (ISO)", required: true },
+            { name: "name", label: "Passenger Name", required: true },
+            { name: "phone", label: "Phone", required: true },
+            { name: "gender", label: "Gender", type: "select", options: [{ value: "male", label: "male" }, { value: "female", label: "female" }], required: true },
+            { name: "nationality", label: "Nationality" },
+            { name: "remarks", label: "Remarks", type: "textarea" },
+        ], (payload) =>
+            api(`${apiBase}/bookings/create/`, {
+                method: "POST",
+                body: JSON.stringify({
+                    ...payload,
+                    seat_ids: String(payload.seat_ids).split(",").map((x) => parseInt(x.trim(), 10)).filter(Boolean),
+                }),
+            })
+        );
+    }
+
+    async function loadVehicles() {
+        const data = await api(`${apiBase}/vehicles/`);
+        state.pageData = (data || []).filter(matchesSearch);
+        renderTable(
+            state.pageData,
+            tableSchemas.vehicles,
+            role === "travel_committee" ? [
+                { id: "edit", label: "Edit", className: "bg-yellow-50" },
+                { id: "delete", label: "Delete", className: "bg-red-50" },
+            ] : null
+        );
+        if (role === "travel_committee") {
+            actionButton("Add Vehicle", () => openModal("Create Vehicle", [
+                { name: "name", label: "Name", required: true },
+                { name: "vehicle_no", label: "Vehicle No", required: true },
+                { name: "from_place", label: "From Place ID", required: true },
+                { name: "to_place", label: "To Place ID", required: true },
+                { name: "departure_time", label: "Departure Time (HH:MM)", required: true },
+                { name: "actual_seat_price", label: "Actual Seat Price", required: true },
+                { name: "seat_price", label: "Seat Price", required: true },
+            ], (payload) => api(`${apiBase}/vehicles/`, { method: "POST", body: JSON.stringify(payload) })));
+        }
+        bindRowActions({
+            edit: async (row) => openModal("Update Vehicle", [
+                { name: "name", label: "Name", value: row.name, required: true },
+                { name: "vehicle_no", label: "Vehicle No", value: row.vehicle_no, required: true },
+                { name: "departure_time", label: "Departure Time", value: row.departure_time, required: true },
+                { name: "actual_seat_price", label: "Actual Seat Price", value: row.actual_seat_price, required: true },
+                { name: "seat_price", label: "Seat Price", value: row.seat_price, required: true },
+            ], (payload) => api(`${apiBase}/vehicles/${row.id}/`, { method: "PATCH", body: JSON.stringify(payload) }), "Update"),
+            delete: async (row) => {
+                if (!window.confirm(`Delete/deactivate ${row.name}?`)) return;
+                await api(`${apiBase}/vehicles/${row.id}/`, { method: "DELETE" });
+                showAlert("Vehicle action completed.", "success");
+                await render();
+            },
+        });
+    }
+
+    async function loadBoarding() {
+        const data = await api(`${apiBase}/boarding/`);
+        state.pageData = (data || []).filter(matchesSearch);
+        renderTable(state.pageData, tableSchemas.boarding, [{ id: "confirm", label: "Confirm", className: "bg-green-50" }]);
+        actionButton("Scan Ticket", () => openModal("Scan Ticket", [
+            { name: "ticket_number", label: "Ticket Number", required: true },
+        ], (payload) => api(`${apiBase}/boarding/scan/`, { method: "POST", body: JSON.stringify(payload) })));
+        bindRowActions({
+            confirm: async (row) => {
+                await api(`${apiBase}/boarding/${row.id}/confirm/`, { method: "POST", body: JSON.stringify({}) });
+                showAlert("Boarding confirmed", "success");
+                await render();
+            },
+        });
+    }
+
+    async function loadStaff() {
+        const data = await api(`${apiBase}/staff/`);
+        state.pageData = (data || []).filter(matchesSearch);
+        renderTable(state.pageData, tableSchemas.staff, [
+            { id: "edit", label: "Edit", className: "bg-yellow-50" },
+            { id: "delete", label: "Delete", className: "bg-red-50" },
+        ]);
+        actionButton("Add Staff", async () => {
+            const users = await api(`${apiBase}/staff/available-users/`);
+            openModal("Create Staff", [
+                { name: "user", label: `User ID (${users.length} available)`, required: true },
+                { name: "booking_permission", label: "Booking (1/0)" },
+                { name: "boarding_permission", label: "Boarding (1/0)" },
+                { name: "finance_permission", label: "Finance (1/0)" },
+            ], (payload) => api(`${apiBase}/staff/create/`, {
+                method: "POST",
+                body: JSON.stringify({
+                    user: payload.user,
+                    booking_permission: payload.booking_permission === "1",
+                    boarding_permission: payload.boarding_permission === "1",
+                    finance_permission: payload.finance_permission === "1",
+                }),
+            }));
+        });
+        bindRowActions({
+            edit: async (row) => openModal("Update Staff", [
+                { name: "booking_permission", label: "Booking (1/0)", value: row.booking_permission ? "1" : "0" },
+                { name: "boarding_permission", label: "Boarding (1/0)", value: row.boarding_permission ? "1" : "0" },
+                { name: "finance_permission", label: "Finance (1/0)", value: row.finance_permission ? "1" : "0" },
+            ], (payload) => api(`${apiBase}/staff/${row.id}/`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                    booking_permission: payload.booking_permission === "1",
+                    boarding_permission: payload.boarding_permission === "1",
+                    finance_permission: payload.finance_permission === "1",
+                }),
+            }), "Update"),
+            delete: async (row) => {
+                if (!window.confirm("Delete staff member?")) return;
+                await api(`${apiBase}/staff/${row.id}/`, { method: "DELETE" });
+                showAlert("Staff removed", "success");
+                await render();
+            },
+        });
+    }
+
+    async function loadAgents() {
+        const data = await api(`${apiBase}/agents/`);
+        state.pageData = (data || []).filter(matchesSearch);
+        renderTable(state.pageData, tableSchemas.agents, null);
+    }
+
+    async function loadRevenue() {
+        const [stats, history] = await Promise.all([api(`${apiBase}/revenue/stats/`), api(`${apiBase}/revenue/history/`)]);
+        renderKpis(stats);
+        state.pageData = (history || []).filter(matchesSearch);
+        renderTable(state.pageData, tableSchemas.revenue, null);
+    }
+
+    async function loadWallet() {
+        const [pm, wd] = await Promise.all([
+            api(`${coreApiBase}/merchant/payment-method/`).catch(() => ({ data: null })),
+            api(`${coreApiBase}/merchant/withdrawals/`).catch(() => ({ results: [] })),
+        ]);
+        const rows = [{ section: "payment_method", value: pm.data ? "Configured" : "Not configured" }, ...((wd.results || wd.data || []))];
+        state.pageData = rows.filter(matchesSearch);
+        renderTable(state.pageData, tableSchemas.wallet, null);
+        actionButton("Create/Update Payment Method", () => openModal("Payment Method", [
+            { name: "method_type", label: "Method Type (bank/esewa/khalti)", required: true },
+            { name: "account_name", label: "Account Name", required: true },
+            { name: "account_number", label: "Account Number", required: true },
+        ], (payload) => api(pm.data ? `${coreApiBase}/merchant/payment-method/update/` : `${coreApiBase}/merchant/payment-method/create/`, {
+            method: pm.data ? "PUT" : "POST",
+            body: JSON.stringify(payload),
+        })));
+        actionButton("Create Withdrawal", () => openModal("Create Withdrawal", [
+            { name: "amount", label: "Amount", required: true },
+        ], (payload) => api(`${coreApiBase}/merchant/withdrawals/create/`, { method: "POST", body: JSON.stringify(payload) })));
+    }
+
+    async function render() {
+        clearAlert();
+        renderNav();
+        el.panelActions.innerHTML = "";
+        el.panelTitle.textContent = state.tab.replace("-", " ").toUpperCase();
+        el.panelBody.innerHTML = `<div class="text-sm text-gray-500 p-2">Loading...</div>`;
+        try {
+            if (state.tab === "dashboard") return await loadDashboard();
+            if (state.tab === "bookings") return await loadBookings();
+            if (state.tab === "vehicles") return await loadVehicles();
+            if (state.tab === "boarding") return await loadBoarding();
+            if (state.tab === "staff") return await loadStaff();
+            if (state.tab === "agents") return await loadAgents();
+            if (state.tab === "revenue") return await loadRevenue();
+            if (state.tab === "wallet") return await loadWallet();
+            if (state.tab === "create-booking") return await openCreateBookingModal();
+        } catch (err) {
+            showAlert(err.message, "error");
+            el.panelBody.innerHTML = `<div class="text-sm text-red-600 p-2">Failed to load data.</div>`;
+        }
+    }
+
+    async function bootstrapSession() {
+        const session = await api(`${apiBase}/session/`);
+        state.session = session;
+        const allowed = {
+            travel_committee: session.is_travel_committee,
+            travel_staff: session.is_travel_staff,
+            travel_dealer: session.is_travel_dealer,
+            agent: session.is_agent,
+        };
+        if (!allowed[role]) {
+            const dest = allowed.travel_committee ? "/app/travel-committee/"
+                : allowed.travel_staff ? "/app/travel-committee-staff/"
+                : allowed.travel_dealer ? "/app/travel-dealer/"
+                : allowed.agent ? "/app/agent/" : "/dashboard/";
+            showAlert("Role mismatch. Redirecting...", "warning");
+            setTimeout(() => { window.location.href = dest; }, 700);
+            return false;
+        }
+        return true;
+    }
+
+    el.refreshBtn.addEventListener("click", async () => { await render(); });
+    el.searchInput.addEventListener("input", async (e) => {
+        state.query = e.target.value || "";
+        await render();
+    });
+    el.modalClose.addEventListener("click", closeModal);
+    el.modalRoot.addEventListener("click", (e) => { if (e.target === el.modalRoot) closeModal(); });
+
+    (async function init() {
+        try {
+            const ok = await bootstrapSession();
+            if (!ok) return;
+            state.tab = roleTabs()[0] || "dashboard";
+            await render();
+        } catch (err) {
+            showAlert(err.message, "error");
+        }
+    })();
+})();
+</script>
 {% endblock %}
