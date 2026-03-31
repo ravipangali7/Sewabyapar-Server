@@ -1,57 +1,57 @@
-{% extends 'website/base.html' %}
 {% load static %}
-
-{% block title %}{{ travel_title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .travel-gradient { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-    .travel-shell { min-height: calc(100vh - 64px); }
-    .travel-card { border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; }
-    .travel-stat { border-radius: 12px; border: 1px solid #e5e7eb; background: #fff; }
-    .travel-tab.active { color: #dc2626; border-bottom: 2px solid #dc2626; }
-    .drawer-item.active { background: #fef2f2; color: #b91c1c; }
-    .mobile-nav { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #e5e7eb; z-index: 50; }
-    @media (max-width: 767px) { .travel-main { padding-bottom: 72px; } }
-</style>
-{% endblock %}
-
-{% block content %}
-<div id="travelApp"
-     class="travel-shell bg-gray-50"
-     data-role="{{ travel_role }}"
-     data-api-base="{{ api_base }}">
-    <div class="travel-gradient text-white">
-        <div class="max-w-7xl mx-auto px-4 py-5 flex items-center justify-between">
-            <div>
-                <h1 class="text-xl md:text-2xl font-bold">{{ travel_title }}</h1>
-                <p class="text-sm text-red-100">Role-gated travel operations dashboard</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ travel_title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #f9fafb; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+        .travel-shell { min-height: 100vh; background: #f9fafb; }
+        .travel-card { border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; }
+        .travel-stat { border-radius: 12px; border: 1px solid #e5e7eb; background: #fff; }
+        .travel-header { position: sticky; top: 0; z-index: 40; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .travel-bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff; border-top: 1px solid #e5e7eb; }
+        .travel-bottom-item.active { color: #dc2626; font-weight: 600; }
+        .travel-appbar-item.active { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+        .travel-drawer-item.active { background: #fef2f2; color: #b91c1c; }
+        @media (max-width: 767px) { .travel-main { padding-bottom: 84px; } }
+    </style>
+</head>
+<body>
+<div id="travelApp" class="travel-shell" data-role="{{ travel_role }}" data-api-base="{{ api_base }}">
+    <header class="travel-header text-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-3 md:px-4 py-3">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold">{{ travel_title }}</h1>
+                    <p class="text-xs md:text-sm text-red-100">Role-gated travel operations dashboard</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'website:dashboard' %}" class="inline-flex items-center px-3 py-2 text-xs md:text-sm rounded-lg bg-white text-red-600 font-semibold">Main Dashboard</a>
+                    <a href="{% url 'website:logout' %}" class="inline-flex items-center px-3 py-2 text-xs md:text-sm rounded-lg bg-red-700 text-white font-semibold border border-red-500">Logout</a>
+                </div>
             </div>
-            <a href="{% url 'website:dashboard' %}" class="bg-white text-red-600 px-3 py-2 rounded-lg text-sm font-semibold">Main Dashboard</a>
+            <nav id="appBarMenu" class="mt-3 flex flex-wrap gap-2"></nav>
         </div>
-    </div>
+    </header>
 
-    <div class="max-w-7xl mx-auto px-3 md:px-4 py-4 travel-main">
+    <main class="max-w-7xl mx-auto px-3 md:px-4 py-4 travel-main">
         <div class="md:flex md:gap-4">
-            <aside class="hidden md:block w-64 travel-card p-3 h-fit sticky top-20">
-                <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Travel Menu</div>
+            <aside class="hidden md:block w-64 travel-card p-3 h-fit sticky top-24">
+                <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Role Menu</div>
                 <nav id="desktopMenu" class="space-y-1"></nav>
             </aside>
 
             <section class="flex-1">
                 <div id="appAlert" class="hidden mb-3 rounded-lg px-3 py-2 text-sm"></div>
-
-                <div id="topTabs" class="travel-card mb-3 overflow-x-auto">
-                    <div id="tabList" class="flex min-w-max"></div>
-                </div>
-
                 <div id="kpiGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3"></div>
-
                 <div class="travel-card p-3 mb-3">
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
                         <h2 id="panelTitle" class="text-base font-semibold text-gray-900">Operations</h2>
                         <div class="flex items-center gap-2">
-                            <input id="searchInput" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Search..." />
+                            <input id="searchInput" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full md:w-auto" placeholder="Search..." />
                             <button id="refreshBtn" class="bg-red-600 text-white px-3 py-2 rounded-lg text-sm">Refresh</button>
                         </div>
                     </div>
@@ -60,10 +60,10 @@
                 </div>
             </section>
         </div>
-    </div>
+    </main>
 
-    <nav class="mobile-nav md:hidden">
-        <div id="mobileMenu" class="grid grid-cols-4 text-xs"></div>
+    <nav class="travel-bottom-nav md:hidden">
+        <div id="bottomBarMenu" class="grid grid-cols-4 text-xs"></div>
     </nav>
 </div>
 
@@ -76,9 +76,6 @@
         <form id="modalForm" class="p-4 space-y-3"></form>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
 <script>
 (function () {
     const root = document.getElementById("travelApp");
@@ -91,9 +88,9 @@
 
     const el = {
         alert: document.getElementById("appAlert"),
-        tabList: document.getElementById("tabList"),
+        appBarMenu: document.getElementById("appBarMenu"),
         desktopMenu: document.getElementById("desktopMenu"),
-        mobileMenu: document.getElementById("mobileMenu"),
+        bottomBarMenu: document.getElementById("bottomBarMenu"),
         kpiGrid: document.getElementById("kpiGrid"),
         panelTitle: document.getElementById("panelTitle"),
         panelActions: document.getElementById("panelActions"),
@@ -111,6 +108,29 @@
         travel_staff: ["dashboard", "bookings", "boarding", "revenue"],
         travel_dealer: ["dashboard", "bookings", "agents", "revenue", "wallet"],
         agent: ["dashboard", "bookings", "create-booking", "vehicles", "revenue", "wallet"],
+    };
+    const appBarItemsByRole = {
+        travel_committee: ["dashboard", "vehicles", "bookings"],
+        travel_staff: ["dashboard", "bookings", "boarding"],
+        travel_dealer: ["dashboard", "bookings", "agents"],
+        agent: ["dashboard", "create-booking", "bookings"],
+    };
+    const bottomBarItemsByRole = {
+        travel_committee: ["dashboard", "boarding", "staff", "revenue", "wallet"],
+        travel_staff: ["dashboard", "bookings", "boarding", "revenue"],
+        travel_dealer: ["dashboard", "bookings", "revenue", "wallet"],
+        agent: ["dashboard", "create-booking", "bookings", "wallet"],
+    };
+    const tabLabel = {
+        dashboard: "Dashboard",
+        bookings: "Bookings",
+        "create-booking": "Create",
+        vehicles: "Vehicles",
+        boarding: "Boarding",
+        staff: "Staff",
+        agents: "Agents",
+        revenue: "Revenue",
+        wallet: "Wallet",
     };
 
     const dashboardProfileFields = {
@@ -335,13 +355,21 @@
 
     function renderNav() {
         const tabs = roleTabs();
-        const renderBtn = (tab, mobile) =>
-            `<button data-tab="${tab}" class="travel-tab ${mobile ? "px-2 py-3 text-xs" : "drawer-item w-full text-left px-3 py-2 rounded-lg"} ${state.tab === tab ? "active text-red-600 font-semibold" : "text-gray-700"}">
-                ${mobile ? tab.split("-")[0] : tab.replace("-", " ").toUpperCase()}
+        const appBarTabs = (appBarItemsByRole[role] || []).filter((tab) => tabs.includes(tab));
+        const bottomTabs = (bottomBarItemsByRole[role] || []).filter((tab) => tabs.includes(tab));
+        const renderBtn = (tab, mode) =>
+            `<button data-tab="${tab}" class="${
+                mode === "appbar"
+                    ? "travel-appbar-item px-3 py-2 text-xs md:text-sm rounded-lg border border-red-300 bg-white/90 text-red-700"
+                    : mode === "bottom"
+                        ? "travel-bottom-item px-1 py-3 text-xs text-gray-700"
+                        : "travel-drawer-item w-full text-left px-3 py-2 rounded-lg text-sm"
+            } ${state.tab === tab ? "active text-red-600 font-semibold" : "text-gray-700"}">
+                ${tabLabel[tab] || tab}
             </button>`;
-        el.tabList.innerHTML = tabs.map((t) => renderBtn(t, false)).join("");
-        el.desktopMenu.innerHTML = tabs.map((t) => renderBtn(t, false)).join("");
-        el.mobileMenu.innerHTML = tabs.slice(0, 4).map((t) => renderBtn(t, true)).join("");
+        el.appBarMenu.innerHTML = appBarTabs.map((t) => renderBtn(t, "appbar")).join("");
+        el.desktopMenu.innerHTML = tabs.map((t) => renderBtn(t, "desktop")).join("");
+        el.bottomBarMenu.innerHTML = bottomTabs.slice(0, 4).map((t) => renderBtn(t, "bottom")).join("");
         root.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", async () => {
             state.tab = b.dataset.tab;
             await render();
@@ -607,4 +635,5 @@
     })();
 })();
 </script>
-{% endblock %}
+</body>
+</html>
