@@ -791,7 +791,7 @@
     el.appBarMenuBtn.addEventListener("click", openDrawer);
     el.drawerCloseBtn.addEventListener("click", closeDrawer);
     el.drawerBackdrop.addEventListener("click", closeDrawer);
-    root.addEventListener("click", async (e) => {
+    document.addEventListener("click", async (e) => {
         const tabButton = e.target.closest("[data-tab]");
         if (!tabButton) return;
         await handleTabSelection(tabButton.dataset.tab);
