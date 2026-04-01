@@ -233,10 +233,11 @@
     }
 
     async function api(path, options = {}) {
+        const isFormData = options.body instanceof FormData;
         const res = await fetch(path, {
             credentials: "same-origin",
             headers: {
-                "Content-Type": "application/json",
+                ...(isFormData ? {} : { "Content-Type": "application/json" }),
                 "X-CSRFToken": getCsrfToken(),
                 ...(options.headers || {}),
             },
@@ -261,6 +262,61 @@
     }
 
     function clearAlert() { el.alert.classList.add("hidden"); }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function toIsoFromDateTimeLocal(value) {
+        if (!value) return value;
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toISOString();
+    }
+
+    async function fetchOptionData(path, mapOption) {
+        const data = await api(path);
+        const list = Array.isArray(data) ? data : (data.results || data.data || []);
+        return list.map(mapOption).filter((opt) => opt && opt.value !== undefined && opt.value !== null);
+    }
+
+    async function fetchVehicleOptions() {
+        return fetchOptionData(`${apiBase}/options/vehicles/`, (item) => ({
+            value: item.value ?? item.id,
+            label: item.label ?? `${item.name || "Vehicle"} (${item.vehicle_no || "-"})`,
+        }));
+    }
+
+    async function fetchPlaceOptions() {
+        return fetchOptionData(`${apiBase}/options/places/`, (item) => ({
+            value: item.value ?? item.id,
+            label: item.label ?? item.name,
+        }));
+    }
+
+    async function fetchStaffUserOptions() {
+        return fetchOptionData(`${apiBase}/staff/available-users/`, (item) => ({
+            value: item.id,
+            label: `${item.name || "Unknown"}${item.phone ? ` (${item.phone})` : ""}`,
+        }));
+    }
+
+    async function fetchSeatOptions(vehicleId, bookingDateValue) {
+        if (!vehicleId || !bookingDateValue) return [];
+        const isoDate = encodeURIComponent(toIsoFromDateTimeLocal(bookingDateValue));
+        return fetchOptionData(`${apiBase}/vehicles/${vehicleId}/available-seats/?date=${isoDate}`, (item) => {
+            if (item.status !== "available") return null;
+            return {
+                value: item.id,
+                label: `${String(item.floor || "").toUpperCase()} ${item.side}${item.number}`,
+            };
+        });
+    }
 
     function toLabel(key) {
         return key.replace(/\./g, " ").replace(/_/g, " ").replace(/\b\w/g, (x) => x.toUpperCase());
@@ -433,16 +489,35 @@
 
     function fieldInputHtml(field) {
         const required = field.required ? "required" : "";
-        const value = field.value || "";
+        const disabled = field.disabled ? "disabled" : "";
+        const helper = field.helpText ? `<p class="text-xs text-gray-500 mt-1">${escapeHtml(field.helpText)}</p>` : "";
+        const value = field.value ?? "";
         if (field.type === "textarea") {
-            return `<textarea name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required}>${value}</textarea>`;
+            return `<textarea data-field="${field.name}" name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled}>${escapeHtml(value)}</textarea>${helper}`;
         }
-        if (field.type === "select") {
+        if (field.type === "checkbox") {
+            return `<label class="inline-flex items-center gap-2">
+                <input data-field="${field.name}" name="${field.name}" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-red-600" ${value ? "checked" : ""} ${disabled} />
+                <span class="text-sm text-gray-700">${escapeHtml(field.checkboxLabel || "Enabled")}</span>
+            </label>${helper}`;
+        }
+        if (field.type === "select" || field.type === "multiselect") {
+            const multiple = field.type === "multiselect" || field.multiple ? "multiple" : "";
+            const placeholderOption = field.placeholder && !multiple
+                ? `<option value="">${escapeHtml(field.placeholder)}</option>`
+                : "";
             const options = (field.options || []).map((o) =>
-                `<option value="${o.value}" ${String(o.value) === String(value) ? "selected" : ""}>${o.label}</option>`).join("");
-            return `<select name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required}>${options}</select>`;
+                `<option value="${escapeHtml(o.value)}" ${
+                    Array.isArray(value)
+                        ? (value.map(String).includes(String(o.value)) ? "selected" : "")
+                        : (String(o.value) === String(value) ? "selected" : "")
+                }>${escapeHtml(o.label)}</option>`).join("");
+            return `<select data-field="${field.name}" name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled} ${multiple}>${placeholderOption}${options}</select>${helper}`;
         }
-        return `<input name="${field.name}" type="${field.type || "text"}" value="${value}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} />`;
+        if (field.type === "file") {
+            return `<input data-field="${field.name}" name="${field.name}" type="file" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled} ${field.accept ? `accept="${field.accept}"` : ""} />${helper}`;
+        }
+        return `<input data-field="${field.name}" name="${field.name}" type="${field.type || "text"}" value="${escapeHtml(value)}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled} ${field.accept ? `accept="${field.accept}"` : ""} ${field.min !== undefined ? `min="${field.min}"` : ""} ${field.max !== undefined ? `max="${field.max}"` : ""} ${field.step !== undefined ? `step="${field.step}"` : ""} />${helper}`;
     }
 
     function openModal(title, fields, onSubmit, submitLabel) {
@@ -462,9 +537,30 @@
             e.preventDefault();
             const formData = new FormData(el.modalForm);
             const payload = {};
-            for (const [k, v] of formData.entries()) payload[k] = v;
+            let hasFile = false;
+            fields.forEach((field) => {
+                const inputEl = el.modalForm.querySelector(`[data-field="${field.name}"]`);
+                if (!inputEl) return;
+                if (field.type === "checkbox") {
+                    payload[field.name] = !!inputEl.checked;
+                    return;
+                }
+                if (field.type === "file") {
+                    const file = inputEl.files && inputEl.files[0] ? inputEl.files[0] : null;
+                    if (file) {
+                        payload[field.name] = file;
+                        hasFile = true;
+                    }
+                    return;
+                }
+                if (field.type === "multiselect" || field.multiple) {
+                    payload[field.name] = formData.getAll(field.name);
+                    return;
+                }
+                payload[field.name] = formData.get(field.name);
+            });
             try {
-                await onSubmit(payload);
+                await onSubmit(payload, { hasFile });
                 closeModal();
                 showAlert("Saved successfully", "success");
                 await render();
@@ -474,6 +570,34 @@
         };
         el.modalRoot.classList.remove("hidden");
         el.modalRoot.classList.add("flex");
+        return {
+            form: el.modalForm,
+            setFieldOptions: (fieldName, options, placeholder = "Select...") => {
+                const selectEl = el.modalForm.querySelector(`select[data-field="${fieldName}"]`);
+                if (!selectEl) return;
+                const isMultiple = selectEl.multiple;
+                const placeholderOption = isMultiple ? "" : `<option value="">${escapeHtml(placeholder)}</option>`;
+                selectEl.innerHTML = `${placeholderOption}${(options || []).map((opt) => (
+                    `<option value="${escapeHtml(opt.value)}">${escapeHtml(opt.label)}</option>`
+                )).join("")}`;
+                selectEl.disabled = !(options || []).length;
+            },
+            setFieldValue: (fieldName, value) => {
+                const inputEl = el.modalForm.querySelector(`[data-field="${fieldName}"]`);
+                if (!inputEl) return;
+                if (inputEl.type === "checkbox") {
+                    inputEl.checked = !!value;
+                } else {
+                    inputEl.value = value ?? "";
+                }
+            },
+            getFieldValue: (fieldName) => {
+                const inputEl = el.modalForm.querySelector(`[data-field="${fieldName}"]`);
+                if (!inputEl) return "";
+                if (inputEl.type === "checkbox") return inputEl.checked;
+                return inputEl.value;
+            },
+        };
     }
 
     function closeModal() {
@@ -593,7 +717,7 @@
             ticket: async (row) => window.open(`${apiBase}/bookings/${row.id}/ticket/`, "_blank"),
             edit: async (row) => openModal("Update Booking", [
                 { name: "name", label: "Name", value: row.name, required: true },
-                { name: "phone", label: "Phone", value: row.phone, required: true },
+                { name: "phone", label: "Phone", type: "tel", value: row.phone, required: true },
                 { name: "status", label: "Status", type: "select", value: row.status, options: ["pending", "booked", "boarded", "cancelled"].map((s) => ({ value: s, label: s })) },
                 { name: "remarks", label: "Remarks", type: "textarea", value: row.remarks || "" },
             ], (payload) => api(`${apiBase}/bookings/${row.id}/`, { method: "PATCH", body: JSON.stringify(payload) }), "Update"),
@@ -601,24 +725,46 @@
     }
 
     async function openCreateBookingModal() {
-        openModal("Create Booking", [
-            { name: "vehicle", label: "Vehicle ID", required: true },
-            { name: "seat_ids", label: "Seat IDs (comma separated)", required: true },
-            { name: "booking_date", label: "Booking DateTime (ISO)", required: true },
+        const vehicleOptions = await fetchVehicleOptions();
+        const modal = openModal("Create Booking", [
+            { name: "vehicle", label: "Vehicle", type: "select", required: true, options: vehicleOptions, placeholder: "Select vehicle" },
+            { name: "seat_ids", label: "Seats", type: "multiselect", required: true, options: [], disabled: true, helpText: "Select vehicle and booking date first" },
+            { name: "booking_date", label: "Booking Date & Time", type: "datetime-local", required: true },
             { name: "name", label: "Passenger Name", required: true },
-            { name: "phone", label: "Phone", required: true },
+            { name: "phone", label: "Phone", type: "tel", required: true },
             { name: "gender", label: "Gender", type: "select", options: [{ value: "male", label: "male" }, { value: "female", label: "female" }], required: true },
             { name: "nationality", label: "Nationality" },
             { name: "remarks", label: "Remarks", type: "textarea" },
-        ], (payload) =>
+        ], (payload) => {
+            const seatIds = (payload.seat_ids || []).map((x) => parseInt(x, 10)).filter(Boolean);
             api(`${apiBase}/bookings/create/`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...payload,
-                    seat_ids: String(payload.seat_ids).split(",").map((x) => parseInt(x.trim(), 10)).filter(Boolean),
+                    booking_date: toIsoFromDateTimeLocal(payload.booking_date),
+                    seat_ids: seatIds,
                 }),
             })
-        );
+        });
+
+        const refreshSeats = async () => {
+            const vehicleId = modal.getFieldValue("vehicle");
+            const bookingDate = modal.getFieldValue("booking_date");
+            if (!vehicleId || !bookingDate) {
+                modal.setFieldOptions("seat_ids", [], "Select vehicle and date first");
+                return;
+            }
+            try {
+                const seatOptions = await fetchSeatOptions(vehicleId, bookingDate);
+                modal.setFieldOptions("seat_ids", seatOptions, "No seats available");
+            } catch (err) {
+                modal.setFieldOptions("seat_ids", [], "Unable to load seats");
+                showAlert(err.message, "warning");
+            }
+        };
+
+        modal.form.querySelector('[data-field="vehicle"]')?.addEventListener("change", refreshSeats);
+        modal.form.querySelector('[data-field="booking_date"]')?.addEventListener("change", refreshSeats);
     }
 
     async function loadVehicles() {
@@ -633,24 +779,54 @@
             ] : null
         );
         if (role === "travel_committee") {
-            actionButton("Add Vehicle", () => openModal("Create Vehicle", [
-                { name: "name", label: "Name", required: true },
-                { name: "vehicle_no", label: "Vehicle No", required: true },
-                { name: "from_place", label: "From Place ID", required: true },
-                { name: "to_place", label: "To Place ID", required: true },
-                { name: "departure_time", label: "Departure Time (HH:MM)", required: true },
-                { name: "actual_seat_price", label: "Actual Seat Price", required: true },
-                { name: "seat_price", label: "Seat Price", required: true },
-            ], (payload) => api(`${apiBase}/vehicles/`, { method: "POST", body: JSON.stringify(payload) })));
+            actionButton("Add Vehicle", async () => {
+                const placeOptions = await fetchPlaceOptions();
+                openModal("Create Vehicle", [
+                    { name: "name", label: "Name", required: true },
+                    { name: "vehicle_no", label: "Vehicle No", required: true },
+                    { name: "from_place", label: "From Place", type: "select", required: true, options: placeOptions, placeholder: "Select origin place" },
+                    { name: "to_place", label: "To Place", type: "select", required: true, options: placeOptions, placeholder: "Select destination place" },
+                    { name: "departure_time", label: "Departure Time", type: "time", required: true },
+                    { name: "actual_seat_price", label: "Actual Seat Price", type: "number", step: "0.01", min: "0", required: true },
+                    { name: "seat_price", label: "Seat Price", type: "number", step: "0.01", min: "0", required: true },
+                    { name: "image", label: "Vehicle Image", type: "file", accept: "image/*" },
+                ], (payload, meta) => {
+                    if (meta.hasFile) {
+                        const formData = new FormData();
+                        Object.entries(payload).forEach(([key, value]) => {
+                            if (value === null || value === undefined || value === "") return;
+                            formData.append(key, value);
+                        });
+                        return api(`${apiBase}/vehicles/`, { method: "POST", body: formData });
+                    }
+                    return api(`${apiBase}/vehicles/`, { method: "POST", body: JSON.stringify(payload) });
+                });
+            });
         }
         bindRowActions({
-            edit: async (row) => openModal("Update Vehicle", [
-                { name: "name", label: "Name", value: row.name, required: true },
-                { name: "vehicle_no", label: "Vehicle No", value: row.vehicle_no, required: true },
-                { name: "departure_time", label: "Departure Time", value: row.departure_time, required: true },
-                { name: "actual_seat_price", label: "Actual Seat Price", value: row.actual_seat_price, required: true },
-                { name: "seat_price", label: "Seat Price", value: row.seat_price, required: true },
-            ], (payload) => api(`${apiBase}/vehicles/${row.id}/`, { method: "PATCH", body: JSON.stringify(payload) }), "Update"),
+            edit: async (row) => {
+                const placeOptions = await fetchPlaceOptions();
+                openModal("Update Vehicle", [
+                    { name: "name", label: "Name", value: row.name, required: true },
+                    { name: "vehicle_no", label: "Vehicle No", value: row.vehicle_no, required: true },
+                    { name: "from_place", label: "From Place", type: "select", value: row.from_place?.id, required: true, options: placeOptions, placeholder: "Select origin place" },
+                    { name: "to_place", label: "To Place", type: "select", value: row.to_place?.id, required: true, options: placeOptions, placeholder: "Select destination place" },
+                    { name: "departure_time", label: "Departure Time", type: "time", value: row.departure_time, required: true },
+                    { name: "actual_seat_price", label: "Actual Seat Price", type: "number", step: "0.01", min: "0", value: row.actual_seat_price, required: true },
+                    { name: "seat_price", label: "Seat Price", type: "number", step: "0.01", min: "0", value: row.seat_price, required: true },
+                    { name: "image", label: "Vehicle Image", type: "file", accept: "image/*" },
+                ], (payload, meta) => {
+                    if (meta.hasFile) {
+                        const formData = new FormData();
+                        Object.entries(payload).forEach(([key, value]) => {
+                            if (value === null || value === undefined || value === "") return;
+                            formData.append(key, value);
+                        });
+                        return api(`${apiBase}/vehicles/${row.id}/`, { method: "PATCH", body: formData });
+                    }
+                    return api(`${apiBase}/vehicles/${row.id}/`, { method: "PATCH", body: JSON.stringify(payload) });
+                }, "Update");
+            },
             delete: async (row) => {
                 if (!window.confirm(`Delete/deactivate ${row.name}?`)) return;
                 await api(`${apiBase}/vehicles/${row.id}/`, { method: "DELETE" });
@@ -684,34 +860,25 @@
             { id: "delete", label: "Delete", className: "bg-red-50" },
         ]);
         actionButton("Add Staff", async () => {
-            const users = await api(`${apiBase}/staff/available-users/`);
+            const userOptions = await fetchStaffUserOptions();
             openModal("Create Staff", [
-                { name: "user", label: `User ID (${users.length} available)`, required: true },
-                { name: "booking_permission", label: "Booking (1/0)" },
-                { name: "boarding_permission", label: "Boarding (1/0)" },
-                { name: "finance_permission", label: "Finance (1/0)" },
+                { name: "user", label: "User", type: "select", required: true, options: userOptions, placeholder: "Select user" },
+                { name: "booking_permission", label: "Booking Permission", type: "checkbox", value: false },
+                { name: "boarding_permission", label: "Boarding Permission", type: "checkbox", value: false },
+                { name: "finance_permission", label: "Finance Permission", type: "checkbox", value: false },
             ], (payload) => api(`${apiBase}/staff/create/`, {
                 method: "POST",
-                body: JSON.stringify({
-                    user: payload.user,
-                    booking_permission: payload.booking_permission === "1",
-                    boarding_permission: payload.boarding_permission === "1",
-                    finance_permission: payload.finance_permission === "1",
-                }),
+                body: JSON.stringify(payload),
             }));
         });
         bindRowActions({
             edit: async (row) => openModal("Update Staff", [
-                { name: "booking_permission", label: "Booking (1/0)", value: row.booking_permission ? "1" : "0" },
-                { name: "boarding_permission", label: "Boarding (1/0)", value: row.boarding_permission ? "1" : "0" },
-                { name: "finance_permission", label: "Finance (1/0)", value: row.finance_permission ? "1" : "0" },
+                { name: "booking_permission", label: "Booking Permission", type: "checkbox", value: row.booking_permission },
+                { name: "boarding_permission", label: "Boarding Permission", type: "checkbox", value: row.boarding_permission },
+                { name: "finance_permission", label: "Finance Permission", type: "checkbox", value: row.finance_permission },
             ], (payload) => api(`${apiBase}/staff/${row.id}/`, {
                 method: "PATCH",
-                body: JSON.stringify({
-                    booking_permission: payload.booking_permission === "1",
-                    boarding_permission: payload.boarding_permission === "1",
-                    finance_permission: payload.finance_permission === "1",
-                }),
+                body: JSON.stringify(payload),
             }), "Update"),
             delete: async (row) => {
                 if (!window.confirm("Delete staff member?")) return;
@@ -744,7 +911,11 @@
         state.pageData = rows.filter(matchesSearch);
         renderTable(state.pageData, tableSchemas.wallet, null);
         actionButton("Create/Update Payment Method", () => openModal("Payment Method", [
-            { name: "method_type", label: "Method Type (bank/esewa/khalti)", required: true },
+            { name: "method_type", label: "Method Type", type: "select", required: true, options: [
+                { value: "bank", label: "Bank" },
+                { value: "esewa", label: "eSewa" },
+                { value: "khalti", label: "Khalti" },
+            ], placeholder: "Select method" },
             { name: "account_name", label: "Account Name", required: true },
             { name: "account_number", label: "Account Number", required: true },
         ], (payload) => api(pm.data ? `${coreApiBase}/merchant/payment-method/update/` : `${coreApiBase}/merchant/payment-method/create/`, {
@@ -752,7 +923,7 @@
             body: JSON.stringify(payload),
         })));
         actionButton("Create Withdrawal", () => openModal("Create Withdrawal", [
-            { name: "amount", label: "Amount", required: true },
+            { name: "amount", label: "Amount", type: "number", min: "0", step: "0.01", required: true },
         ], (payload) => api(`${coreApiBase}/merchant/withdrawals/create/`, { method: "POST", body: JSON.stringify(payload) })));
     }
 

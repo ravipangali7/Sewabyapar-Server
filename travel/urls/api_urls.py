@@ -2,7 +2,7 @@
 from django.urls import path
 from travel.views.api import (
     dashboard_views, booking_views, boarding_views,
-    vehicle_views, revenue_views, staff_views, agent_views
+    vehicle_views, revenue_views, staff_views, agent_views, option_views
 )
 
 app_name = 'travel'
@@ -32,6 +32,8 @@ urlpatterns = [
     path('vehicles/<int:vehicle_id>/seats/', vehicle_views.seat_layout, name='vehicle-seat-layout'),
     path('vehicles/<int:vehicle_id>/available-seats/', vehicle_views.available_seats, name='vehicle-available-seats'),
     path('vehicles/<int:vehicle_id>/reset-seats/', booking_views.reset_seats, name='vehicle-reset-seats'),
+    path('options/vehicles/', option_views.vehicle_options, name='vehicle-options'),
+    path('options/places/', option_views.place_options, name='place-options'),
     
     # Staff endpoints (committee only)
     path('staff/', staff_views.staff_list, name='staff-list'),
