@@ -7,6 +7,7 @@ from django.conf import settings as django_settings
 import random
 from core.models import User, Otp
 from core.utils.sms_service import sms_service
+from core.utils.role_helpers import get_dashboard_path_for_user
 from website.models import MySetting, CMSPages
 
 
@@ -18,7 +19,7 @@ def generate_otp():
 def send_otp_view(request):
     """Send OTP for registration"""
     if request.user.is_authenticated:
-        return redirect('website:dashboard')
+        return redirect(get_dashboard_path_for_user(request.user))
     
     if request.method == 'POST':
         phone = request.POST.get('phone', '').strip()
@@ -95,7 +96,7 @@ def send_otp_view(request):
 def register_view(request):
     """User registration page with OTP verification"""
     if request.user.is_authenticated:
-        return redirect('website:dashboard')
+        return redirect(get_dashboard_path_for_user(request.user))
     
     try:
         settings = MySetting.objects.first()
@@ -169,7 +170,7 @@ def register_view(request):
                             
                             login(request, user)
                             messages.success(request, 'Registration successful!')
-                            return redirect('website:dashboard')
+                            return redirect(get_dashboard_path_for_user(user))
                         except Exception as e:
                             messages.error(request, f'Registration failed: {str(e)}')
                 except Otp.DoesNotExist:

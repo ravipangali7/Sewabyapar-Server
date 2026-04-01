@@ -4,12 +4,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from core.models import User
 from website.models import MySetting, CMSPages
+from core.utils.role_helpers import get_dashboard_path_for_user
 
 
 def login_view(request):
     """User login page"""
     if request.user.is_authenticated:
-        return redirect('website:dashboard')
+        return redirect(get_dashboard_path_for_user(request.user))
     
     try:
         settings = MySetting.objects.first()
@@ -51,8 +52,10 @@ def login_view(request):
             user = authenticate(request, username=phone, password=password)
             if user is not None:
                 login(request, user)
-                next_url = request.GET.get('next', 'website:dashboard')
-                return redirect(next_url)
+                next_url = request.GET.get('next')
+                if next_url:
+                    return redirect(next_url)
+                return redirect(get_dashboard_path_for_user(user))
             else:
                 messages.error(request, 'Invalid phone number or password.')
         else:

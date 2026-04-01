@@ -60,7 +60,7 @@
                     <div id="appBarTitle" class="text-sm md:text-base font-semibold tracking-wide">Dashboard</div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="{% url 'website:profile' %}" class="inline-flex items-center px-2.5 py-1.5 text-xs rounded-lg bg-white/90 text-red-700 border border-red-300 font-semibold">
+                    <a href="{% url 'website:travel_profile' %}" class="inline-flex items-center px-2.5 py-1.5 text-xs rounded-lg bg-white/90 text-red-700 border border-red-300 font-semibold">
                         Profile
                     </a>
                     <button id="appBarBackBtn" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/90 text-red-700 border border-red-300" aria-label="Back">
@@ -536,7 +536,7 @@
     async function handleTabSelection(tab) {
         if (!tab) return;
         if (tab === "profile") {
-            window.location.href = "{% url 'website:profile' %}";
+            window.location.href = "{% url 'website:travel_profile' %}";
             return;
         }
         state.tab = tab;

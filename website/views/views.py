@@ -8,13 +8,14 @@ from ..models import MySetting, Services, CMSPages
 from ecommerce.models import Product, Category, Store, Order, OrderItem
 from taxi.models import TaxiBooking
 from website.decorators import travel_role_required
+from core.utils.role_helpers import get_user_primary_role, get_dashboard_path_for_user
 
 
 def home_view(request):
     """Homepage view - single page website"""
     # If user is authenticated, redirect to dashboard
     if request.user.is_authenticated:
-        return redirect('website:dashboard')
+        return redirect(get_dashboard_path_for_user(request.user))
     
     try:
         settings = MySetting.objects.first()
@@ -90,6 +91,9 @@ def contact_form_view(request):
 @login_required
 def dashboard_view(request):
     """Dashboard view for logged-in users"""
+    if get_user_primary_role(request.user) != 'customer':
+        return redirect(get_dashboard_path_for_user(request.user))
+
     try:
         settings = MySetting.objects.first()
     except MySetting.DoesNotExist:

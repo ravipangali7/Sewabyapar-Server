@@ -1,4 +1,4 @@
-from .profile_views import profile_view
+from .profile_views import profile_view, travel_profile_view
 from .edit_profile_views import edit_profile_view
 from .address_views import addresses_view
 from .notification_views import notifications_view
@@ -8,6 +8,7 @@ from .kyc_views import kyc_submit_view, kyc_status_view
 
 __all__ = [
     'profile_view',
+    'travel_profile_view',
     'edit_profile_view',
     'addresses_view',
     'notifications_view',

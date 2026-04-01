@@ -46,6 +46,7 @@ urlpatterns = [
     
     # Profile routes
     path('profile/', profile.profile_view, name='profile'),
+    path('travel/profile/', profile.travel_profile_view, name='travel_profile'),
     path('profile/edit/', profile.edit_profile_view, name='edit_profile'),
     path('profile/addresses/', profile.addresses_view, name='addresses'),
     path('profile/notifications/', profile.notifications_view, name='notifications'),

@@ -1,4 +1,4 @@
-"""Role helper functions for user role checking and mode switching"""
+"""Role helper functions for user role checking and mode switching."""
 from travel.utils import check_user_travel_role
 from travel.models import TravelCommittee, TravelCommitteeStaff
 from travel.models import TravelDealer
@@ -12,6 +12,9 @@ def get_user_travel_roles(user):
 
 def get_user_primary_role(user):
     """Determine primary dashboard role for user"""
+    if user.is_superuser or user.is_staff:
+        return 'admin'
+
     roles = get_user_travel_roles(user)
     
     # Priority: Committee > Staff > Dealer > Agent > Merchant > Driver > Customer
@@ -29,6 +32,35 @@ def get_user_primary_role(user):
         return 'driver'
     else:
         return 'customer'
+
+
+def is_travel_role(role):
+    return role in {'travel_committee', 'travel_staff', 'travel_dealer', 'agent'}
+
+
+def get_dashboard_path_for_role(role):
+    role_map = {
+        'admin': '/myadmin/',
+        'travel_committee': '/app/travel-committee/',
+        'travel_staff': '/app/travel-committee-staff/',
+        'travel_dealer': '/app/travel-dealer/',
+        'agent': '/app/agent/',
+        'merchant': '/dashboard/',
+        'driver': '/dashboard/',
+        'customer': '/dashboard/',
+    }
+    return role_map.get(role, '/dashboard/')
+
+
+def get_dashboard_path_for_user(user):
+    return get_dashboard_path_for_role(get_user_primary_role(user))
+
+
+def get_profile_path_for_user(user):
+    role = get_user_primary_role(user)
+    if is_travel_role(role):
+        return '/travel/profile/'
+    return '/profile/'
 
 
 def can_switch_to_customer(user):

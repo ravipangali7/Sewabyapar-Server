@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from core.utils.role_helpers import get_user_primary_role
+from core.utils.role_helpers import get_user_primary_role, get_dashboard_path_for_user
 from travel.utils import check_user_travel_role
 
 
@@ -33,15 +33,8 @@ def travel_role_required(expected_role):
             if allowed.get(expected_role) and primary == expected_role:
                 return view_func(request, *args, **kwargs)
 
-            fallback_map = {
-                "travel_committee": "website:travel_committee",
-                "travel_staff": "website:travel_committee_staff",
-                "travel_dealer": "website:travel_dealer",
-                "agent": "website:travel_agent",
-            }
-            fallback = fallback_map.get(primary, "website:dashboard")
             messages.warning(request, "Access restricted for this travel role page.")
-            return redirect(fallback)
+            return redirect(get_dashboard_path_for_user(user))
 
         return _wrapped
 
