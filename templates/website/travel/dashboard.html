@@ -23,12 +23,26 @@
         .travel-bottom-item.active { color: #dc2626; font-weight: 600; background: #fff1f2; }
         .travel-appbar-item.active { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
         .travel-drawer-item.active { background: #fef2f2; color: #b91c1c; }
-        .travel-mobile-list { display: grid; gap: 8px; }
-        .travel-mobile-row { border: 1px solid #e8edf5; border-radius: 16px; padding: 12px; background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08); }
+        .travel-mobile-list { display: grid; gap: 10px; }
+        .travel-mobile-row { border: 1px solid #e8edf5; border-radius: 16px; background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%); box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09); overflow: hidden; }
+        .travel-mobile-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-bottom: 1px solid #edf1f6; }
+        .travel-mobile-profile { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .travel-mobile-avatar { width: 36px; height: 36px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); flex-shrink: 0; }
+        .travel-mobile-name { font-size: 14px; font-weight: 700; color: #111827; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .travel-mobile-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .travel-chip { display: inline-flex; align-items: center; border-radius: 9999px; font-size: 11px; font-weight: 700; padding: 3px 9px; white-space: nowrap; }
+        .travel-chip-positive { color: #166534; background: #dcfce7; border: 1px solid #86efac; }
+        .travel-chip-negative { color: #991b1b; background: #fee2e2; border: 1px solid #fca5a5; }
+        .travel-chip-neutral { color: #374151; background: #f3f4f6; border: 1px solid #e5e7eb; }
+        .travel-mobile-sections { padding: 12px; display: grid; gap: 10px; }
+        .travel-mobile-section { border: 1px solid #eef2f7; border-radius: 12px; padding: 9px; background: rgba(255, 255, 255, 0.75); }
+        .travel-mobile-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; font-weight: 700; margin-bottom: 6px; }
         .travel-mobile-item { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; font-size: 12px; }
         .travel-mobile-item-label { color: #6b7280; font-weight: 600; }
-        .travel-mobile-item-value { color: #111827; text-align: right; word-break: break-word; }
-        .travel-mobile-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .travel-mobile-item-value { color: #111827; text-align: right; word-break: break-word; font-weight: 600; }
+        .travel-mobile-actions { border-top: 1px solid #edf1f6; padding: 10px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; background: #fbfcff; }
+        .travel-mobile-action-btn { border-radius: 10px; border: 1px solid #d7deea; padding: 7px 10px; font-size: 12px; font-weight: 700; text-align: center; background: #fff; color: #374151; }
+        .travel-mobile-action-btn.delete { color: #991b1b; border-color: #fca5a5; background: #fff1f2; }
         @media (max-width: 767px) { .travel-main { padding-bottom: 84px; } }
     </style>
 </head>
@@ -248,6 +262,55 @@
         return "-";
     }
 
+    function getRawValue(obj, path) {
+        return path.split(".").reduce((acc, p) => (acc && acc[p] !== undefined ? acc[p] : undefined), obj);
+    }
+
+    function getChipClass(value) {
+        const normalized = String(value || "").toLowerCase();
+        if (["yes", "true", "active", "booked", "boarded", "success", "completed"].includes(normalized)) return "travel-chip travel-chip-positive";
+        if (["no", "false", "inactive", "cancelled", "failed", "rejected"].includes(normalized)) return "travel-chip travel-chip-negative";
+        return "travel-chip travel-chip-neutral";
+    }
+
+    function formatFieldValue(row, field) {
+        const raw = getRawValue(row, field);
+        const display = getValue(row, field);
+        const isBooleanLike = typeof raw === "boolean" || field.includes("permission") || field === "is_active" || field === "status";
+        if (isBooleanLike) return `<span class="${getChipClass(display)}">${display}</span>`;
+        return display;
+    }
+
+    function mobileCardSections(row, columns) {
+        const groups = [
+            { title: "Contact", matches: (f) => f.includes("phone") || f.includes("nationality") },
+            { title: "Permissions", matches: (f) => f.includes("permission") },
+            { title: "Details", matches: () => true },
+        ];
+        const reserved = new Set(["id", "name", "user.name", "status", "is_active"]);
+        const available = columns.filter((f) => !reserved.has(f));
+        const sections = [];
+        const used = new Set();
+        groups.forEach((group) => {
+            const keys = available.filter((f) => !used.has(f) && group.matches(f));
+            if (!keys.length) return;
+            keys.forEach((k) => used.add(k));
+            const rows = keys.map((field) => `
+                <div class="travel-mobile-item">
+                    <div class="travel-mobile-item-label">${toLabel(field)}</div>
+                    <div class="travel-mobile-item-value">${formatFieldValue(row, field)}</div>
+                </div>
+            `).join("");
+            sections.push(`
+                <div class="travel-mobile-section">
+                    <div class="travel-mobile-section-title">${group.title}</div>
+                    ${rows}
+                </div>
+            `);
+        });
+        return sections.join("");
+    }
+
     function flattenMetrics(stats) {
         const result = [];
         const grouped = [];
@@ -306,18 +369,34 @@
         const isMobile = window.matchMedia("(max-width: 767px)").matches;
         if (isMobile) {
             const rows = items.map((row, i) => {
-                const fields = columns.map((c) => `
-                    <div class="travel-mobile-item">
-                        <div class="travel-mobile-item-label">${toLabel(c)}</div>
-                        <div class="travel-mobile-item-value">${getValue(row, c)}</div>
-                    </div>
-                `).join("");
+                const idValue = getValue(row, "id");
+                const primaryName = getValue(row, "user.name") !== "-" ? getValue(row, "user.name") : getValue(row, "name");
+                const fallbackName = primaryName !== "-" ? primaryName : getValue(row, "ticket_number");
+                const displayName = fallbackName !== "-" ? fallbackName : `Item #${idValue}`;
+                const initials = displayName.split(" ").map((x) => x[0]).join("").slice(0, 2).toUpperCase();
+                const statusValue = getValue(row, "status") !== "-" ? getValue(row, "status") : getValue(row, "is_active");
+                const statusChip = statusValue !== "-" ? `<span class="${getChipClass(statusValue)}">${statusValue}</span>` : `<span class="travel-chip travel-chip-neutral">Info</span>`;
                 const actionCell = actions
                     ? `<div class="travel-mobile-actions">${actions.map((a) =>
-                        `<button data-row="${i}" data-act="${a.id}" class="text-xs px-2 py-1 rounded ${a.className || "bg-gray-100"}">${a.label}</button>`
+                        `<button data-row="${i}" data-act="${a.id}" class="travel-mobile-action-btn ${a.id === "delete" ? "delete" : ""}">${a.label}</button>`
                     ).join("")}</div>`
                     : "";
-                return `<div class="travel-mobile-row">${fields}${actionCell}</div>`;
+                return `
+                    <div class="travel-mobile-row">
+                        <div class="travel-mobile-head">
+                            <div class="travel-mobile-profile">
+                                <div class="travel-mobile-avatar">${initials || "NA"}</div>
+                                <div>
+                                    <div class="travel-mobile-name">${displayName}</div>
+                                    <div class="travel-mobile-meta">User ID: ${idValue}</div>
+                                </div>
+                            </div>
+                            ${statusChip}
+                        </div>
+                        <div class="travel-mobile-sections">${mobileCardSections(row, columns)}</div>
+                        ${actionCell}
+                    </div>
+                `;
             }).join("");
             el.panelBody.innerHTML = `<div class="travel-mobile-list">${rows}</div>`;
             return;
