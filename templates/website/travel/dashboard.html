@@ -9,8 +9,8 @@
     <style>
         body { margin: 0; background: #f6f7fb; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #111827; }
         .travel-shell { min-height: 100vh; background: #f6f7fb; }
-        .travel-card { border-radius: 16px; background: #fff; border: 1px solid #eceff5; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
-        .travel-stat { border-radius: 14px; border: 1px solid #eceff5; background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05); }
+        .travel-card { border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(248,250,255,.96) 100%); border: 1px solid #e8edf5; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08); backdrop-filter: blur(4px); }
+        .travel-stat { border-radius: 16px; border: 1px solid #e8edf5; background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07); }
         .travel-header { position: sticky; top: 0; z-index: 40; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
         .travel-header-main { min-height: 52px; }
         .travel-drawer-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.45); z-index: 70; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
@@ -20,11 +20,11 @@
         .travel-bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff; border-top: 1px solid #e5e7eb; }
         .travel-bottom-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; }
         .travel-bottom-item svg { width: 16px; height: 16px; }
-        .travel-bottom-item.active { color: #dc2626; font-weight: 600; }
+        .travel-bottom-item.active { color: #dc2626; font-weight: 600; background: #fff1f2; }
         .travel-appbar-item.active { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
         .travel-drawer-item.active { background: #fef2f2; color: #b91c1c; }
         .travel-mobile-list { display: grid; gap: 8px; }
-        .travel-mobile-row { border: 1px solid #eceff5; border-radius: 14px; padding: 12px; background: #fff; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05); }
+        .travel-mobile-row { border: 1px solid #e8edf5; border-radius: 16px; padding: 12px; background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08); }
         .travel-mobile-item { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; font-size: 12px; }
         .travel-mobile-item-label { color: #6b7280; font-weight: 600; }
         .travel-mobile-item-value { color: #111827; text-align: right; word-break: break-word; }
@@ -103,7 +103,7 @@
 </aside>
 
 <div id="modalRoot" class="hidden fixed inset-0 z-[60] bg-black/40 items-center justify-center p-3">
-    <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+    <div class="travel-card w-full max-w-2xl max-h-[90vh] overflow-auto">
         <div class="flex items-center justify-between border-b px-4 py-3">
             <h3 id="modalTitle" class="font-semibold">Form</h3>
             <button id="modalClose" class="text-gray-500 text-xl">&times;</button>
@@ -151,10 +151,10 @@
         agent: ["dashboard", "bookings", "create-booking", "vehicles", "revenue", "wallet"],
     };
     const bottomBarItemsByRole = {
-        travel_committee: ["dashboard", "vehicles", "bookings", "staff", "wallet"],
-        travel_staff: ["dashboard", "bookings", "boarding", "revenue"],
-        travel_dealer: ["dashboard", "bookings", "agents", "wallet"],
-        agent: ["dashboard", "bookings", "create-booking", "wallet"],
+        travel_committee: ["dashboard", "vehicles", "bookings", "staff", "wallet", "profile"],
+        travel_staff: ["dashboard", "bookings", "boarding", "revenue", "profile"],
+        travel_dealer: ["dashboard", "bookings", "agents", "wallet", "profile"],
+        agent: ["dashboard", "bookings", "create-booking", "wallet", "profile"],
     };
     const tabLabel = {
         dashboard: "Dashboard",
@@ -166,6 +166,7 @@
         agents: "Agents",
         revenue: "Revenue",
         wallet: "Wallet",
+        profile: "Profile",
     };
     const tabIcons = {
         dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zm10 8h8v-6h-8v6zM3 21h8v-6H3v6zm10-10h8V3h-8v8z"/></svg>`,
@@ -177,6 +178,7 @@
         revenue: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>`,
         agents: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 11a3 3 0 1 0 0-6"/><path d="M22 21a7 7 0 0 0-4-6.3"/></svg>`,
         "create-booking": `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg>`,
+        profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>`,
     };
 
     const dashboardProfileFields = {
@@ -430,7 +432,7 @@
 
     function renderNav() {
         const tabs = roleTabs();
-        const bottomTabs = (bottomBarItemsByRole[role] || []).filter((tab) => tabs.includes(tab));
+        const bottomTabs = (bottomBarItemsByRole[role] || []).filter((tab) => tabs.includes(tab) || tab === "profile");
         const renderBtn = (tab, mode) =>
             `<button data-tab="${tab}" class="${
                 mode === "bottom"
@@ -442,18 +444,25 @@
             </button>`;
         el.desktopMenu.innerHTML = tabs.map((t) => renderBtn(t, "desktop")).join("");
         el.drawerMenu.innerHTML = tabs.map((t) => renderBtn(t, "drawer")).join("");
-        el.bottomBarMenu.innerHTML = bottomTabs.slice(0, 4).map((t) => renderBtn(t, "bottom")).join("");
+        el.bottomBarMenu.innerHTML = bottomTabs.map((t) => renderBtn(t, "bottom")).join("");
+        el.bottomBarMenu.style.gridTemplateColumns = `repeat(${Math.max(bottomTabs.length, 1)}, minmax(0, 1fr))`;
         el.appBarTitle.textContent = tabLabel[state.tab] || "Dashboard";
         if (state.tab !== "dashboard") {
             el.appBarBackBtn.classList.remove("hidden");
         } else {
             el.appBarBackBtn.classList.add("hidden");
         }
-        root.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", async () => {
-            state.tab = b.dataset.tab;
-            closeDrawer();
-            await render();
-        }));
+    }
+
+    async function handleTabSelection(tab) {
+        if (!tab) return;
+        if (tab === "profile") {
+            window.location.href = "{% url 'website:profile' %}";
+            return;
+        }
+        state.tab = tab;
+        closeDrawer();
+        await render();
     }
 
     async function loadDashboard() {
@@ -703,6 +712,11 @@
     el.appBarMenuBtn.addEventListener("click", openDrawer);
     el.drawerCloseBtn.addEventListener("click", closeDrawer);
     el.drawerBackdrop.addEventListener("click", closeDrawer);
+    root.addEventListener("click", async (e) => {
+        const tabButton = e.target.closest("[data-tab]");
+        if (!tabButton) return;
+        await handleTabSelection(tabButton.dataset.tab);
+    });
     el.searchInput.addEventListener("input", async (e) => {
         state.query = e.target.value || "";
         await render();
