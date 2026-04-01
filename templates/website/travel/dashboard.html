@@ -12,7 +12,7 @@
         .travel-card { border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; }
         .travel-stat { border-radius: 12px; border: 1px solid #e5e7eb; background: #fff; }
         .travel-header { position: sticky; top: 0; z-index: 40; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .travel-header-main { min-height: 54px; }
+        .travel-header-main { min-height: 52px; }
         .travel-bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff; border-top: 1px solid #e5e7eb; }
         .travel-bottom-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; }
         .travel-bottom-item svg { width: 16px; height: 16px; }
@@ -33,20 +33,17 @@
     <header class="travel-header text-white shadow-sm">
         <div class="max-w-7xl mx-auto px-3 md:px-4 py-2">
             <div class="travel-header-main flex items-center justify-between gap-2">
-                <div>
-                    <h1 class="text-base md:text-lg font-semibold leading-tight">{{ travel_title }}</h1>
-                </div>
+                <div id="appBarTitle" class="text-sm md:text-base font-semibold tracking-wide">Dashboard</div>
                 <div class="flex items-center gap-2">
-                    <a href="{% url 'website:dashboard' %}" class="inline-flex items-center px-2.5 py-1.5 text-xs rounded-lg bg-white text-red-600 font-semibold">Home</a>
-                    <a href="{% url 'website:logout' %}" class="inline-flex items-center px-2.5 py-1.5 text-xs rounded-lg bg-red-700 text-white font-semibold border border-red-500">Logout</a>
+                    <a href="{% url 'website:profile' %}" class="inline-flex items-center px-2.5 py-1.5 text-xs rounded-lg bg-white/90 text-red-700 border border-red-300 font-semibold">
+                        Profile
+                    </a>
+                    <button id="appBarBackBtn" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/90 text-red-700 border border-red-300" aria-label="Back">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                    </button>
                 </div>
-            </div>
-            <div class="mt-1.5 flex items-center justify-between gap-2">
-                <button id="appBarBackBtn" class="hidden inline-flex items-center px-2.5 py-1.5 text-xs rounded-lg bg-white/90 text-red-700 border border-red-300">
-                    Back
-                </button>
-                <div id="appBarTitle" class="text-xs md:text-sm font-semibold tracking-wide">Dashboard</div>
-                <div class="w-[56px]"></div>
             </div>
         </div>
     </header>
