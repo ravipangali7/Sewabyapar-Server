@@ -174,6 +174,14 @@ class TravelBooking(models.Model):
     boarding_date = models.DateTimeField(blank=True, null=True)
     boarding_place = models.ForeignKey(Place, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
     actual_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    ticket_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text='Customer fare (vehicle.seat_price) at time of booking',
+    )
     dealer_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     agent_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     system_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])

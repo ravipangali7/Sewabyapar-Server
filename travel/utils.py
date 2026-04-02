@@ -94,19 +94,41 @@ def calculate_travel_commissions(booking):
     }
 
 
-def validate_booking_date(vehicle, booking_date):
-    """Validate booking date - must be today or future"""
+def to_booking_calendar_date(booking_date):
+    """Normalize booking_date (datetime, date, or ISO str) to a date."""
     if isinstance(booking_date, str):
         booking_date = datetime.fromisoformat(booking_date.replace('Z', '+00:00'))
-    
     if isinstance(booking_date, datetime):
-        booking_date = booking_date.date()
-    
+        return booking_date.date()
+    if isinstance(booking_date, date):
+        return booking_date
+    raise TypeError('booking_date must be datetime, date, or ISO string')
+
+
+def seat_has_blocking_booking_for_date(vehicle_seat, booking_date):
+    """True if this seat already has a pending or booked ticket for the calendar day."""
+    from travel.models import TravelBooking
+
+    d = to_booking_calendar_date(booking_date)
+    return TravelBooking.objects.filter(
+        vehicle_seat=vehicle_seat,
+        booking_date__date=d,
+        status__in=['pending', 'booked'],
+    ).exists()
+
+
+def validate_booking_date(vehicle, booking_date):
+    """Validate booking date - must be today or future"""
+    try:
+        booking_date = to_booking_calendar_date(booking_date)
+    except (TypeError, ValueError):
+        return False, "Invalid booking date"
+
     today = timezone.now().date()
-    
+
     if booking_date < today:
         return False, "Booking date cannot be in the past"
-    
+
     return True, None
 
 
@@ -199,7 +221,8 @@ def generate_ticket_pdf(booking):
     # Price
     y_pos -= 40
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y_pos, f"Amount Paid: ₹{booking.vehicle.seat_price}")
+    fare = getattr(booking, 'ticket_price', None) or booking.vehicle.seat_price
+    c.drawString(50, y_pos, f"Amount Paid: ₹{fare}")
     
     # Footer
     c.setFont("Helvetica", 10)

@@ -89,14 +89,15 @@ def can_switch_to_merchant(user):
 
 def can_use_merchant_wallet_services(user):
     """
-    Merchants and travel partners (committee owner, dealer, agent) may add
-    payment methods and request withdrawals against User.balance.
+    Merchants and travel partners (committee, committee staff, dealer, agent)
+    may add payment methods and request withdrawals against User.balance.
     """
     if user.is_merchant:
         return True
     roles = get_user_travel_roles(user)
     return (
         roles['is_travel_committee'] or
+        roles['is_travel_staff'] or
         roles['is_travel_dealer'] or
         roles['is_agent']
     )

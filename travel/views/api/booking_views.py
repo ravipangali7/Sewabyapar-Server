@@ -14,7 +14,12 @@ from travel.serializers import (
     serialize_bookings,
     serialize_booking,
 )
-from travel.utils import check_user_travel_role, validate_booking_date, generate_ticket_pdf
+from travel.utils import (
+    check_user_travel_role,
+    validate_booking_date,
+    generate_ticket_pdf,
+    seat_has_blocking_booking_for_date,
+)
 from travel.services.commission_service import calculate_commissions
 from django.http import HttpResponse
 from rest_framework.exceptions import ValidationError
@@ -46,22 +51,29 @@ def create_booking(request):
     if not is_valid:
         return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Get seats
-    seats = list(
-        TravelVehicleSeat.objects.filter(id__in=seat_ids, vehicle=vehicle, status='available')
-    )
-    
-    if len(seats) != len(seat_ids):
-        return Response({
-            'error': 'Some selected seats are not available'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
     created_bookings = []
     with db_transaction.atomic():
+        seats = list(
+            TravelVehicleSeat.objects.select_for_update().filter(
+                id__in=seat_ids, vehicle=vehicle
+            )
+        )
+        if len(seats) != len(seat_ids):
+            return Response({
+                'error': 'Some selected seats are invalid for this vehicle'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        for seat in seats:
+            if seat_has_blocking_booking_for_date(seat, booking_date):
+                return Response({
+                    'error': 'One or more seats are already reserved for this date'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
         for seat in seats:
             booking_data = data.copy()
             booking_data['vehicle_seat'] = seat
             booking_data['actual_price'] = vehicle.actual_seat_price
+            booking_data['ticket_price'] = vehicle.seat_price
             booking_data['status'] = 'booked'
             
             if roles['is_agent']:
@@ -212,55 +224,80 @@ def download_ticket(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reset_seats(request, vehicle_id):
-    """Reset all seats for a vehicle to available (with date check)"""
+    """Reset seats to available. Requires confirm=true. Optional booking_date scopes the reset."""
     vehicle = get_object_or_404(TravelVehicle, pk=vehicle_id)
-    
-    # Check permissions
+
     roles = check_user_travel_role(request.user)
     has_access = False
-    
+
     if roles['is_travel_committee']:
         has_access = vehicle.committee == roles['committee']
     elif roles['is_travel_staff']:
         has_access = vehicle.committee == roles['staff'].travel_committee
-    
+
     if not has_access:
         return Response({
             'error': 'You do not have permission to reset seats for this vehicle'
         }, status=status.HTTP_403_FORBIDDEN)
-    
-    # Date validation - only allow for future dates or today
+
+    if not request.data.get('confirm'):
+        return Response({
+            'error': 'Confirmation required: send {"confirm": true, ...}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     today = timezone.now().date()
-    booking_date = request.data.get('booking_date')
-    
-    if booking_date:
-        if isinstance(booking_date, str):
-            booking_date = datetime.fromisoformat(booking_date.replace('Z', '+00:00')).date()
-        
-        if booking_date < today:
+    booking_date_raw = request.data.get('booking_date')
+    booking_date_only = None
+
+    if booking_date_raw is not None and booking_date_raw != '':
+        try:
+            if isinstance(booking_date_raw, str):
+                booking_date_only = datetime.fromisoformat(
+                    booking_date_raw.replace('Z', '+00:00')
+                ).date()
+            elif hasattr(booking_date_raw, 'date'):
+                booking_date_only = booking_date_raw.date()
+            else:
+                booking_date_only = booking_date_raw
+        except (TypeError, ValueError):
+            return Response({
+                'error': 'Invalid booking_date format'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if booking_date_only < today:
             return Response({
                 'error': 'Cannot reset seats for past dates'
             }, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    cancelled = 0
+    count = 0
     with db_transaction.atomic():
-        # Seats currently marked booked (not yet boarded on vehicle)
-        seat_qs = TravelVehicleSeat.objects.filter(
-            vehicle=vehicle,
-            status='booked'
-        )
-        seat_ids = list(seat_qs.values_list('id', flat=True))
-        
-        booking_filter = TravelBooking.objects.filter(
-            vehicle=vehicle,
-            vehicle_seat_id__in=seat_ids,
-            status__in=['pending', 'booked'],
-        )
-        if booking_date:
-            booking_filter = booking_filter.filter(booking_date__date=booking_date)
-        
-        cancelled = booking_filter.update(status='cancelled')
-        count = seat_qs.update(status='available')
-    
+        if booking_date_only is not None:
+            cancelled = TravelBooking.objects.filter(
+                vehicle=vehicle,
+                booking_date__date=booking_date_only,
+                status__in=['pending', 'booked'],
+            ).update(status='cancelled')
+
+            seat_ids_to_clear = TravelBooking.objects.filter(
+                vehicle=vehicle,
+                booking_date__date=booking_date_only,
+            ).values_list('vehicle_seat_id', flat=True).distinct()
+            count = TravelVehicleSeat.objects.filter(
+                vehicle=vehicle,
+                id__in=list(seat_ids_to_clear),
+                status__in=['booked', 'boarded'],
+            ).update(status='available')
+        else:
+            cancelled = TravelBooking.objects.filter(
+                vehicle=vehicle,
+                status__in=['pending', 'booked'],
+            ).update(status='cancelled')
+            count = TravelVehicleSeat.objects.filter(
+                vehicle=vehicle,
+                status__in=['booked', 'boarded'],
+            ).update(status='available')
+
     return Response({
         'message': f'{count} seats reset to available; {cancelled} booking(s) cancelled',
         'count': count,

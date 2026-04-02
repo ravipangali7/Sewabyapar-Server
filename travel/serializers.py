@@ -58,6 +58,29 @@ class TravelVehicleSerializer(serializers.ModelSerializer):
         return obj.seats.count()
 
 
+class TravelVehiclePublicSerializer(serializers.ModelSerializer):
+    """Vehicle for agents, dealers, staff, customers — hides actual_seat_price (margin)."""
+
+    from_place = PlaceSerializer(read_only=True)
+    to_place = PlaceSerializer(read_only=True)
+    committee = TravelCommitteeSerializer(read_only=True)
+    seats = TravelVehicleSeatSerializer(many=True, read_only=True)
+    images = TravelVehicleImageSerializer(many=True, read_only=True)
+    seat_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TravelVehicle
+        fields = [
+            'id', 'name', 'vehicle_no', 'committee', 'image', 'is_active',
+            'from_place', 'to_place', 'departure_time', 'seat_price',
+            'seats', 'images', 'seat_count', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_seat_count(self, obj):
+        return obj.seats.count()
+
+
 class TravelVehicleCreateUpdateSerializer(serializers.ModelSerializer):
     """Travel Vehicle create/update serializer (write-only fields)"""
     seats = TravelVehicleSeatSerializer(many=True, required=False, write_only=True)
@@ -199,7 +222,7 @@ class TravelBookingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'ticket_number', 'qr_code', 'customer', 'name', 'phone', 'gender',
             'nationality', 'remarks', 'agent', 'vehicle', 'vehicle_seat', 'status',
-            'booking_date', 'boarding_date', 'boarding_place', 'actual_price',
+            'booking_date', 'boarding_date', 'boarding_place', 'actual_price', 'ticket_price',
             'dealer_commission', 'agent_commission', 'system_commission',
             'commission_distributed',
             'created_at', 'updated_at'
@@ -224,7 +247,7 @@ class TravelBookingSerializer(serializers.ModelSerializer):
 class TravelBookingPublicSerializer(serializers.ModelSerializer):
     """Agent, dealer, customer — no internal split fields; optional booking_revenue for this user."""
     customer = UserSerializer(read_only=True)
-    vehicle = TravelVehicleSerializer(read_only=True)
+    vehicle = TravelVehiclePublicSerializer(read_only=True)
     vehicle_seat = TravelVehicleSeatSerializer(read_only=True)
     agent = serializers.SerializerMethodField()
     boarding_place = PlaceSerializer(read_only=True)
@@ -237,14 +260,14 @@ class TravelBookingPublicSerializer(serializers.ModelSerializer):
             'id', 'ticket_number', 'qr_code', 'customer', 'name', 'phone', 'gender',
             'nationality', 'remarks', 'agent', 'vehicle', 'vehicle_seat', 'status',
             'booking_date', 'boarding_date', 'boarding_place',
-            'booking_revenue', 'fare',
+            'booking_revenue', 'fare', 'ticket_price',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'ticket_number', 'qr_code', 'customer', 'name', 'phone', 'gender',
             'nationality', 'remarks', 'agent', 'vehicle', 'vehicle_seat', 'status',
             'booking_date', 'boarding_date', 'boarding_place',
-            'booking_revenue', 'fare',
+            'booking_revenue', 'fare', 'ticket_price',
             'created_at', 'updated_at'
         ]
     
@@ -275,6 +298,8 @@ class TravelBookingPublicSerializer(serializers.ModelSerializer):
         return None
     
     def get_fare(self, obj):
+        if obj.ticket_price is not None:
+            return float(obj.ticket_price)
         if obj.vehicle:
             return float(obj.vehicle.seat_price)
         return None
@@ -333,16 +358,19 @@ class TravelBookingCreateSerializer(serializers.ModelSerializer):
         if not is_valid:
             raise serializers.ValidationError(error)
         
-        # Validate seats belong to vehicle and are available
-        seats = TravelVehicleSeat.objects.filter(
-            id__in=seat_ids,
-            vehicle=vehicle,
-            status='available'
-        )
-        
+        # Seats belong to vehicle and have no pending/booked ticket on this calendar day
+        from travel.utils import seat_has_blocking_booking_for_date
+
+        seats = TravelVehicleSeat.objects.filter(id__in=seat_ids, vehicle=vehicle)
         if seats.count() != len(seat_ids):
-            raise serializers.ValidationError("Some selected seats are not available")
-        
+            raise serializers.ValidationError("Some selected seats are invalid for this vehicle")
+
+        for seat in seats:
+            if seat_has_blocking_booking_for_date(seat, booking_date):
+                raise serializers.ValidationError(
+                    "One or more seats are already reserved for this date"
+                )
+
         return data
 
 
@@ -357,6 +385,10 @@ class TravelBookingUpdateSerializer(serializers.ModelSerializer):
         if value not in allowed:
             raise serializers.ValidationError(
                 f'Status must be one of: {", ".join(allowed)}'
+            )
+        if value == 'boarded':
+            raise serializers.ValidationError(
+                'Use POST /api/travel/boarding/<booking_id>/confirm/ to board a passenger.'
             )
         return value
     

@@ -9,10 +9,18 @@ from datetime import datetime
 from travel.models import TravelVehicle, TravelVehicleSeat, TravelBooking
 from travel.serializers import (
     TravelVehicleSerializer,
+    TravelVehiclePublicSerializer,
     TravelVehicleCreateUpdateSerializer,
     TravelVehicleSeatSerializer,
 )
 from travel.utils import check_user_travel_role, validate_booking_date
+
+
+def _vehicle_read_serializer_class(request):
+    roles = check_user_travel_role(request.user)
+    if roles['is_travel_committee']:
+        return TravelVehicleSerializer
+    return TravelVehiclePublicSerializer
 
 
 def _vehicle_create(request):
@@ -29,7 +37,8 @@ def _vehicle_create(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     vehicle = serializer.save()
-    out = TravelVehicleSerializer(vehicle, context={'request': request})
+    Ser = _vehicle_read_serializer_class(request)
+    out = Ser(vehicle, context={'request': request})
     return Response(out.data, status=status.HTTP_201_CREATED)
 
 
@@ -54,7 +63,8 @@ def _vehicle_update(request, pk):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     vehicle = serializer.save()
-    out = TravelVehicleSerializer(vehicle, context={'request': request})
+    Ser = _vehicle_read_serializer_class(request)
+    out = Ser(vehicle, context={'request': request})
     return Response(out.data)
 
 
@@ -108,7 +118,8 @@ def vehicle_list(request):
     if committee_id:
         vehicles = vehicles.filter(committee_id=committee_id)
     
-    serializer = TravelVehicleSerializer(vehicles, many=True, context={'request': request})
+    Ser = _vehicle_read_serializer_class(request)
+    serializer = Ser(vehicles, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -134,7 +145,8 @@ def vehicle_detail(request, pk):
         }, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
-        serializer = TravelVehicleSerializer(vehicle, context={'request': request})
+        Ser = _vehicle_read_serializer_class(request)
+        serializer = Ser(vehicle, context={'request': request})
         return Response(serializer.data)
     if request.method in ('PATCH', 'PUT'):
         return _vehicle_update(request, pk)
@@ -197,17 +209,17 @@ def available_seats(request, vehicle_id):
     # Get all seats
     all_seats = TravelVehicleSeat.objects.filter(vehicle=vehicle)
     
-    # Get booked seats for this date
-    booked_seats = TravelBooking.objects.filter(
-        vehicle=vehicle,
-        booking_date__date=booking_date.date(),
-        status__in=['pending', 'booked'],
-    ).values_list('vehicle_seat_id', flat=True)
-    
-    # Mark seats as available or booked
+    booked_ids = set(
+        TravelBooking.objects.filter(
+            vehicle=vehicle,
+            booking_date__date=booking_date.date(),
+            status__in=['pending', 'booked'],
+        ).values_list('vehicle_seat_id', flat=True)
+    )
+
     seats_data = []
     for seat in all_seats:
-        is_booked = seat.id in booked_seats or seat.status in ['booked', 'boarded']
+        is_booked = seat.id in booked_ids
         seats_data.append({
             'id': seat.id,
             'side': seat.side,
