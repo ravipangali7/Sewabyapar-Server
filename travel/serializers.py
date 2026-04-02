@@ -119,6 +119,14 @@ class TravelVehicleCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'seats': f'Duplicate seats in payload: {", ".join(sorted(set(duplicates)))}'
                 })
+        remove_image_ids = attrs.get('remove_image_ids') or []
+        if self.instance and remove_image_ids:
+            existing_ids = set(self.instance.images.filter(id__in=remove_image_ids).values_list('id', flat=True))
+            invalid_ids = sorted(set(remove_image_ids) - existing_ids)
+            if invalid_ids:
+                raise serializers.ValidationError({
+                    'remove_image_ids': f'Invalid image ids for this vehicle: {", ".join(map(str, invalid_ids))}'
+                })
         return attrs
 
     def _save_vehicle_seats(self, vehicle, seats):

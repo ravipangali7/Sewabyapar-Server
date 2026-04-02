@@ -245,7 +245,10 @@
         });
         const isJson = (res.headers.get("content-type") || "").includes("application/json");
         const data = isJson ? await res.json() : null;
-        if (!res.ok) throw new Error((data && (data.error || data.detail)) || `Request failed (${res.status})`);
+        if (!res.ok) {
+            if (data) throw new Error(JSON.stringify(data));
+            throw new Error(`Request failed (${res.status})`);
+        }
         return data;
     }
 
@@ -600,6 +603,306 @@
         };
     }
 
+    function parseApiErrorMessage(err) {
+        if (!err) return "Request failed";
+        const message = String(err.message || err);
+        if (!message.startsWith("{")) return message;
+        try {
+            const parsed = JSON.parse(message);
+            if (parsed.error) return String(parsed.error);
+            if (parsed.detail) return String(parsed.detail);
+            const firstKey = Object.keys(parsed)[0];
+            if (!firstKey) return "Request failed";
+            const firstVal = parsed[firstKey];
+            if (Array.isArray(firstVal)) return `${toLabel(firstKey)}: ${firstVal[0]}`;
+            if (typeof firstVal === "string") return `${toLabel(firstKey)}: ${firstVal}`;
+            return `${toLabel(firstKey)}: ${JSON.stringify(firstVal)}`;
+        } catch (_) {
+            return message;
+        }
+    }
+
+    function normalizeTimeForInput(timeValue) {
+        const raw = String(timeValue || "");
+        if (!raw) return "";
+        return raw.length >= 5 ? raw.slice(0, 5) : raw;
+    }
+
+    function buildSeatPreviewHtml(seats) {
+        const grouped = { upper: { A: [], B: [], C: [] }, lower: { A: [], B: [], C: [] } };
+        (seats || []).forEach((seat) => {
+            if (!grouped[seat.floor] || !grouped[seat.floor][seat.side]) return;
+            grouped[seat.floor][seat.side].push(seat);
+        });
+        ["upper", "lower"].forEach((floor) => {
+            ["A", "B", "C"].forEach((side) => {
+                grouped[floor][side].sort((a, b) => a.number - b.number);
+            });
+        });
+        return ["upper", "lower"].map((floor) => `
+            <div class="border rounded-lg p-2">
+                <div class="text-xs font-semibold text-gray-600 mb-1">${floor.toUpperCase()} FLOOR</div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    ${["A", "B", "C"].map((side) => `
+                        <div class="rounded border p-2 bg-gray-50 min-h-[58px]">
+                            <div class="font-semibold text-gray-600 mb-1">Side ${side}</div>
+                            <div class="flex flex-wrap gap-1">
+                                ${(grouped[floor][side] || []).map((seat) => {
+                                    const cls = seat.status === "boarded"
+                                        ? "bg-red-100 text-red-700 border-red-300"
+                                        : seat.status === "booked"
+                                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                            : "bg-green-100 text-green-700 border-green-300";
+                                    return `<span class="inline-flex text-[10px] border rounded px-1.5 py-0.5 ${cls}">${seat.side}${seat.number}</span>`;
+                                }).join("") || `<span class="text-gray-400">-</span>`}
+                            </div>
+                        </div>
+                    `).join("")}
+                </div>
+            </div>
+        `).join("");
+    }
+
+    function openVehicleModal(mode, row, placeOptions) {
+        const isEdit = mode === "edit";
+        const seats = Array.isArray(row?.seats)
+            ? row.seats.map((seat) => ({
+                floor: seat.floor || "lower",
+                side: seat.side || "A",
+                number: Number(seat.number || 1),
+                status: seat.status || "available",
+            }))
+            : [];
+        const removedImageIds = new Set();
+        const existingImages = Array.isArray(row?.images) ? row.images : [];
+
+        el.modalTitle.textContent = isEdit ? "Update Vehicle" : "Create Vehicle";
+        el.modalForm.innerHTML = `
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Name</label>
+                <input data-field="name" name="name" type="text" required class="w-full border border-gray-300 rounded-lg px-3 py-2" value="${escapeHtml(row?.name || "")}" />
+            </div>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Vehicle No</label>
+                <input data-field="vehicle_no" name="vehicle_no" type="text" required class="w-full border border-gray-300 rounded-lg px-3 py-2" value="${escapeHtml(row?.vehicle_no || "")}" />
+            </div>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">From Place</label>
+                <select data-field="from_place" name="from_place" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="">Select origin place</option>
+                    ${placeOptions.map((opt) => `<option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(row?.from_place?.id || "") ? "selected" : ""}>${escapeHtml(opt.label)}</option>`).join("")}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">To Place</label>
+                <select data-field="to_place" name="to_place" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="">Select destination place</option>
+                    ${placeOptions.map((opt) => `<option value="${escapeHtml(opt.value)}" ${String(opt.value) === String(row?.to_place?.id || "") ? "selected" : ""}>${escapeHtml(opt.label)}</option>`).join("")}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Departure Time</label>
+                <input data-field="departure_time" name="departure_time" type="time" required class="w-full border border-gray-300 rounded-lg px-3 py-2" value="${escapeHtml(normalizeTimeForInput(row?.departure_time || ""))}" />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-700 mb-1">Actual Seat Price</label>
+                    <input data-field="actual_seat_price" name="actual_seat_price" type="number" min="0" step="0.01" required class="w-full border border-gray-300 rounded-lg px-3 py-2" value="${escapeHtml(row?.actual_seat_price ?? "")}" />
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-700 mb-1">Seat Price</label>
+                    <input data-field="seat_price" name="seat_price" type="number" min="0" step="0.01" required class="w-full border border-gray-300 rounded-lg px-3 py-2" value="${escapeHtml(row?.seat_price ?? "")}" />
+                </div>
+            </div>
+            <div class="border rounded-lg p-3 bg-gray-50">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-semibold text-gray-800">Seat Layout Designer</div>
+                    <span id="seatCountLabel" class="text-xs px-2 py-1 rounded bg-white border text-gray-700">Seats: 0</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <select id="seatFloorInput" class="border border-gray-300 rounded px-2 py-2 text-sm">
+                        <option value="lower">Lower</option>
+                        <option value="upper">Upper</option>
+                    </select>
+                    <select id="seatSideInput" class="border border-gray-300 rounded px-2 py-2 text-sm">
+                        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                    </select>
+                    <input id="seatNumberInput" type="number" min="1" placeholder="Seat No" class="border border-gray-300 rounded px-2 py-2 text-sm" />
+                    <select id="seatStatusInput" class="border border-gray-300 rounded px-2 py-2 text-sm">
+                        <option value="available">Available</option>
+                        <option value="booked">Booked</option>
+                        <option value="boarded">Boarded</option>
+                    </select>
+                </div>
+                <div class="mt-2 flex items-center gap-2">
+                    <button id="addSeatBtn" type="button" class="px-3 py-1.5 rounded bg-red-600 text-white text-sm">Add Seat</button>
+                    <button id="clearSeatsBtn" type="button" class="px-3 py-1.5 rounded border text-sm text-gray-700">Clear Seats</button>
+                </div>
+                <div id="seatPreviewRoot" class="mt-3 grid gap-2"></div>
+                <div id="seatListRoot" class="mt-2 flex flex-wrap gap-2"></div>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Primary Vehicle Image (optional)</label>
+                <input data-field="image" name="image" type="file" accept="image/*" class="w-full border border-gray-300 rounded-lg px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Vehicle Images (multiple)</label>
+                <input data-field="images" name="images" type="file" multiple accept="image/*" class="w-full border border-gray-300 rounded-lg px-3 py-2" />
+                <p class="text-xs text-gray-500 mt-1">You can select multiple files at once.</p>
+            </div>
+            ${isEdit && existingImages.length ? `
+                <div class="border rounded-lg p-3 bg-gray-50">
+                    <div class="text-sm font-semibold text-gray-800 mb-2">Existing Images</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        ${existingImages.map((img, index) => `
+                            <label class="flex items-center gap-2 border rounded p-2 bg-white">
+                                <input type="checkbox" data-remove-image-id="${img.id}" class="h-4 w-4" />
+                                <span class="text-xs text-gray-700">Remove image #${index + 1}${img.title ? ` (${escapeHtml(img.title)})` : ""}</span>
+                            </label>
+                        `).join("")}
+                    </div>
+                </div>
+            ` : ""}
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg">${isEdit ? "Update" : "Save"}</button>
+        `;
+
+        const seatCountLabel = el.modalForm.querySelector("#seatCountLabel");
+        const seatPreviewRoot = el.modalForm.querySelector("#seatPreviewRoot");
+        const seatListRoot = el.modalForm.querySelector("#seatListRoot");
+        const seatFloorInput = el.modalForm.querySelector("#seatFloorInput");
+        const seatSideInput = el.modalForm.querySelector("#seatSideInput");
+        const seatNumberInput = el.modalForm.querySelector("#seatNumberInput");
+        const seatStatusInput = el.modalForm.querySelector("#seatStatusInput");
+
+        function syncSeatView() {
+            seatCountLabel.textContent = `Seats: ${seats.length}`;
+            seatPreviewRoot.innerHTML = buildSeatPreviewHtml(seats);
+            seatListRoot.innerHTML = seats
+                .slice()
+                .sort((a, b) => `${a.floor}-${a.side}-${a.number}`.localeCompare(`${b.floor}-${b.side}-${b.number}`))
+                .map((seat, index) => {
+                    const cls = seat.status === "boarded"
+                        ? "bg-red-100 text-red-700 border-red-300"
+                        : seat.status === "booked"
+                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                            : "bg-green-100 text-green-700 border-green-300";
+                    return `
+                        <span class="inline-flex items-center gap-1 border rounded-full px-2 py-1 text-xs ${cls}">
+                            ${seat.floor.toUpperCase()} ${seat.side}${seat.number}
+                            <button type="button" data-seat-remove-index="${index}" class="text-gray-600 hover:text-gray-900">&times;</button>
+                        </span>
+                    `;
+                }).join("");
+            seatListRoot.querySelectorAll("[data-seat-remove-index]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const idx = parseInt(btn.dataset.seatRemoveIndex, 10);
+                    if (Number.isNaN(idx)) return;
+                    seats.splice(idx, 1);
+                    syncSeatView();
+                });
+            });
+        }
+
+        el.modalForm.querySelector("#addSeatBtn")?.addEventListener("click", () => {
+            const floor = String(seatFloorInput.value || "lower");
+            const side = String(seatSideInput.value || "A");
+            const number = parseInt(seatNumberInput.value, 10);
+            const status = String(seatStatusInput.value || "available");
+            if (!number || number < 1) {
+                showAlert("Seat number must be at least 1.", "warning");
+                return;
+            }
+            const duplicate = seats.some((seat) => seat.floor === floor && seat.side === side && seat.number === number);
+            if (duplicate) {
+                showAlert(`Duplicate seat detected: ${floor.toUpperCase()} ${side}${number}`, "warning");
+                return;
+            }
+            seats.push({ floor, side, number, status });
+            seatNumberInput.value = "";
+            syncSeatView();
+        });
+
+        el.modalForm.querySelector("#clearSeatsBtn")?.addEventListener("click", () => {
+            seats.splice(0, seats.length);
+            syncSeatView();
+        });
+
+        el.modalForm.querySelectorAll("[data-remove-image-id]").forEach((checkboxEl) => {
+            checkboxEl.addEventListener("change", () => {
+                const imageId = parseInt(checkboxEl.dataset.removeImageId, 10);
+                if (!imageId) return;
+                if (checkboxEl.checked) {
+                    removedImageIds.add(imageId);
+                } else {
+                    removedImageIds.delete(imageId);
+                }
+            });
+        });
+
+        syncSeatView();
+
+        el.modalForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: el.modalForm.querySelector('[data-field="name"]')?.value || "",
+                vehicle_no: el.modalForm.querySelector('[data-field="vehicle_no"]')?.value || "",
+                from_place: el.modalForm.querySelector('[data-field="from_place"]')?.value || "",
+                to_place: el.modalForm.querySelector('[data-field="to_place"]')?.value || "",
+                departure_time: el.modalForm.querySelector('[data-field="departure_time"]')?.value || "",
+                actual_seat_price: el.modalForm.querySelector('[data-field="actual_seat_price"]')?.value || "",
+                seat_price: el.modalForm.querySelector('[data-field="seat_price"]')?.value || "",
+                seats: seats.map((seat) => ({ ...seat })),
+            };
+            const primaryImageInput = el.modalForm.querySelector('[data-field="image"]');
+            const imagesInput = el.modalForm.querySelector('[data-field="images"]');
+            const primaryImageFile = primaryImageInput?.files?.[0] || null;
+            const multiFiles = imagesInput?.files ? Array.from(imagesInput.files) : [];
+            const hasFiles = !!primaryImageFile || multiFiles.length > 0;
+            const hasRemoveImages = removedImageIds.size > 0;
+
+            try {
+                if (hasFiles || hasRemoveImages) {
+                    const formData = new FormData();
+                    Object.entries(payload).forEach(([key, value]) => {
+                        if (key === "seats") {
+                            formData.append("seats", JSON.stringify(value));
+                            return;
+                        }
+                        if (value === null || value === undefined || value === "") return;
+                        formData.append(key, value);
+                    });
+                    if (primaryImageFile) {
+                        formData.append("image", primaryImageFile);
+                    }
+                    if (multiFiles.length) {
+                        multiFiles.forEach((file) => formData.append("images", file));
+                        formData.append("image_titles", JSON.stringify(multiFiles.map((file) => file.name || "")));
+                    }
+                    if (removedImageIds.size) {
+                        formData.append("remove_image_ids", JSON.stringify(Array.from(removedImageIds)));
+                    }
+                    await api(isEdit ? `${apiBase}/vehicles/${row.id}/` : `${apiBase}/vehicles/`, {
+                        method: isEdit ? "PATCH" : "POST",
+                        body: formData,
+                    });
+                } else {
+                    await api(isEdit ? `${apiBase}/vehicles/${row.id}/` : `${apiBase}/vehicles/`, {
+                        method: isEdit ? "PATCH" : "POST",
+                        body: JSON.stringify(payload),
+                    });
+                }
+                closeModal();
+                showAlert(`Vehicle ${isEdit ? "updated" : "created"} successfully.`, "success");
+                await render();
+            } catch (err) {
+                showAlert(parseApiErrorMessage(err), "error");
+            }
+        };
+
+        el.modalRoot.classList.remove("hidden");
+        el.modalRoot.classList.add("flex");
+    }
+
     function closeModal() {
         el.modalRoot.classList.add("hidden");
         el.modalRoot.classList.remove("flex");
@@ -781,51 +1084,13 @@
         if (role === "travel_committee") {
             actionButton("Add Vehicle", async () => {
                 const placeOptions = await fetchPlaceOptions();
-                openModal("Create Vehicle", [
-                    { name: "name", label: "Name", required: true },
-                    { name: "vehicle_no", label: "Vehicle No", required: true },
-                    { name: "from_place", label: "From Place", type: "select", required: true, options: placeOptions, placeholder: "Select origin place" },
-                    { name: "to_place", label: "To Place", type: "select", required: true, options: placeOptions, placeholder: "Select destination place" },
-                    { name: "departure_time", label: "Departure Time", type: "time", required: true },
-                    { name: "actual_seat_price", label: "Actual Seat Price", type: "number", step: "0.01", min: "0", required: true },
-                    { name: "seat_price", label: "Seat Price", type: "number", step: "0.01", min: "0", required: true },
-                    { name: "image", label: "Vehicle Image", type: "file", accept: "image/*" },
-                ], (payload, meta) => {
-                    if (meta.hasFile) {
-                        const formData = new FormData();
-                        Object.entries(payload).forEach(([key, value]) => {
-                            if (value === null || value === undefined || value === "") return;
-                            formData.append(key, value);
-                        });
-                        return api(`${apiBase}/vehicles/`, { method: "POST", body: formData });
-                    }
-                    return api(`${apiBase}/vehicles/`, { method: "POST", body: JSON.stringify(payload) });
-                });
+                openVehicleModal("create", null, placeOptions);
             });
         }
         bindRowActions({
             edit: async (row) => {
                 const placeOptions = await fetchPlaceOptions();
-                openModal("Update Vehicle", [
-                    { name: "name", label: "Name", value: row.name, required: true },
-                    { name: "vehicle_no", label: "Vehicle No", value: row.vehicle_no, required: true },
-                    { name: "from_place", label: "From Place", type: "select", value: row.from_place?.id, required: true, options: placeOptions, placeholder: "Select origin place" },
-                    { name: "to_place", label: "To Place", type: "select", value: row.to_place?.id, required: true, options: placeOptions, placeholder: "Select destination place" },
-                    { name: "departure_time", label: "Departure Time", type: "time", value: row.departure_time, required: true },
-                    { name: "actual_seat_price", label: "Actual Seat Price", type: "number", step: "0.01", min: "0", value: row.actual_seat_price, required: true },
-                    { name: "seat_price", label: "Seat Price", type: "number", step: "0.01", min: "0", value: row.seat_price, required: true },
-                    { name: "image", label: "Vehicle Image", type: "file", accept: "image/*" },
-                ], (payload, meta) => {
-                    if (meta.hasFile) {
-                        const formData = new FormData();
-                        Object.entries(payload).forEach(([key, value]) => {
-                            if (value === null || value === undefined || value === "") return;
-                            formData.append(key, value);
-                        });
-                        return api(`${apiBase}/vehicles/${row.id}/`, { method: "PATCH", body: formData });
-                    }
-                    return api(`${apiBase}/vehicles/${row.id}/`, { method: "PATCH", body: JSON.stringify(payload) });
-                }, "Update");
+                openVehicleModal("edit", row, placeOptions);
             },
             delete: async (row) => {
                 if (!window.confirm(`Delete/deactivate ${row.name}?`)) return;
