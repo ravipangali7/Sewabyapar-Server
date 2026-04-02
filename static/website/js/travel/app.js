@@ -70,26 +70,48 @@
 
   function fieldHtml(field) {
     const required = field.required ? "required" : "";
+    const disabled = field.disabled ? "disabled" : "";
     const value = field.value || "";
     if (field.type === "textarea") {
-      return `<textarea name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required}>${value}</textarea>`;
+      return `<textarea name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled}>${value}</textarea>`;
     }
     if (field.type === "select") {
-      return `<select name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required}>
+      return `<select name="${field.name}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled}>
         ${(field.options || [])
           .map((opt) => `<option value="${opt.value}" ${String(opt.value) === String(value) ? "selected" : ""}>${opt.label}</option>`)
           .join("")}
       </select>`;
     }
-    return `<input name="${field.name}" type="${field.type || "text"}" value="${value}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} />`;
+    return `<input name="${field.name}" type="${field.type || "text"}" value="${value}" class="w-full border border-gray-300 rounded-lg px-3 py-2" ${required} ${disabled} />`;
   }
 
-  function openModal(title, fields, onSubmit, submitLabel = "Save") {
+  function parseApiErrorMessage(err) {
+    if (!err) return "Request failed";
+    const message = String(err.message || err);
+    if (!message.startsWith("{")) return message;
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed.error) return String(parsed.error);
+      if (parsed.detail) return String(parsed.detail);
+      const firstKey = Object.keys(parsed)[0];
+      if (!firstKey) return "Request failed";
+      const firstVal = parsed[firstKey];
+      if (Array.isArray(firstVal)) return `${firstKey}: ${firstVal[0]}`;
+      if (typeof firstVal === "string") return `${firstKey}: ${firstVal}`;
+      return `${firstKey}: ${JSON.stringify(firstVal)}`;
+    } catch (_) {
+      return message;
+    }
+  }
+
+  function openModal(title, fields, onSubmit, submitLabel = "Save", modalOptions) {
+    const opts = modalOptions || {};
     el.modalTitle.textContent = title;
     el.modalForm.innerHTML = "";
     fields.forEach((field) => {
       const wrap = document.createElement("div");
-      wrap.innerHTML = `<label class="block text-sm text-gray-700 mb-1">${field.label}</label>${fieldHtml(field)}`;
+      const help = field.helpText ? `<p class="text-xs text-gray-500 mt-1">${field.helpText}</p>` : "";
+      wrap.innerHTML = `<label class="block text-sm text-gray-700 mb-1">${field.label}</label>${fieldHtml(field)}${help}`;
       el.modalForm.appendChild(wrap);
     });
     const submit = document.createElement("button");
@@ -105,10 +127,12 @@
       try {
         await onSubmit(payload);
         closeModal();
-        showAlert("Saved successfully", "success");
-        refreshCurrent();
+        if (!opts.silentSuccess) {
+          showAlert("Saved successfully", "success");
+          refreshCurrent();
+        }
       } catch (err) {
-        showAlert(err.message, "error");
+        showAlert(parseApiErrorMessage(err), "error");
       }
     };
     el.modalRoot.classList.remove("hidden");
@@ -425,33 +449,159 @@
     el.panelBody.innerHTML = tableFromArray(history.filter(filterBySearch), ["id", "transaction_type", "amount", "status", "description", "created_at"]);
   }
 
-  async function loadWallet() {
-    const [pm, wd] = await Promise.all([
-      api(`${coreApiBase}/merchant/payment-method/`).catch(() => ({ data: null })),
-      api(`${coreApiBase}/merchant/withdrawals/`).catch(() => ({ results: [] })),
-    ]);
-    const rows = [];
-    rows.push({ section: "payment_method", value: pm.data ? JSON.stringify(pm.data) : "not_set" });
-    (wd.results || wd.data || []).forEach((it) => rows.push(it));
-    el.panelBody.innerHTML = tableFromArray(rows, ["section", "id", "amount", "status", "created_at", "value"]);
-    actionButton("Create/Update Payment Method", () =>
-      openModal(
-        "Payment Method",
-        [
-          { name: "method_type", label: "Method Type (bank/esewa/khalti)", required: true },
-          { name: "account_name", label: "Account Name", required: true },
-          { name: "account_number", label: "Account Number", required: true },
+  function paymentMethodCanEdit(pmData) {
+    if (!pmData) return true;
+    if (typeof pmData.can_edit === "boolean") return pmData.can_edit;
+    return pmData.status === "pending" || pmData.status === "rejected";
+  }
+
+  function paymentMethodFormFields(pmData) {
+    const pt = pmData?.payment_method_type || "bank_account";
+    const d = pmData?.payment_details || {};
+    return [
+      {
+        name: "payment_method_type",
+        label: "Method type",
+        type: "select",
+        required: true,
+        options: [
+          { value: "bank_account", label: "Bank account" },
+          { value: "upi", label: "UPI" },
+          { value: "wallet", label: "Wallet" },
         ],
-        async (payload) => {
-          if (pm && pm.data) {
-            return api(`${coreApiBase}/merchant/payment-method/update/`, { method: "PUT", body: JSON.stringify(payload) });
+        value: pt,
+      },
+      { name: "account_number", label: "Account number (bank)", value: d.account_number || "", helpText: "Required when type is Bank account" },
+      { name: "ifsc", label: "IFSC (bank)", value: d.ifsc || "" },
+      { name: "bank_name", label: "Bank name", value: d.bank_name || "" },
+      { name: "account_holder_name", label: "Account holder name (bank)", value: d.account_holder_name || "" },
+      { name: "vpa", label: "UPI VPA", value: d.vpa || d.upi_id || "", helpText: "Required when type is UPI" },
+      { name: "wallet_type", label: "Wallet type (e.g. eSewa, Khalti)", value: d.wallet_type || "", helpText: "Required when type is Wallet" },
+      { name: "wallet_id", label: "Wallet ID / phone", value: d.wallet_id || "" },
+      { name: "wallet_provider", label: "Wallet provider (optional)", value: d.wallet_provider || "" },
+    ];
+  }
+
+  function paymentMethodReadOnlyFields(pmData) {
+    return paymentMethodFormFields(pmData).map((f) => ({ ...f, disabled: true, required: false }));
+  }
+
+  function buildPaymentMethodApiBody(payload) {
+    const t = payload.payment_method_type;
+    if (t === "bank_account") {
+      const account_number = String(payload.account_number || "").trim();
+      const ifsc = String(payload.ifsc || "").trim();
+      const bank_name = String(payload.bank_name || "").trim();
+      const account_holder_name = String(payload.account_holder_name || "").trim();
+      if (!account_number || !ifsc || !bank_name || !account_holder_name) {
+        throw new Error("Bank account: account number, IFSC, bank name, and account holder name are required.");
+      }
+      return {
+        payment_method_type: "bank_account",
+        payment_details: {
+          account_number,
+          ifsc: ifsc.toUpperCase(),
+          bank_name,
+          account_holder_name,
+        },
+      };
+    }
+    if (t === "upi") {
+      const vpa = String(payload.vpa || "").trim();
+      if (!vpa) throw new Error("UPI: VPA is required.");
+      return { payment_method_type: "upi", payment_details: { vpa, upi_id: vpa } };
+    }
+    if (t === "wallet") {
+      const wallet_type = String(payload.wallet_type || "").trim();
+      const wallet_id = String(payload.wallet_id || "").trim();
+      if (!wallet_type || !wallet_id) throw new Error("Wallet: type and wallet ID are required.");
+      const wallet_provider = String(payload.wallet_provider || "").trim() || wallet_type;
+      return { payment_method_type: "wallet", payment_details: { wallet_type, wallet_id, wallet_provider } };
+    }
+    throw new Error("Select a valid method type.");
+  }
+
+  async function loadWallet() {
+    let pm = null;
+    try {
+      pm = await api(`${coreApiBase}/merchant/payment-method/`);
+    } catch (_) {
+      pm = { success: false, data: null };
+    }
+    const wd = await api(`${coreApiBase}/merchant/withdrawals/`).catch(() => ({ results: [] }));
+    const pmData = pm && pm.success && pm.data ? pm.data : null;
+    const canEditPm = paymentMethodCanEdit(pmData);
+    const pmStatusLabel = pmData ? pmData.status_display || pmData.status || "—" : "Not configured";
+    const pmValueDetail = pmData
+      ? `${pmData.payment_method_type_display || pmData.payment_method_type || ""} — ${pmData.status_display || pmData.status || ""}${
+          canEditPm ? "" : " (locked — contact admin to change)"
+        }`
+      : "No payout method on file. Add bank, UPI, or wallet for withdrawals.";
+    const rows = [];
+    rows.push({
+      section: "payment_method",
+      name: "Payment details",
+      id: null,
+      amount: null,
+      status: pmStatusLabel,
+      created_at: null,
+      value: pmValueDetail,
+    });
+    (wd.results || wd.data || []).forEach((it) => rows.push(it));
+    el.panelBody.innerHTML = tableFromArray(rows.filter(filterBySearch), ["section", "id", "amount", "status", "created_at", "value"]);
+
+    if (pmData && !canEditPm) {
+      actionButton(
+        "View payment details",
+        () => {
+          openModal(
+            "Payment method (approved)",
+            paymentMethodReadOnlyFields(pmData),
+            async () => {},
+            "Close",
+            { silentSuccess: true }
+          );
+        },
+        "bg-gray-700 text-white px-3 py-2 rounded-lg text-sm"
+      );
+    }
+    if (!pmData) {
+      actionButton(
+        "Add payment method",
+        () =>
+          openModal("Add payment method", paymentMethodFormFields(null), async (payload) => {
+            const body = buildPaymentMethodApiBody(payload);
+            await api(`${coreApiBase}/merchant/payment-method/create/`, { method: "POST", body: JSON.stringify(body) });
+          }),
+        "bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+      );
+    } else if (canEditPm) {
+      actionButton(
+        "Edit payment method",
+        () =>
+          openModal("Edit payment method", paymentMethodFormFields(pmData), async (payload) => {
+            const body = buildPaymentMethodApiBody(payload);
+            await api(`${coreApiBase}/merchant/payment-method/update/`, { method: "PUT", body: JSON.stringify(body) });
+          }),
+        "bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+      );
+      actionButton(
+        "Delete payment method",
+        async () => {
+          if (!confirm("Delete your saved payment method? You can add a new one after.")) return;
+          try {
+            await api(`${coreApiBase}/merchant/payment-method/delete/`, { method: "DELETE" });
+            showAlert("Payment method deleted.", "success");
+            refreshCurrent();
+          } catch (err) {
+            showAlert(parseApiErrorMessage(err), "error");
           }
-          return api(`${coreApiBase}/merchant/payment-method/create/`, { method: "POST", body: JSON.stringify(payload) });
-        }
-      )
-    );
+        },
+        "bg-gray-700 text-white px-3 py-2 rounded-lg text-sm"
+      );
+    }
     actionButton("Create Withdrawal", () =>
-      openModal("Withdrawal", [{ name: "amount", label: "Amount", required: true }], (payload) =>
+      openModal("Withdrawal", [{ name: "amount", label: "Amount", type: "number", min: "0", step: "0.01", required: true }], (payload) =>
         api(`${coreApiBase}/merchant/withdrawals/create/`, { method: "POST", body: JSON.stringify(payload) })
       )
     );
