@@ -97,11 +97,15 @@ class TravelVehicleCreateUpdateSerializer(serializers.ModelSerializer):
         mutable_data = data.copy()
         for key in ('seats', 'image_titles', 'remove_image_ids'):
             raw_value = mutable_data.get(key)
+            if raw_value in (None, '', 'null'):
+                continue
             if isinstance(raw_value, str):
                 try:
                     mutable_data[key] = json.loads(raw_value)
                 except json.JSONDecodeError:
-                    raise serializers.ValidationError({key: 'Invalid JSON format.'})
+                    raise serializers.ValidationError({
+                        key: 'Invalid JSON format. Send a JSON array, e.g. [].'
+                    })
         return super().to_internal_value(mutable_data)
 
     def validate(self, attrs):

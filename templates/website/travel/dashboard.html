@@ -780,7 +780,8 @@
             seatListRoot.innerHTML = seats
                 .slice()
                 .sort((a, b) => `${a.floor}-${a.side}-${a.number}`.localeCompare(`${b.floor}-${b.side}-${b.number}`))
-                .map((seat, index) => {
+                .map((seat) => {
+                    const seatKey = `${seat.floor}|${seat.side}|${seat.number}`;
                     const cls = seat.status === "boarded"
                         ? "bg-red-100 text-red-700 border-red-300"
                         : seat.status === "booked"
@@ -789,14 +790,22 @@
                     return `
                         <span class="inline-flex items-center gap-1 border rounded-full px-2 py-1 text-xs ${cls}">
                             ${seat.floor.toUpperCase()} ${seat.side}${seat.number}
-                            <button type="button" data-seat-remove-index="${index}" class="text-gray-600 hover:text-gray-900">&times;</button>
+                            <button type="button" data-seat-remove-key="${seatKey}" class="text-gray-600 hover:text-gray-900">&times;</button>
                         </span>
                     `;
                 }).join("");
-            seatListRoot.querySelectorAll("[data-seat-remove-index]").forEach((btn) => {
+            seatListRoot.querySelectorAll("[data-seat-remove-key]").forEach((btn) => {
                 btn.addEventListener("click", () => {
-                    const idx = parseInt(btn.dataset.seatRemoveIndex, 10);
-                    if (Number.isNaN(idx)) return;
+                    const key = String(btn.dataset.seatRemoveKey || "");
+                    if (!key) return;
+                    const [floor, side, numberStr] = key.split("|");
+                    const number = parseInt(numberStr, 10);
+                    const idx = seats.findIndex((seat) => (
+                        seat.floor === floor &&
+                        seat.side === side &&
+                        seat.number === number
+                    ));
+                    if (idx === -1) return;
                     seats.splice(idx, 1);
                     syncSeatView();
                 });
@@ -922,7 +931,7 @@
             const row = state.pageData[parseInt(btn.dataset.row, 10)];
             const fn = actionsMap[btn.dataset.act];
             if (!row || !fn) return;
-            try { await fn(row); } catch (err) { showAlert(err.message, "error"); }
+            try { await fn(row); } catch (err) { showAlert(parseApiErrorMessage(err), "error"); }
         }));
     }
 
@@ -1040,14 +1049,14 @@
             { name: "remarks", label: "Remarks", type: "textarea" },
         ], (payload) => {
             const seatIds = (payload.seat_ids || []).map((x) => parseInt(x, 10)).filter(Boolean);
-            api(`${apiBase}/bookings/create/`, {
+            return api(`${apiBase}/bookings/create/`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...payload,
                     booking_date: toIsoFromDateTimeLocal(payload.booking_date),
                     seat_ids: seatIds,
                 }),
-            })
+            });
         });
 
         const refreshSeats = async () => {
