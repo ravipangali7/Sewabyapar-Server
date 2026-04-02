@@ -1,4 +1,6 @@
 """Travel app serializers"""
+import json
+from django.db import transaction
 from rest_framework import serializers
 from travel.models import (
     TravelCommittee, TravelVehicle, TravelVehicleSeat, TravelBooking,
@@ -41,25 +43,46 @@ class TravelVehicleSerializer(serializers.ModelSerializer):
     committee = TravelCommitteeSerializer(read_only=True)
     seats = TravelVehicleSeatSerializer(many=True, read_only=True)
     images = TravelVehicleImageSerializer(many=True, read_only=True)
+    seat_count = serializers.SerializerMethodField()
     
     class Meta:
         model = TravelVehicle
         fields = [
             'id', 'name', 'vehicle_no', 'committee', 'image', 'is_active',
             'from_place', 'to_place', 'departure_time', 'actual_seat_price',
-            'seat_price', 'seats', 'images', 'created_at', 'updated_at'
+            'seat_price', 'seats', 'images', 'seat_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_seat_count(self, obj):
+        return obj.seats.count()
 
 
 class TravelVehicleCreateUpdateSerializer(serializers.ModelSerializer):
     """Travel Vehicle create/update serializer (write-only fields)"""
+    seats = TravelVehicleSeatSerializer(many=True, required=False, write_only=True)
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        required=False,
+        write_only=True,
+    )
+    image_titles = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),
+        required=False,
+        write_only=True,
+    )
+    remove_image_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        write_only=True,
+    )
+
     class Meta:
         model = TravelVehicle
         fields = [
             'name', 'vehicle_no', 'committee', 'image', 'is_active',
             'from_place', 'to_place', 'departure_time', 'actual_seat_price',
-            'seat_price'
+            'seat_price', 'seats', 'images', 'image_titles', 'remove_image_ids'
         ]
     
     def validate_vehicle_no(self, value):
@@ -69,6 +92,79 @@ class TravelVehicleCreateUpdateSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError('A vehicle with this number already exists.')
         return value
+
+    def to_internal_value(self, data):
+        mutable_data = data.copy()
+        for key in ('seats', 'image_titles', 'remove_image_ids'):
+            raw_value = mutable_data.get(key)
+            if isinstance(raw_value, str):
+                try:
+                    mutable_data[key] = json.loads(raw_value)
+                except json.JSONDecodeError:
+                    raise serializers.ValidationError({key: 'Invalid JSON format.'})
+        return super().to_internal_value(mutable_data)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        seats = attrs.get('seats')
+        if seats:
+            seen = set()
+            duplicates = []
+            for seat in seats:
+                key = (seat['floor'], seat['side'], seat['number'])
+                if key in seen:
+                    duplicates.append(f"{seat['floor']}-{seat['side']}{seat['number']}")
+                seen.add(key)
+            if duplicates:
+                raise serializers.ValidationError({
+                    'seats': f'Duplicate seats in payload: {", ".join(sorted(set(duplicates)))}'
+                })
+        return attrs
+
+    def _save_vehicle_seats(self, vehicle, seats):
+        if seats is None:
+            return
+        vehicle.seats.all().delete()
+        TravelVehicleSeat.objects.bulk_create([
+            TravelVehicleSeat(vehicle=vehicle, **seat) for seat in seats
+        ])
+
+    def _save_vehicle_images(self, vehicle, images, image_titles):
+        if not images:
+            return
+        titles = image_titles or []
+        TravelVehicleImage.objects.bulk_create([
+            TravelVehicleImage(
+                vehicle=vehicle,
+                image=image,
+                title=titles[index] if index < len(titles) else '',
+            )
+            for index, image in enumerate(images)
+        ])
+
+    @transaction.atomic
+    def create(self, validated_data):
+        seats = validated_data.pop('seats', None)
+        images = validated_data.pop('images', [])
+        image_titles = validated_data.pop('image_titles', [])
+        validated_data.pop('remove_image_ids', None)
+        vehicle = super().create(validated_data)
+        self._save_vehicle_seats(vehicle, seats)
+        self._save_vehicle_images(vehicle, images, image_titles)
+        return vehicle
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        seats = validated_data.pop('seats', None)
+        images = validated_data.pop('images', [])
+        image_titles = validated_data.pop('image_titles', [])
+        remove_image_ids = validated_data.pop('remove_image_ids', [])
+        vehicle = super().update(instance, validated_data)
+        if remove_image_ids:
+            vehicle.images.filter(id__in=remove_image_ids).delete()
+        self._save_vehicle_seats(vehicle, seats)
+        self._save_vehicle_images(vehicle, images, image_titles)
+        return vehicle
 
 
 class SeatLayoutSerializer(serializers.Serializer):
